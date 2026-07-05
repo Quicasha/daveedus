@@ -1,0 +1,112 @@
+/* Daveedus — built-in exercise database.
+   g = muscle group key, e = equipment key. Names use standard gym terminology. */
+'use strict';
+
+const EX_GROUPS = ['chest','back','shoulders','biceps','triceps','forearms',
+                   'quads','hamstrings','glutes','calves','core','other'];
+
+const EX_DB = [
+  /* ------- chest ------- */
+  { id:'bench-press',            n:'Bench Press',                 g:'chest', e:'barbell' },
+  { id:'incline-bench-press',    n:'Incline Bench Press',         g:'chest', e:'barbell' },
+  { id:'decline-bench-press',    n:'Decline Bench Press',         g:'chest', e:'barbell' },
+  { id:'db-bench-press',         n:'Dumbbell Bench Press',        g:'chest', e:'dumbbell' },
+  { id:'incline-db-press',       n:'Incline Dumbbell Press',      g:'chest', e:'dumbbell' },
+  { id:'db-fly',                 n:'Dumbbell Fly',                g:'chest', e:'dumbbell' },
+  { id:'cable-fly',              n:'Cable Fly',                   g:'chest', e:'cable' },
+  { id:'pec-deck',               n:'Pec Deck',                    g:'chest', e:'machine' },
+  { id:'machine-chest-press',    n:'Machine Chest Press',         g:'chest', e:'machine' },
+  { id:'push-up',                n:'Push-Up',                     g:'chest', e:'bodyweight' },
+  { id:'chest-dip',              n:'Chest Dip',                   g:'chest', e:'bodyweight' },
+  /* ------- back ------- */
+  { id:'deadlift',               n:'Deadlift',                    g:'back', e:'barbell' },
+  { id:'barbell-row',            n:'Barbell Row',                 g:'back', e:'barbell' },
+  { id:'pendlay-row',            n:'Pendlay Row',                 g:'back', e:'barbell' },
+  { id:'t-bar-row',              n:'T-Bar Row',                   g:'back', e:'barbell' },
+  { id:'db-row',                 n:'Dumbbell Row',                g:'back', e:'dumbbell' },
+  { id:'seated-cable-row',       n:'Seated Cable Row',            g:'back', e:'cable' },
+  { id:'lat-pulldown',           n:'Lat Pulldown',                g:'back', e:'cable' },
+  { id:'straight-arm-pulldown',  n:'Straight-Arm Pulldown',       g:'back', e:'cable' },
+  { id:'pull-up',                n:'Pull-Up',                     g:'back', e:'bodyweight' },
+  { id:'chin-up',                n:'Chin-Up',                     g:'back', e:'bodyweight' },
+  { id:'machine-row',            n:'Machine Row',                 g:'back', e:'machine' },
+  { id:'rack-pull',              n:'Rack Pull',                   g:'back', e:'barbell' },
+  { id:'barbell-shrug',          n:'Barbell Shrug',               g:'back', e:'barbell' },
+  { id:'db-shrug',               n:'Dumbbell Shrug',              g:'back', e:'dumbbell' },
+  { id:'hyperextension',         n:'Hyperextension',              g:'back', e:'bodyweight' },
+  /* ------- shoulders ------- */
+  { id:'overhead-press',         n:'Overhead Press',              g:'shoulders', e:'barbell' },
+  { id:'seated-db-press',        n:'Seated Dumbbell Press',       g:'shoulders', e:'dumbbell' },
+  { id:'arnold-press',           n:'Arnold Press',                g:'shoulders', e:'dumbbell' },
+  { id:'machine-shoulder-press', n:'Machine Shoulder Press',      g:'shoulders', e:'machine' },
+  { id:'lateral-raise',          n:'Lateral Raise',               g:'shoulders', e:'dumbbell' },
+  { id:'cable-lateral-raise',    n:'Cable Lateral Raise',         g:'shoulders', e:'cable' },
+  { id:'front-raise',            n:'Front Raise',                 g:'shoulders', e:'dumbbell' },
+  { id:'rear-delt-fly',          n:'Rear Delt Fly',               g:'shoulders', e:'dumbbell' },
+  { id:'face-pull',              n:'Face Pull',                   g:'shoulders', e:'cable' },
+  { id:'upright-row',            n:'Upright Row',                 g:'shoulders', e:'barbell' },
+  /* ------- biceps ------- */
+  { id:'barbell-curl',           n:'Barbell Curl',                g:'biceps', e:'barbell' },
+  { id:'ez-bar-curl',            n:'EZ-Bar Curl',                 g:'biceps', e:'barbell' },
+  { id:'db-curl',                n:'Dumbbell Curl',               g:'biceps', e:'dumbbell' },
+  { id:'hammer-curl',            n:'Hammer Curl',                 g:'biceps', e:'dumbbell' },
+  { id:'incline-db-curl',        n:'Incline Dumbbell Curl',       g:'biceps', e:'dumbbell' },
+  { id:'preacher-curl',          n:'Preacher Curl',               g:'biceps', e:'barbell' },
+  { id:'cable-curl',             n:'Cable Curl',                  g:'biceps', e:'cable' },
+  { id:'concentration-curl',     n:'Concentration Curl',          g:'biceps', e:'dumbbell' },
+  /* ------- triceps ------- */
+  { id:'close-grip-bench',       n:'Close-Grip Bench Press',      g:'triceps', e:'barbell' },
+  { id:'triceps-pushdown',       n:'Triceps Pushdown',            g:'triceps', e:'cable' },
+  { id:'rope-pushdown',          n:'Rope Pushdown',               g:'triceps', e:'cable' },
+  { id:'overhead-triceps-ext',   n:'Overhead Triceps Extension',  g:'triceps', e:'dumbbell' },
+  { id:'skull-crusher',          n:'Skull Crusher',               g:'triceps', e:'barbell' },
+  { id:'triceps-dip',            n:'Triceps Dip',                 g:'triceps', e:'bodyweight' },
+  { id:'db-kickback',            n:'Dumbbell Kickback',           g:'triceps', e:'dumbbell' },
+  { id:'machine-triceps-ext',    n:'Machine Triceps Extension',   g:'triceps', e:'machine' },
+  /* ------- forearms ------- */
+  { id:'wrist-curl',             n:'Wrist Curl',                  g:'forearms', e:'barbell' },
+  { id:'reverse-curl',           n:'Reverse Curl',                g:'forearms', e:'barbell' },
+  { id:'farmers-walk',           n:"Farmer's Walk",               g:'forearms', e:'dumbbell' },
+  /* ------- quads ------- */
+  { id:'back-squat',             n:'Back Squat',                  g:'quads', e:'barbell' },
+  { id:'front-squat',            n:'Front Squat',                 g:'quads', e:'barbell' },
+  { id:'goblet-squat',           n:'Goblet Squat',                g:'quads', e:'dumbbell' },
+  { id:'leg-press',              n:'Leg Press',                   g:'quads', e:'machine' },
+  { id:'hack-squat',             n:'Hack Squat',                  g:'quads', e:'machine' },
+  { id:'leg-extension',          n:'Leg Extension',               g:'quads', e:'machine' },
+  { id:'bulgarian-split-squat',  n:'Bulgarian Split Squat',       g:'quads', e:'dumbbell' },
+  { id:'lunge',                  n:'Lunge',                       g:'quads', e:'dumbbell' },
+  { id:'step-up',                n:'Step-Up',                     g:'quads', e:'dumbbell' },
+  /* ------- hamstrings ------- */
+  { id:'romanian-deadlift',      n:'Romanian Deadlift',           g:'hamstrings', e:'barbell' },
+  { id:'stiff-leg-deadlift',     n:'Stiff-Leg Deadlift',          g:'hamstrings', e:'barbell' },
+  { id:'lying-leg-curl',         n:'Lying Leg Curl',              g:'hamstrings', e:'machine' },
+  { id:'seated-leg-curl',        n:'Seated Leg Curl',             g:'hamstrings', e:'machine' },
+  { id:'nordic-curl',            n:'Nordic Curl',                 g:'hamstrings', e:'bodyweight' },
+  { id:'good-morning',           n:'Good Morning',                g:'hamstrings', e:'barbell' },
+  /* ------- glutes ------- */
+  { id:'hip-thrust',             n:'Hip Thrust',                  g:'glutes', e:'barbell' },
+  { id:'glute-bridge',           n:'Glute Bridge',                g:'glutes', e:'bodyweight' },
+  { id:'cable-kickback',         n:'Cable Kickback',              g:'glutes', e:'cable' },
+  { id:'sumo-deadlift',          n:'Sumo Deadlift',               g:'glutes', e:'barbell' },
+  /* ------- calves ------- */
+  { id:'standing-calf-raise',    n:'Standing Calf Raise',         g:'calves', e:'machine' },
+  { id:'seated-calf-raise',      n:'Seated Calf Raise',           g:'calves', e:'machine' },
+  { id:'calf-press',             n:'Calf Press (Leg Press)',      g:'calves', e:'machine' },
+  /* ------- core ------- */
+  { id:'plank',                  n:'Plank',                       g:'core', e:'bodyweight' },
+  { id:'ab-crunch',              n:'Ab Crunch',                   g:'core', e:'bodyweight' },
+  { id:'cable-crunch',           n:'Cable Crunch',                g:'core', e:'cable' },
+  { id:'hanging-leg-raise',      n:'Hanging Leg Raise',           g:'core', e:'bodyweight' },
+  { id:'hanging-knee-raise',     n:'Hanging Knee Raise',          g:'core', e:'bodyweight' },
+  { id:'russian-twist',          n:'Russian Twist',               g:'core', e:'bodyweight' },
+  { id:'ab-wheel',               n:'Ab Wheel Rollout',            g:'core', e:'other' },
+  { id:'sit-up',                 n:'Sit-Up',                      g:'core', e:'bodyweight' },
+  { id:'side-plank',             n:'Side Plank',                  g:'core', e:'bodyweight' },
+  /* ------- other / full body ------- */
+  { id:'power-clean',            n:'Power Clean',                 g:'other', e:'barbell' },
+  { id:'kettlebell-swing',       n:'Kettlebell Swing',            g:'other', e:'kettlebell' },
+  { id:'sled-push',              n:'Sled Push',                   g:'other', e:'other' },
+  { id:'rowing-machine',         n:'Rowing Machine',              g:'other', e:'machine' },
+  { id:'box-jump',               n:'Box Jump',                    g:'other', e:'bodyweight' }
+];
