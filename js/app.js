@@ -358,7 +358,7 @@ function buildActiveEx(k, name, sets, reps){
   const last = lastForExercise(k, name);
   return { id:uid(), k, name, targetSets:sets, targetReps:reps, note:'',
     last, sug:suggestionFor(sets, reps, last), sugOn:false,
-    sets: Array.from({length:sets}, ()=>({ w:'', r:'', warm:false, done:false, cls:'' })) };
+    sets: Array.from({length:sets}, ()=>({ w:'', r:'', warm:false, drop:false, done:false, cls:'' })) };
 }
 function lastForExercise(k, name){
   const nm = (name||'').trim().toLowerCase();
@@ -373,7 +373,7 @@ function lastForExercise(k, name){
 }
 function suggestionFor(targetSets, targetReps, last){
   if(!last) return null;
-  const work = last.sets.filter(s=>!s.warm);
+  const work = last.sets.filter(s=>!s.warm && !s.drop);
   if(work.length < targetSets) return null;
   if(!work.every(s => s.reps >= targetReps)) return null;
   const maxW = Math.max(...work.map(s=>s.weight));
@@ -403,11 +403,17 @@ function ghostFor(ex, si){
     let wi = 0; for(let i=0;i<si;i++) if(ex.sets[i].warm) wi++;
     return prevWarm[wi] || null;
   }
+  if(cur.drop){
+    if(!prev) return null;
+    const prevDrop = prev.filter(s=>s.drop);
+    let di = 0; for(let i=0;i<si;i++) if(ex.sets[i].drop) di++;
+    return prevDrop[di] || null;
+  }
   if(ex.sugOn && ex.sug) return { weight:ex.sug.w, reps:ex.sug.r };
   if(!prev) return null;
-  const prevWork = prev.filter(s=>!s.warm);
+  const prevWork = prev.filter(s=>!s.warm && !s.drop);
   if(!prevWork.length) return null;
-  let wi = 0; for(let i=0;i<si;i++) if(!ex.sets[i].warm) wi++;
+  let wi = 0; for(let i=0;i<si;i++) if(!ex.sets[i].warm && !ex.sets[i].drop) wi++;
   return prevWork[Math.min(wi, prevWork.length-1)] || null;
 }
 /* comparison target = actual previous session (never the suggestion) */
@@ -415,10 +421,10 @@ function realPrev(ex, si){
   const prev = ex.last ? ex.last.sets : null;
   if(!prev) return null;
   const cur = ex.sets[si];
-  if(cur.warm) return null;
-  const prevWork = prev.filter(s=>!s.warm);
+  if(cur.warm || cur.drop) return null;
+  const prevWork = prev.filter(s=>!s.warm && !s.drop);
   if(!prevWork.length) return null;
-  let wi = 0; for(let i=0;i<si;i++) if(!ex.sets[i].warm) wi++;
+  let wi = 0; for(let i=0;i<si;i++) if(!ex.sets[i].warm && !ex.sets[i].drop) wi++;
   return prevWork[Math.min(wi, prevWork.length-1)] || null;
 }
 function htmlWorkout(){
@@ -431,23 +437,27 @@ function htmlWorkout(){
              <button onclick="applySug(${xi})">${t('woSugApply')}</button></div>`;
     }
     const hdr = `<div class="setgrid hdr"><div>${t('woSet')}</div><div>${t('woPrev')}</div>
-      <div>${t('woKg')}</div><div>${t('woReps')}</div><div>✓</div></div>`;
+      <div>${t('woKg')}</div><div>${t('woReps')}</div><div>✓</div><div></div></div>`;
     let workNum = 0;
     const rows = ex.sets.map((s,si)=>{
       const g = ghostFor(ex,si);
       const prevTxt = g ? `${fmtW(g.weight)} ${t('woKg')} × ${g.reps}` : '—';
-      const label = s.warm ? 'W' : String(++workNum);
+      const label = s.warm ? 'W' : s.drop ? 'D' : String(++workNum);
       const chkCls = s.done ? (s.cls==='loss' ? 'loss' : 'done') : '';
       const restHere = S.active.rest && S.active.rest.key===xi+'-'+si;
-      return `<div class="setrow-wrap ${s.done?'done':''}">
+      const rowBtn = s.drop
+        ? `<button class="dropbtn del" onclick="removeDrop(${xi},${si})">✕</button>`
+        : `<button class="dropbtn" onclick="addDrop(${xi},${si})">D+</button>`;
+      return `<div class="setrow-wrap ${s.done?'done':''} ${s.drop?'droprow':''}">
         <div class="setgrid">
-          <button class="setnum ${s.warm?'warm':''}" onclick="toggleWarm(${xi},${si})">${label}</button>
+          <button class="setnum ${s.warm?'warm':''} ${s.drop?'dropn':''}" onclick="toggleWarm(${xi},${si})">${label}</button>
           <div class="prev">${prevTxt}</div>
           <input type="text" inputmode="decimal" placeholder="${g?fmtW(g.weight):t('woKg')}" value="${esc(s.w)}"
             ${s.done?'disabled':''} oninput="onSetInput(${xi},${si},'w',this.value)">
           <input type="text" inputmode="numeric" placeholder="${g?g.reps:'×'}" value="${esc(s.r)}"
             ${s.done?'disabled':''} oninput="onSetInput(${xi},${si},'r',this.value)">
           <button class="checkbtn ${chkCls}" onclick="toggleSet(${xi},${si})">✓</button>
+          ${rowBtn}
         </div>
         ${restHere ? restBarHtml() : ''}
       </div>`;
@@ -486,8 +496,29 @@ function onNoteInput(xi,v){ S.active.exercises[xi].note=v; save(); }
 function applySug(xi){ S.active.exercises[xi].sugOn=true; save(); render(); }
 function toggleWarm(xi,si){
   const s = S.active.exercises[xi].sets[si];
-  if(s.done) return;
+  if(s.done || s.drop) return;
   s.warm = !s.warm;
+  save(); render();
+}
+function shiftRestKey(xi, fromSi, delta){
+  /* keep the inline rest bar anchored to the same row when rows are inserted/removed above it */
+  const r = S.active.rest;
+  if(!r) return;
+  const [rx, rs] = r.key.split('-').map(Number);
+  if(rx!==xi) return;
+  if(rs >= fromSi) r.key = xi+'-'+(rs+delta);
+}
+function addDrop(xi,si){
+  S.active.exercises[xi].sets.splice(si+1, 0, {w:'',r:'',warm:false,drop:true,done:false,cls:''});
+  shiftRestKey(xi, si+1, 1);
+  save(); render();
+}
+function removeDrop(xi,si){
+  const s = S.active.exercises[xi].sets[si];
+  if(!s || !s.drop) return;
+  if(s.done){ toast(t('woRemoveDone')); return; }
+  S.active.exercises[xi].sets.splice(si,1);
+  shiftRestKey(xi, si+1, -1);
   save(); render();
 }
 function toggleSet(xi,si){
@@ -501,7 +532,7 @@ function toggleSet(xi,si){
   if(isNaN(w) || isNaN(r)){ toast(t('woEmptyVals')); return; }
   s.w = fmtW(w); s.r = String(Math.round(r)); s.done = true;
   const real = realPrev(ex,si);
-  if(!real || s.warm) s.cls = 'none';
+  if(!real || s.warm || s.drop) s.cls = 'none';
   else if(w>real.weight || (w===real.weight && r>real.reps)) s.cls='win';
   else if(w===real.weight && r===real.reps) s.cls='even';
   else s.cls='loss';
@@ -509,7 +540,7 @@ function toggleSet(xi,si){
   save(); render();
 }
 function addSet(xi){
-  S.active.exercises[xi].sets.push({w:'',r:'',warm:false,done:false,cls:''});
+  S.active.exercises[xi].sets.push({w:'',r:'',warm:false,drop:false,done:false,cls:''});
   save(); render();
 }
 function removeSet(xi){
@@ -536,7 +567,7 @@ function finishWorkout(){
   if(!S.active) return;
   const exercises = S.active.exercises.map(ex=>({
     k:ex.k, name:ex.name, targetSets:ex.targetSets, targetReps:ex.targetReps, note:ex.note||'',
-    sets: ex.sets.filter(s=>s.done).map(s=>({ weight:parseNum(s.w), reps:parseNum(s.r), warm:!!s.warm }))
+    sets: ex.sets.filter(s=>s.done).map(s=>({ weight:parseNum(s.w), reps:parseNum(s.r), warm:!!s.warm, drop:!!s.drop }))
   })).filter(e=>e.sets.length);
   if(!exercises.length){
     if(confirm(t('woFinishEmpty'))){ S.active=null; save(); go('home'); }
@@ -838,7 +869,7 @@ function exStats(k, name){
   for(const h of S.history){
     for(const e of h.exercises){
       if(e.k===k || (nm && e.name && e.name.trim().toLowerCase()===nm)){
-        const work = e.sets.filter(s=>!s.warm);
+        const work = e.sets.filter(s=>!s.warm && !s.drop);
         if(work.length){
           sessions++;
           if(!lastDate) lastDate = h.date;
@@ -899,7 +930,7 @@ function htmlExDetail(){
     for(const e of w.exercises){
       if(e.k===k || (e.name && e.name.trim().toLowerCase()===name.trim().toLowerCase())){
         rows.push(`<div class="exl"><span class="n">${fmtDate(w.date)}</span>
-          <span class="s">${e.sets.map(s=>(s.warm?'W ':'')+fmtW(s.weight)+'×'+s.reps).join('&nbsp; ')}</span></div>`);
+          <span class="s">${e.sets.map(s=>(s.warm?'W ':s.drop?'D ':'')+fmtW(s.weight)+'×'+s.reps).join('&nbsp; ')}</span></div>`);
       }
     }
   }
@@ -913,7 +944,7 @@ function chartSVG(k, name){
     const w = S.history[i];
     for(const e of w.exercises){
       if(e.k===k || (e.name && e.name.trim().toLowerCase()===nm)){
-        const work = e.sets.filter(s=>!s.warm);
+        const work = e.sets.filter(s=>!s.warm && !s.drop);
         if(work.length) pts.push({ d:w.date, w:Math.max(...work.map(s=>s.weight)) });
       }
     }
@@ -962,7 +993,7 @@ function htmlHistory(){
     if(open){
       detail = `<div class="histdetail">` + w.exercises.map(e=>
         `<div class="exl"><span class="n">${esc(e.name)}${e.note?` <em style="opacity:.8">— ${esc(e.note)}</em>`:''}</span>
-         <span class="s">${e.sets.map(s=>(s.warm?'W ':'')+fmtW(s.weight)+'×'+s.reps).join('&nbsp; ')}</span></div>`).join('') +
+         <span class="s">${e.sets.map(s=>(s.warm?'W ':s.drop?'D ':'')+fmtW(s.weight)+'×'+s.reps).join('&nbsp; ')}</span></div>`).join('') +
         `<div style="display:flex;gap:10px;margin-top:10px;align-items:center">
           <span style="color:var(--ghost);font-size:13px">${t('histVolume')}: ${Math.round(vol)} kg${w.dur?' · ⏱ '+fmtTime(w.dur):''}</span>
           <button class="btn danger small" style="margin-left:auto" onclick="event.stopPropagation();delHist('${w.id}')">✕</button>

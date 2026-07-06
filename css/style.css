@@ -110,7 +110,7 @@ h2.sec{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(
   font-size:14px; color:var(--accent-soft); font-weight:600;}
 .sug button{margin-left:auto; background:var(--accent); color:var(--on-accent); border:none; border-radius:8px;
   min-height:34px; padding:0 14px; font-size:13px; font-weight:700; flex:none;}
-.setgrid{display:grid; grid-template-columns:32px 1fr 72px 58px 44px; gap:7px; align-items:center; margin-top:8px;}
+.setgrid{display:grid; grid-template-columns:30px 1fr 66px 54px 42px 24px; gap:6px; align-items:center; margin-top:8px;}
 .setgrid.hdr{margin-top:14px;}
 .setgrid.hdr div{font-size:10px; font-weight:700; letter-spacing:.5px; color:var(--dim); text-transform:uppercase; text-align:center;}
 .setgrid.hdr div:nth-child(2){text-align:left; padding-left:2px;}
@@ -118,6 +118,18 @@ h2.sec{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(
 .setrow-wrap.done{background:var(--green-bg);}
 .setnum{min-height:42px; border:none; background:none; color:var(--dim); font-weight:700; font-size:15px; border-radius:8px;}
 .setnum.warm{color:var(--orange);}
+.setnum.dropn{color:var(--accent-soft);}
+.dropbtn{width:24px; min-height:36px; border:none; background:none; color:var(--ghost);
+  font-size:10px; font-weight:800; padding:0; border-radius:7px;}
+.dropbtn:active{color:var(--accent-soft);}
+.dropbtn.del{color:var(--red); font-size:12px;}
+/* dropset rows — smaller, indented */
+.setrow-wrap.droprow{margin-left:20px;}
+.droprow .setgrid{margin-top:4px;}
+.droprow .setgrid input{min-height:34px; font-size:15px;}
+.droprow .checkbtn{min-height:34px; font-size:13px;}
+.droprow .setnum{min-height:34px; font-size:13px;}
+.droprow .prev{font-size:11px;}
 .prev{color:var(--ghost); font-size:13px; font-weight:500; padding-left:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 .setgrid input{width:100%; background:var(--input); border:none;
   border-radius:9px; min-height:42px; font-size:17px; font-weight:700; text-align:center;
