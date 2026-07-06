@@ -35,6 +35,11 @@ const I18N = {
     folderName:'Splito pavadinimas', folderDel:'Ištrinti splitą „{n}“? Programos liks, tik be splito.',
     folderShare:'Splito kodas', folderShareHint:'Nusiųsk šį kodą draugui — jis gaus visą splitą su visomis programomis.',
     folderImported:'Splitas „{n}“ pridėtas ✓', tplFolder:'Splitas', deleteBtn:'Ištrinti', nextBadge:'KITA',
+    histEditTitle:'Redaguoti treniruotę',
+    bw:'Kūno svoris', bwLog:'Įrašyti', bwDel:'Ištrinti šį įrašą?',
+    plates:'Svarelių kalkuliatorius', platesBar:'Grifas', platesSide:'Ant vienos pusės',
+    platesRem:'{n} kg pusėj netelpa iš standartinių svarelių', platesEmpty:'Tuščias grifas',
+    superset:'Superset',
     codeBad:'Neteisingas kodas', copy:'Kopijuoti', copied:'Nukopijuota ✓',
     daySets:'setai', dayReps:'kart.',
     exSearch:'Ieškoti pratimo...', exAll:'Visi', exCreate:'+ Sukurti savo pratimą',
@@ -87,6 +92,11 @@ const I18N = {
     folderName:'Split name', folderDel:'Delete split “{n}”? Templates will remain, just without the split.',
     folderShare:'Split code', folderShareHint:'Send this code to a friend — they get the whole split with all templates.',
     folderImported:'Split “{n}” added ✓', tplFolder:'Split', deleteBtn:'Delete', nextBadge:'NEXT',
+    histEditTitle:'Edit workout',
+    bw:'Body weight', bwLog:'Log', bwDel:'Delete this entry?',
+    plates:'Plate calculator', platesBar:'Bar', platesSide:'Per side',
+    platesRem:"{n} kg per side doesn't fit standard plates", platesEmpty:'Empty bar',
+    superset:'Superset',
     codeBad:'Invalid code', copy:'Copy', copied:'Copied ✓',
     daySets:'sets', dayReps:'reps',
     exSearch:'Search exercises...', exAll:'All', exCreate:'+ Create your own exercise',
@@ -139,8 +149,8 @@ function seedTemplates(fid){
 function defaultState(){
   const fid = uid();
   return { lang:'lt', theme:'auto', keepAwake:true,
-           folders:[{ id:fid, name:'Upper / Lower', open:true }],
-           customEx:[], templates:seedTemplates(fid), history:[], active:null };
+           folders:[{ id:fid, name:'Upper / Lower', open:true, pinned:true }],
+           customEx:[], templates:seedTemplates(fid), history:[], weights:[], active:null };
 }
 function load(){
   try{
@@ -154,6 +164,8 @@ function load(){
           s.folders = [{ id:fid, name:'Upper / Lower', open:true }];
           s.templates.forEach(tp=>{ if(!tp.folderId) tp.folderId = fid; });
         }
+        s.folders.forEach(f=>{ if(typeof f.pinned==='undefined') f.pinned = true; });
+        if(!Array.isArray(s.weights)) s.weights = [];
         return Object.assign(defaultState(), s);
       }
     }
@@ -318,6 +330,8 @@ function htmlHome(){
     <div class="statrow">
       <div class="stat"><div class="v">${weekCount()}</div><div class="l">${t('statWeek')}</div></div>
       <div class="stat"><div class="v">${S.history.length}</div><div class="l">${t('statTotal')}</div></div>
+      <div class="stat" style="cursor:pointer" onclick="go('history')">
+        <div class="v">${S.weights.length?fmtW(S.weights[0].kg):'—'}</div><div class="l">${t('bw').toLowerCase()}, kg</div></div>
     </div>`;
   if(S.active){
     const n = S.active.exercises.reduce((a,e)=>a+e.sets.filter(s=>s.done).length,0);
@@ -335,7 +349,10 @@ function htmlHome(){
       <div class="tsub">${last?daysAgoStr(last.date):t('never')} · ${esc(names)}</div></div>
       <div class="go">▶</div></button>`;
   };
-  for(const f of S.folders){
+  /* home shows only PINNED splits; if none pinned, fall back to everything */
+  const pinned = S.folders.filter(f=>f.pinned);
+  const showFolders = pinned.length ? pinned : S.folders;
+  for(const f of showFolders){
     const tpls = S.templates.filter(x=>x.folderId===f.id);
     if(!tpls.length) continue;
     /* suggest the workout AFTER the most recently done one in this split (cyclic) */
@@ -347,16 +364,16 @@ function htmlHome(){
     h += `<h2 class="sec">${esc(f.name)}</h2>` + tpls.map(d=>tplBtn(d, d.id===nextId)).join('');
   }
   const loose = looseTemplates();
-  if(loose.length){
+  if(loose.length && !pinned.length){
     h += `<h2 class="sec">${S.folders.length?t('folderNone'):t('homeTemplates')}</h2>` + loose.map(d=>tplBtn(d,false)).join('');
   }
   return h;
 }
 
 /* ======================= WORKOUT ======================= */
-function buildActiveEx(k, name, sets, reps){
+function buildActiveEx(k, name, sets, reps, ss){
   const last = lastForExercise(k, name);
-  return { id:uid(), k, name, targetSets:sets, targetReps:reps, note:'',
+  return { id:uid(), k, name, targetSets:sets, targetReps:reps, note:'', ss:!!ss,
     last, sug:suggestionFor(sets, reps, last), sugOn:false,
     sets: Array.from({length:sets}, ()=>({ w:'', r:'', warm:false, drop:false, done:false, cls:'' })) };
 }
@@ -388,7 +405,7 @@ function startWorkout(tplId){
   }
   S.active = {
     tplId: tpl.id, name: tpl.name, startedAt: new Date().toISOString(), rest:null,
-    exercises: tpl.ex.map(e => buildActiveEx(e.k, exName(e.k,e.n), e.s, e.r))
+    exercises: tpl.ex.map(e => buildActiveEx(e.k, exName(e.k,e.n), e.s, e.r, e.ss))
   };
   save();
   go('workout');
@@ -462,10 +479,14 @@ function htmlWorkout(){
         ${restHere ? restBarHtml() : ''}
       </div>`;
     }).join('');
+    const notLast = xi < S.active.exercises.length-1;
+    const ssConn = (ex.ss && notLast) ? `<div class="ssline">🔗 ${t('superset')}</div>` : '';
     return `<div class="card">
       <div class="exhead">
         <div class="exname" onclick="openExDetailByKey('${esc(ex.k)}')">${esc(ex.name)}</div>
         <div class="extarget">${ex.targetSets}×${ex.targetReps}</div>
+        <button class="minibtn" onclick="openPlates(${xi})">⚖</button>
+        ${notLast?`<button class="minibtn ${ex.ss?'acc':''}" onclick="toggleWoSS(${xi})">🔗</button>`:''}
         <button class="minibtn del" onclick="removeWorkoutEx(${xi})">✕</button>
       </div>
       <input class="exnote" placeholder="${t('woNote')}" value="${esc(ex.note)}" oninput="onNoteInput(${xi},this.value)">
@@ -474,7 +495,7 @@ function htmlWorkout(){
         <button onclick="addSet(${xi})">${t('woAddSet')}</button>
         <button onclick="removeSet(${xi})">${t('woRemoveSet')}</button>
       </div>
-    </div>`;
+    </div>${ssConn}`;
   }).join('');
   h += `<button class="btn ghostbtn" onclick="addWorkoutEx()">${t('woAddEx')}</button>`;
   h += `<button class="btn primary" onclick="finishWorkout()">${t('woFinish')} ✓</button>`;
@@ -556,6 +577,11 @@ function addWorkoutEx(){
     save(); closeModal(); render();
   });
 }
+function toggleWoSS(xi){
+  if(xi >= S.active.exercises.length-1) return;
+  S.active.exercises[xi].ss = !S.active.exercises[xi].ss;
+  save(); render();
+}
 function removeWorkoutEx(xi){
   const ex = S.active.exercises[xi];
   if(!confirm(t('woDelEx',{n:ex.name}))) return;
@@ -566,7 +592,7 @@ function removeWorkoutEx(xi){
 function finishWorkout(){
   if(!S.active) return;
   const exercises = S.active.exercises.map(ex=>({
-    k:ex.k, name:ex.name, targetSets:ex.targetSets, targetReps:ex.targetReps, note:ex.note||'',
+    k:ex.k, name:ex.name, targetSets:ex.targetSets, targetReps:ex.targetReps, note:ex.note||'', ss:!!ex.ss,
     sets: ex.sets.filter(s=>s.done).map(s=>({ weight:parseNum(s.w), reps:parseNum(s.r), warm:!!s.warm, drop:!!s.drop }))
   })).filter(e=>e.sets.length);
   if(!exercises.length){
@@ -628,10 +654,12 @@ function htmlProgram(){
   h += S.folders.map(f=>{
     const tpls = S.templates.filter(x=>x.folderId===f.id);
     const names = tpls.slice(0,4).map(x=>x.name).join(', ');
-    return `<button class="tplbtn" onclick="openSplit('${f.id}')">
+    return `<div class="tplbtn" onclick="openSplit('${f.id}')">
       <div class="tinfo"><div class="tname">${esc(f.name)} <span style="color:var(--dim);font-weight:700;font-size:14px">(${tpls.length})</span></div>
       <div class="tsub">${esc(names)||'—'}</div></div>
-      <div class="go">›</div></button>`;
+      <button class="minibtn ${f.pinned?'acc':''}" style="${f.pinned?'':'opacity:.4'}"
+        onclick="event.stopPropagation(); togglePin('${f.id}')">📌</button>
+      <div class="go">›</div></div>`;
   }).join('');
   const loose = looseTemplates();
   if(loose.length){
@@ -647,6 +675,12 @@ function htmlProgram(){
 function openSplit(id){
   V.viewFolder = id;
   go('splitview');
+}
+function togglePin(id){
+  const f = S.folders.find(x=>x.id===id);
+  if(!f) return;
+  f.pinned = !f.pinned;
+  save(); render();
 }
 function htmlSplitView(){
   const f = S.folders.find(x=>x.id===V.viewFolder);
@@ -688,7 +722,7 @@ function shareFolder(id){
   if(!f) return;
   const tpls = S.templates.filter(x=>x.folderId===id);
   const payload = { t:'folder', name:f.name,
-    tpls: tpls.map(d=>({ name:d.name, ex:d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r })) })) };
+    tpls: tpls.map(d=>({ name:d.name, ex:d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0 })) })) };
   const code = encodeShare(payload);
   openModal(`<h3>${t('folderShare')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div style="color:var(--dim);font-size:14px;margin:0 4px 10px">${t('folderShareHint')}</div>
@@ -743,7 +777,9 @@ function htmlTplEdit(){
           <button onclick="bumpTplEx('${d.id}',${i},'r',-1)">−</button><span class="val">${e.r}</span>
           <button onclick="bumpTplEx('${d.id}',${i},'r',1)">+</button><span class="lbl">${t('dayReps')}</span>
         </div>
+        ${i<d.ex.length-1?`<button class="minibtn ${e.ss?'acc':''}" style="margin-left:auto" onclick="toggleSS('${d.id}',${i})">🔗</button>`:''}
       </div>
+      ${e.ss && i<d.ex.length-1?`<div class="ssline">🔗 ${t('superset')}</div>`:''}
     </div>`;
   }).join('');
   if(!d.ex.length) h += `<div class="empty">—</div>`;
@@ -784,6 +820,12 @@ function addTplEx(id){
     d.ex.push({ id:uid(), k:info.id, s:3, r:10 });
     save(); closeModal(); render();
   });
+}
+function toggleSS(id,i){
+  const d = S.templates.find(x=>x.id===id);
+  if(!d || !d.ex[i]) return;
+  d.ex[i].ss = !d.ex[i].ss;
+  save(); render();
 }
 function delTplEx(id,i){
   const d = S.templates.find(x=>x.id===id);
@@ -949,6 +991,10 @@ function chartSVG(k, name){
       }
     }
   }
+  return lineChartSVG(pts, t('chartTop'));
+}
+/* generic line chart: pts = [{d:dateIso, w:number}] chronological */
+function lineChartSVG(pts, label){
   if(!pts.length) return `<div class="empty">${t('chartNoData')}</div>`;
   const data = pts.slice(-24);
   const W=360, H=210, padL=44, padR=14, padT=18, padB=30;
@@ -977,13 +1023,28 @@ function chartSVG(k, name){
     ${dots}
     <text x="${padL}" y="${H-8}" fill="var(--dim)" font-size="11">${d0}</text>
     <text x="${W-padR}" y="${H-8}" fill="var(--dim)" font-size="11" text-anchor="end">${d1}</text>
-    <text x="${W-padR}" y="${padT-5}" fill="var(--ghost)" font-size="10" text-anchor="end">${t('chartTop')}</text>
+    <text x="${W-padR}" y="${padT-5}" fill="var(--ghost)" font-size="10" text-anchor="end">${label||''}</text>
   </svg>`;
 }
 
 /* ======================= HISTORY ======================= */
 function htmlHistory(){
   let h = '<div style="height:8px"></div>';
+  /* body weight tracking */
+  h += `<h2 class="sec" style="margin-top:8px">${t('bw')}</h2>
+    <div class="card">
+      <div style="display:flex;gap:8px;align-items:center">
+        <input class="nameinput" id="bw-input" type="text" inputmode="decimal"
+          placeholder="${S.weights.length?fmtW(S.weights[0].kg)+' kg':'kg'}" style="flex:1">
+        <button class="btn small" style="background:var(--accent);color:var(--on-accent);min-height:46px;padding:0 20px" onclick="addWeight()">${t('bwLog')}</button>
+      </div>
+      ${S.weights.length>1?`<div style="margin-top:12px">${lineChartSVG(S.weights.slice(0,24).slice().reverse().map(x=>({d:x.date,w:x.kg})), 'kg')}</div>`:''}
+      ${S.weights.slice(0,5).map(x=>`<div style="display:flex;gap:8px;padding:6px 0;align-items:center;font-size:14px">
+        <span style="color:var(--dim);flex:1">${fmtDate(x.date)}</span>
+        <span style="font-weight:700">${fmtW(x.kg)} kg</span>
+        <button class="dropbtn del" style="min-height:28px" onclick="delWeight('${x.id}')">✕</button></div>`).join('')}
+    </div>
+    <h2 class="sec">${t('tabHistory')}</h2>`;
   if(!S.history.length) return h + `<div class="empty">${t('histEmpty')}</div>`;
   h += S.history.map(w=>{
     const nsets = w.exercises.reduce((a,e)=>a+e.sets.length,0);
@@ -994,9 +1055,10 @@ function htmlHistory(){
       detail = `<div class="histdetail">` + w.exercises.map(e=>
         `<div class="exl"><span class="n">${esc(e.name)}${e.note?` <em style="opacity:.8">— ${esc(e.note)}</em>`:''}</span>
          <span class="s">${e.sets.map(s=>(s.warm?'W ':s.drop?'D ':'')+fmtW(s.weight)+'×'+s.reps).join('&nbsp; ')}</span></div>`).join('') +
-        `<div style="display:flex;gap:10px;margin-top:10px;align-items:center">
+        `<div style="display:flex;gap:8px;margin-top:10px;align-items:center">
           <span style="color:var(--ghost);font-size:13px">${t('histVolume')}: ${Math.round(vol)} kg${w.dur?' · ⏱ '+fmtTime(w.dur):''}</span>
-          <button class="btn danger small" style="margin-left:auto" onclick="event.stopPropagation();delHist('${w.id}')">✕</button>
+          <button class="btn small" style="margin-left:auto;background:var(--accent-bg);color:var(--accent-soft)" onclick="event.stopPropagation();openHistEdit('${w.id}')">✎</button>
+          <button class="btn danger small" onclick="event.stopPropagation();delHist('${w.id}')">✕</button>
         </div></div>`;
     }
     return `<div class="card histrow" onclick="V.expanded=V.expanded==='${w.id}'?null:'${w.id}'; render()">
@@ -1013,6 +1075,121 @@ function delHist(id){
   S.history = S.history.filter(w=>w.id!==id);
   V.expanded = null;
   save(); render();
+}
+
+/* ---- history editing ---- */
+function openHistEdit(id){
+  openModal(`<h3>${t('histEditTitle')}<button class="x" onclick="closeHistEdit()">✕</button></h3>
+    <div id="he-body">${histEditBody(id)}</div>
+    <button class="btn primary" onclick="closeHistEdit()">OK</button>`);
+}
+function closeHistEdit(){ closeModal(); render(); }
+function histEditBody(id){
+  const w = S.history.find(x=>x.id===id);
+  if(!w) return '';
+  return w.exercises.map((e,ei)=>{
+    let workNum = 0;
+    const rows = e.sets.map((s,si)=>{
+      const label = s.warm ? 'W' : s.drop ? 'D' : String(++workNum);
+      return `<div class="setgrid" style="grid-template-columns:30px 1fr 70px 56px 34px">
+        <div class="setnum ${s.warm?'warm':s.drop?'dropn':''}" style="display:flex;align-items:center;justify-content:center;min-height:40px">${label}</div>
+        <div></div>
+        <input type="text" inputmode="decimal" value="${fmtW(s.weight)}"
+          oninput="editHistSet('${id}',${ei},${si},'weight',this.value)">
+        <input type="text" inputmode="numeric" value="${s.reps}"
+          oninput="editHistSet('${id}',${ei},${si},'reps',this.value)">
+        <button class="dropbtn del" onclick="delHistSet('${id}',${ei},${si})">✕</button>
+      </div>`;
+    }).join('');
+    return `<div class="card"><div class="exname">${esc(e.name)}</div>${rows}</div>`;
+  }).join('');
+}
+function editHistSet(id,ei,si,f,v){
+  const w = S.history.find(x=>x.id===id);
+  if(!w || !w.exercises[ei] || !w.exercises[ei].sets[si]) return;
+  const n = parseNum(v);
+  if(!isNaN(n) && n>=0){
+    w.exercises[ei].sets[si][f] = f==='reps' ? Math.round(n) : n;
+    save();
+  }
+}
+function delHistSet(id,ei,si){
+  const w = S.history.find(x=>x.id===id);
+  if(!w || !w.exercises[ei]) return;
+  w.exercises[ei].sets.splice(si,1);
+  if(!w.exercises[ei].sets.length) w.exercises.splice(ei,1);
+  save();
+  const b = $('#he-body');
+  if(b) b.innerHTML = histEditBody(id);
+}
+
+/* ---- body weight ---- */
+function addWeight(){
+  const inp = $('#bw-input');
+  const n = parseNum(inp ? inp.value : '');
+  if(isNaN(n) || n<=0 || n>400){ toast(t('woEmptyVals')); return; }
+  S.weights.unshift({ id:uid(), date:new Date().toISOString(), kg:Math.round(n*10)/10 });
+  save(); render();
+}
+function delWeight(id){
+  if(!confirm(t('bwDel'))) return;
+  S.weights = S.weights.filter(x=>x.id!==id);
+  save(); render();
+}
+
+/* ---- plate calculator ---- */
+function openPlates(xi){
+  let w = NaN;
+  if(xi!=null && S.active && S.active.exercises[xi]){
+    const ex = S.active.exercises[xi];
+    for(let i=0;i<ex.sets.length;i++){
+      const s = ex.sets[i];
+      if(!s.done){
+        w = parseNum(s.w);
+        if(isNaN(w)){ const g = ghostFor(ex,i); if(g) w = g.weight; }
+        break;
+      }
+    }
+  }
+  V.plateBar = V.plateBar || 20;
+  openModal(`<h3>${t('plates')}<button class="x" onclick="closeModal()">✕</button></h3>
+    <div class="card">
+      <input class="nameinput" id="pl-w" type="text" inputmode="decimal" value="${!isNaN(w)?fmtW(w):''}"
+        placeholder="kg" style="font-size:24px;font-weight:800;text-align:center;min-height:56px"
+        oninput="renderPlates()">
+      <div class="setline" style="margin-top:10px">
+        <span class="lb">${t('platesBar')}</span>
+        <div class="seg" id="pl-bars"></div>
+      </div>
+    </div>
+    <div class="card" id="pl-out"></div>`);
+  renderPlatesSeg();
+  renderPlates();
+}
+function renderPlatesSeg(){
+  const el = $('#pl-bars');
+  if(!el) return;
+  el.innerHTML = [20,15,10].map(b=>
+    `<button class="${V.plateBar===b?'on':''}" onclick="V.plateBar=${b};renderPlatesSeg();renderPlates()">${b} kg</button>`).join('');
+}
+function renderPlates(){
+  const out = $('#pl-out');
+  if(!out) return;
+  const w = parseNum($('#pl-w').value);
+  if(isNaN(w) || w<=0){ out.innerHTML = `<div class="empty" style="padding:12px">—</div>`; return; }
+  const side = (w - V.plateBar)/2;
+  if(side <= 0){ out.innerHTML = `<div class="empty" style="padding:12px">${t('platesEmpty')} (${V.plateBar} kg)</div>`; return; }
+  const plates = [25,20,15,10,5,2.5,1.25];
+  const used = [];
+  let rem = side;
+  for(const p of plates){ while(rem >= p - 1e-9){ used.push(p); rem -= p; } }
+  rem = Math.round(rem*100)/100;
+  let html = `<div style="font-size:13px;color:var(--dim);font-weight:600;margin-bottom:8px">${t('platesSide')} — ${fmtW(side)} kg:</div>`;
+  html += used.length
+    ? `<div style="font-size:24px;font-weight:800;color:var(--accent-soft)">${used.map(fmtW).join(' + ')}</div>`
+    : `<div style="font-size:16px;font-weight:700">${t('platesEmpty')}</div>`;
+  if(rem > 0) html += `<div style="margin-top:8px;font-size:13px;color:var(--orange);font-weight:600">${t('platesRem',{n:fmtW(rem)})}</div>`;
+  out.innerHTML = html;
 }
 
 /* ======================= SETTINGS ======================= */
@@ -1075,7 +1252,7 @@ function shareTpl(id){
   const d = S.templates.find(x=>x.id===id);
   if(!d) return;
   const payload = { t:'tpl', name:d.name,
-    ex: d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r })) };
+    ex: d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0 })) };
   const code = encodeShare(payload);
   openModal(`<h3>${t('tplShare')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div style="color:var(--dim);font-size:14px;margin:0 4px 10px">${t('tplShareHint')}</div>
@@ -1084,7 +1261,7 @@ function shareTpl(id){
 }
 function copyBackup(){
   const payload = { t:'bak', s:{ lang:S.lang, theme:S.theme, keepAwake:S.keepAwake,
-    folders:S.folders, customEx:S.customEx, templates:S.templates, history:S.history } };
+    folders:S.folders, customEx:S.customEx, templates:S.templates, history:S.history, weights:S.weights } };
   copyText(encodeShare(payload));
 }
 function openImportModal(kind){
@@ -1110,7 +1287,7 @@ function importTplPayload(d, folderId){
         k = info.id;
       } else continue;
     }
-    tpl.ex.push({ id:uid(), k, s:Math.max(1,Math.min(12,e.s|0||3)), r:Math.max(1,Math.min(50,e.r|0||10)) });
+    tpl.ex.push({ id:uid(), k, s:Math.max(1,Math.min(12,e.s|0||3)), r:Math.max(1,Math.min(50,e.r|0||10)), ss:!!e.ss });
   }
   S.templates.push(tpl);
   return tpl;
@@ -1138,6 +1315,7 @@ function doImport(){
       d.s.folders = [{ id:fid, name:'Upper / Lower', open:true }];
       d.s.templates.forEach(tp=>{ if(!tp.folderId) tp.folderId=fid; });
     }
+    d.s.folders.forEach(f=>{ if(typeof f.pinned==='undefined') f.pinned=true; });
     S = Object.assign(defaultState(), d.s, { active:null });
     save(); applyTheme(); closeModal();
     go('home');
