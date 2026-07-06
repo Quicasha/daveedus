@@ -18,7 +18,6 @@ const I18N = {
     woCancel:'Atšaukti treniruotę', woCancelConfirm:'Atšaukti treniruotę? Įvesti duomenys nebus išsaugoti.',
     woSwitchConfirm:'Jau vyksta kita treniruotė. Ją atšaukti ir pradėti naują?',
     woSet:'Set', woPrev:'Anksčiau', woKg:'kg', woReps:'kart.', woNote:'Pastaba...',
-    woSug:'Siūlymas', woSugApply:'Taikyti', woSugOr:'arba +1 kart.',
     woAddSet:'+ Setas', woRemoveSet:'− Setas', woRemoveDone:'Setas jau atliktas',
     woAddEx:'+ Pridėti pratimą', woDelEx:'Išimti pratimą „{n}“?',
     woEmptyVals:'Įvesk svorį ir kartojimus', woSaved:'Treniruotė išsaugota 💪',
@@ -36,6 +35,9 @@ const I18N = {
     folderShare:'Splito kodas', folderShareHint:'Nusiųsk šį kodą draugui — jis gaus visą splitą su visomis programomis.',
     folderImported:'Splitas „{n}“ pridėtas ✓', tplFolder:'Splitas', deleteBtn:'Ištrinti', nextBadge:'KITA',
     histEditTitle:'Redaguoti treniruotę',
+    histArch:'Archyvuoti', histUnarch:'Grąžinti', archTitle:'Archyvas',
+    exMine:'Mano', exMineEmpty:'Dar nieko nedarei — pasirink „Visi“ ir pradėk!',
+    saveDone:'Išsaugoti',
     bw:'Kūno svoris', bwLog:'Įrašyti', bwDel:'Ištrinti šį įrašą?',
     plates:'Svarelių kalkuliatorius', platesBar:'Grifas', platesSide:'Ant vienos pusės',
     platesRem:'{n} kg pusėj netelpa iš standartinių svarelių', platesEmpty:'Tuščias grifas',
@@ -75,7 +77,6 @@ const I18N = {
     woCancel:'Cancel workout', woCancelConfirm:'Cancel workout? Entered data will not be saved.',
     woSwitchConfirm:'Another workout is in progress. Discard it and start a new one?',
     woSet:'Set', woPrev:'Previous', woKg:'kg', woReps:'reps', woNote:'Note...',
-    woSug:'Suggestion', woSugApply:'Apply', woSugOr:'or +1 rep',
     woAddSet:'+ Set', woRemoveSet:'− Set', woRemoveDone:'Set already completed',
     woAddEx:'+ Add exercise', woDelEx:'Remove exercise “{n}”?',
     woEmptyVals:'Enter weight and reps', woSaved:'Workout saved 💪',
@@ -93,6 +94,9 @@ const I18N = {
     folderShare:'Split code', folderShareHint:'Send this code to a friend — they get the whole split with all templates.',
     folderImported:'Split “{n}” added ✓', tplFolder:'Split', deleteBtn:'Delete', nextBadge:'NEXT',
     histEditTitle:'Edit workout',
+    histArch:'Archive', histUnarch:'Restore', archTitle:'Archive',
+    exMine:'Mine', exMineEmpty:'Nothing done yet — pick “All” and get started!',
+    saveDone:'Save',
     bw:'Body weight', bwLog:'Log', bwDel:'Delete this entry?',
     plates:'Plate calculator', platesBar:'Bar', platesSide:'Per side',
     platesRem:"{n} kg per side doesn't fit standard plates", platesEmpty:'Empty bar',
@@ -179,7 +183,8 @@ function save(){
 }
 /* view state (not persisted) */
 const V = { screen:'home', editTpl:null, viewFolder:null, exDetail:null, expanded:null,
-            pickerCb:null, pickerQ:'', pickerG:'all', exQ:'', exG:'all' };
+            pickerCb:null, pickerQ:'', pickerG:'all', exQ:'', exG:'mine',
+            exTplFilter:'', exFilterNames:[], showArch:false };
 
 /* exercise lookup: built-in DB + user's custom exercises */
 function exInfo(k){
@@ -279,12 +284,12 @@ function renderTopbar(){
          <button class="finishbtn" onclick="finishWorkout()">${t('woFinish')}</button>`;
   }else if(V.screen==='tpledit'){
     const d = S.templates.find(x=>x.id===V.editTpl);
-    const back = (d && d.folderId && S.folders.some(f=>f.id===d.folderId))
-      ? `openSplit('${d.folderId}')` : `go('program')`;
-    h = `<button class="iconbtn" onclick="${back}">‹</button><h1>${d?esc(d.name):''}</h1>`;
+    h = `<button class="iconbtn" onclick="closeTplEdit()">‹</button><h1>${d?esc(d.name):''}</h1>
+         <button class="finishbtn" onclick="closeTplEdit()">✓ ${t('saveDone')}</button>`;
   }else if(V.screen==='splitview'){
     const f = S.folders.find(x=>x.id===V.viewFolder);
-    h = `<button class="iconbtn" onclick="go('program')">‹</button><h1>${f?esc(f.name):''}</h1>`;
+    h = `<button class="iconbtn" onclick="go('program')">‹</button><h1>${f?esc(f.name):''}</h1>
+         <button class="finishbtn" onclick="go('program')">✓ ${t('saveDone')}</button>`;
   }else if(V.screen==='exdetail'){
     h = `<button class="iconbtn" onclick="go('exercises')">‹</button><h1>${esc(exName(V.exDetail, V.exDetailName))}</h1>`;
   }else{
@@ -321,7 +326,7 @@ function weekCount(){
   const now = new Date();
   const day = (now.getDay()+6)%7; /* Monday = 0 */
   const monday = new Date(now); monday.setHours(0,0,0,0); monday.setDate(now.getDate()-day);
-  return S.history.filter(h=>new Date(h.date)>=monday).length;
+  return S.history.filter(h=>!h.arch && new Date(h.date)>=monday).length;
 }
 function htmlHome(){
   const dateStr = new Date().toLocaleDateString(S.lang==='lt'?'lt-LT':'en-GB',
@@ -349,20 +354,26 @@ function htmlHome(){
       <div class="tsub">${last?daysAgoStr(last.date):t('never')} · ${esc(names)}</div></div>
       <div class="go">▶</div></button>`;
   };
-  /* home shows only PINNED splits; if none pinned, fall back to everything */
+  /* home shows only PINNED splits as a grid of split cards; fall back to all when none pinned */
   const pinned = S.folders.filter(f=>f.pinned);
   const showFolders = pinned.length ? pinned : S.folders;
-  for(const f of showFolders){
+  const cards = showFolders.map(f=>{
     const tpls = S.templates.filter(x=>x.folderId===f.id);
-    if(!tpls.length) continue;
+    if(!tpls.length) return '';
     /* suggest the workout AFTER the most recently done one in this split (cyclic) */
     let nextId = tpls[0].id;
     for(const hw of S.history){
+      if(hw.arch) continue;
       const idx = tpls.findIndex(x=>x.id===hw.tplId);
       if(idx>=0){ nextId = tpls[(idx+1)%tpls.length].id; break; }
     }
-    h += `<h2 class="sec">${esc(f.name)}</h2>` + tpls.map(d=>tplBtn(d, d.id===nextId)).join('');
-  }
+    const rows = tpls.map(d=>`<button class="sprow ${d.id===nextId?'next':''}" onclick="startWorkout('${d.id}')">
+      <span class="spn">${esc(d.name)}</span>
+      ${d.id===nextId?`<span class="nextchip">${t('nextBadge')}</span>`:''}</button>`).join('');
+    return `<div class="splitcard">
+      <div class="sphead" onclick="openSplit('${f.id}')">${esc(f.name)} ›</div>${rows}</div>`;
+  }).filter(Boolean);
+  if(cards.length) h += `<h2 class="sec">${t('homeTemplates')}</h2><div class="splitgrid">${cards.join('')}</div>`;
   const loose = looseTemplates();
   if(loose.length && !pinned.length){
     h += `<h2 class="sec">${S.folders.length?t('folderNone'):t('homeTemplates')}</h2>` + loose.map(d=>tplBtn(d,false)).join('');
@@ -373,13 +384,13 @@ function htmlHome(){
 /* ======================= WORKOUT ======================= */
 function buildActiveEx(k, name, sets, reps, ss){
   const last = lastForExercise(k, name);
-  return { id:uid(), k, name, targetSets:sets, targetReps:reps, note:'', ss:!!ss,
-    last, sug:suggestionFor(sets, reps, last), sugOn:false,
+  return { id:uid(), k, name, targetSets:sets, targetReps:reps, note:'', ss:!!ss, last,
     sets: Array.from({length:sets}, ()=>({ w:'', r:'', warm:false, drop:false, done:false, cls:'' })) };
 }
 function lastForExercise(k, name){
   const nm = (name||'').trim().toLowerCase();
   for(const h of S.history){
+    if(h.arch) continue;
     for(const e of h.exercises){
       if(e.k===k || (nm && e.name && e.name.trim().toLowerCase()===nm)){
         if(e.sets && e.sets.length) return { date:h.date, sets:e.sets };
@@ -387,15 +398,6 @@ function lastForExercise(k, name){
     }
   }
   return null;
-}
-function suggestionFor(targetSets, targetReps, last){
-  if(!last) return null;
-  const work = last.sets.filter(s=>!s.warm && !s.drop);
-  if(work.length < targetSets) return null;
-  if(!work.every(s => s.reps >= targetReps)) return null;
-  const maxW = Math.max(...work.map(s=>s.weight));
-  if(!isFinite(maxW) || maxW<=0) return null;
-  return { w: Math.round((maxW+2.5)*100)/100, r: targetReps };
 }
 function startWorkout(tplId){
   const tpl = S.templates.find(d=>d.id===tplId);
@@ -426,14 +428,13 @@ function ghostFor(ex, si){
     let di = 0; for(let i=0;i<si;i++) if(ex.sets[i].drop) di++;
     return prevDrop[di] || null;
   }
-  if(ex.sugOn && ex.sug) return { weight:ex.sug.w, reps:ex.sug.r };
   if(!prev) return null;
   const prevWork = prev.filter(s=>!s.warm && !s.drop);
   if(!prevWork.length) return null;
   let wi = 0; for(let i=0;i<si;i++) if(!ex.sets[i].warm && !ex.sets[i].drop) wi++;
   return prevWork[Math.min(wi, prevWork.length-1)] || null;
 }
-/* comparison target = actual previous session (never the suggestion) */
+/* comparison target = same working set of the previous session */
 function realPrev(ex, si){
   const prev = ex.last ? ex.last.sets : null;
   if(!prev) return null;
@@ -448,11 +449,6 @@ function htmlWorkout(){
   if(!S.active){ V.screen='home'; return htmlHome(); }
   let h = '<div style="height:8px"></div>';
   h += S.active.exercises.map((ex,xi)=>{
-    let sug = '';
-    if(ex.sug && !ex.sugOn){
-      sug = `<div class="sug"><span>💪 ${t('woSug')}: <b>${fmtW(ex.sug.w)} ${t('woKg')} × ${ex.sug.r}</b> <span style="opacity:.7">(${t('woSugOr')})</span></span>
-             <button onclick="applySug(${xi})">${t('woSugApply')}</button></div>`;
-    }
     const hdr = `<div class="setgrid hdr"><div>${t('woSet')}</div><div>${t('woPrev')}</div>
       <div>${t('woKg')}</div><div>${t('woReps')}</div><div>✓</div><div></div></div>`;
     let workNum = 0;
@@ -490,7 +486,7 @@ function htmlWorkout(){
         <button class="minibtn del" onclick="removeWorkoutEx(${xi})">✕</button>
       </div>
       <input class="exnote" placeholder="${t('woNote')}" value="${esc(ex.note)}" oninput="onNoteInput(${xi},this.value)">
-      ${sug}${hdr}${rows}
+      ${hdr}${rows}
       <div class="setctl">
         <button onclick="addSet(${xi})">${t('woAddSet')}</button>
         <button onclick="removeSet(${xi})">${t('woRemoveSet')}</button>
@@ -514,7 +510,6 @@ function dismissRest(){
 }
 function onSetInput(xi,si,f,v){ S.active.exercises[xi].sets[si][f]=v; save(); }
 function onNoteInput(xi,v){ S.active.exercises[xi].note=v; save(); }
-function applySug(xi){ S.active.exercises[xi].sugOn=true; save(); render(); }
 function toggleWarm(xi,si){
   const s = S.active.exercises[xi].sets[si];
   if(s.done || s.drop) return;
@@ -693,6 +688,7 @@ function htmlSplitView(){
     </div>`;
   h += tpls.map(tplCardHtml).join('') || `<div class="empty">—</div>`;
   h += `<button class="btn ghostbtn" onclick="addTplTo('${f.id}')">${t('tplNew')}</button>
+        <button class="btn primary" onclick="go('program')">✓ ${t('saveDone')}</button>
         <button class="btn" onclick="shareFolder('${f.id}')">⤴ ${t('folderShare')}</button>
         <button class="btn danger" onclick="delFolder('${f.id}')">✕ ${t('deleteBtn')}</button>`;
   return h;
@@ -730,6 +726,11 @@ function shareFolder(id){
     <button class="btn primary" style="margin-top:12px" onclick="copyText(document.querySelector('.codebox').value)">⤴ ${t('copy')}</button>`);
 }
 function openTpl(id){ V.editTpl=id; go('tpledit'); }
+function closeTplEdit(){
+  const d = S.templates.find(x=>x.id===V.editTpl);
+  if(d && d.folderId && S.folders.some(f=>f.id===d.folderId)) openSplit(d.folderId);
+  else go('program');
+}
 function addTpl(){ addTplTo(null); }
 function addTplTo(fid){
   const d = { id:uid(), name:t('tplDefaultName'), folderId:fid||null, ex:[] };
@@ -785,6 +786,7 @@ function htmlTplEdit(){
   if(!d.ex.length) h += `<div class="empty">—</div>`;
   h += `</div>
     <button class="btn ghostbtn" onclick="addTplEx('${d.id}')">${t('tplAddEx')}</button>
+    <button class="btn primary" onclick="closeTplEdit()">✓ ${t('saveDone')}</button>
     <button class="btn" onclick="shareTpl('${d.id}')">⤴ ${t('tplShare')}</button>`;
   return h;
 }
@@ -845,7 +847,8 @@ function closeModal(){
   V.pickerCb = null;
 }
 function openPicker(cb){
-  V.pickerCb = cb; V.pickerQ=''; V.pickerG='all';
+  V.pickerCb = cb; V.pickerQ='';
+  V.pickerG = doneExerciseList().length ? 'mine' : 'all';
   openModal(`<h3>${t('tabExercises')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div class="searchbox">${TAB_ICONS.exercises}
       <input id="pk-q" type="text" placeholder="${t('exSearch')}" oninput="V.pickerQ=this.value; renderPickerList()">
@@ -858,8 +861,8 @@ function openPicker(cb){
 function renderPickerChips(){
   const el = $('#pk-chips');
   if(!el) return;
-  el.innerHTML = ['all'].concat(EX_GROUPS).map(g=>
-    `<button class="chip ${V.pickerG===g?'on':''}" onclick="V.pickerG='${g}'; renderPickerChips(); renderPickerList()">${t('g_'+g)}</button>`).join('');
+  el.innerHTML = ['mine','all'].concat(EX_GROUPS).map(g=>
+    `<button class="chip ${V.pickerG===g?'on':''}" onclick="V.pickerG='${g}'; renderPickerChips(); renderPickerList()">${chipLabel(g)}</button>`).join('');
 }
 function filterExercises(q, g){
   q = (q||'').trim().toLowerCase();
@@ -870,7 +873,13 @@ function filterExercises(q, g){
 function renderPickerList(){
   const el = $('#pk-list');
   if(!el) return;
-  const list = filterExercises(V.pickerQ, V.pickerG);
+  let list;
+  if(V.pickerG==='mine'){
+    const q = (V.pickerQ||'').trim().toLowerCase();
+    list = doneExerciseList().filter(x=>!q || x.n.toLowerCase().includes(q));
+  }else{
+    list = filterExercises(V.pickerQ, V.pickerG);
+  }
   el.innerHTML = list.map(x=>
     `<button class="exitem" onclick="pickEx('${x.id}')">
       <div class="xi"><div class="xn">${esc(x.n)}</div>
@@ -905,10 +914,25 @@ function saveCustomEx(){
 }
 
 /* ======================= EXERCISES tab ======================= */
-function exStats(k, name){
+/* exercises the user has actually done, most recent first */
+function doneExerciseList(){
+  const seen = new Map();
+  for(const h of S.history){
+    if(h.arch) continue;
+    for(const e of h.exercises){
+      const info = exInfo(e.k) ||
+        allExercises().find(x=>x.n.toLowerCase()===(e.name||'').trim().toLowerCase());
+      if(info && !seen.has(info.id)) seen.set(info.id, info);
+    }
+  }
+  return [...seen.values()];
+}
+function chipLabel(g){ return g==='mine' ? t('exMine') : t('g_'+g); }
+function exStats(k, name, tplName){
   const nm = (name||'').trim().toLowerCase();
   let best = 0, sessions = 0, lastDate = null;
   for(const h of S.history){
+    if(h.arch || (tplName && h.name!==tplName)) continue;
     for(const e of h.exercises){
       if(e.k===k || (nm && e.name && e.name.trim().toLowerCase()===nm)){
         const work = e.sets.filter(s=>!s.warm && !s.drop);
@@ -928,15 +952,25 @@ function htmlExercises(){
       <input id="ex-q" type="text" value="${esc(V.exQ)}" placeholder="${t('exSearch')}"
         oninput="V.exQ=this.value; renderExList()">
     </div>
-    <div class="chips">` + ['all'].concat(EX_GROUPS).map(g=>
-      `<button class="chip ${V.exG===g?'on':''}" onclick="V.exG='${g}'; render()">${t('g_'+g)}</button>`).join('')
+    <div class="chips">` + ['mine','all'].concat(EX_GROUPS).map(g=>
+      `<button class="chip ${V.exG===g?'on':''}" onclick="V.exG='${g}'; render()">${chipLabel(g)}</button>`).join('')
     + `</div><div id="ex-list"></div>`;
   return h;
 }
 function renderExList(){
   const el = $('#ex-list');
   if(!el) return;
-  const list = filterExercises(V.exQ, V.exG);
+  let list;
+  if(V.exG==='mine'){
+    const q = (V.exQ||'').trim().toLowerCase();
+    list = doneExerciseList().filter(x=>!q || x.n.toLowerCase().includes(q));
+    if(!list.length){
+      el.innerHTML = `<div class="empty">${t('exMineEmpty')}</div>`;
+      return;
+    }
+  }else{
+    list = filterExercises(V.exQ, V.exG);
+  }
   el.innerHTML = list.map(x=>{
     const st = exStats(x.id, x.n);
     return `<button class="exitem" onclick="openExDetailByKey('${x.id}')">
@@ -947,6 +981,7 @@ function renderExList(){
 }
 function openExDetailByKey(k){
   V.exDetail = k;
+  V.exTplFilter = '';
   const i = exInfo(k);
   V.exDetailName = i ? i.n : k;
   closeModal();
@@ -956,22 +991,35 @@ function htmlExDetail(){
   const k = V.exDetail;
   const info = exInfo(k);
   const name = info ? info.n : (V.exDetailName||k);
-  const st = exStats(k, name);
+  const nm = name.trim().toLowerCase();
+  const matches = e => e.k===k || (e.name && e.name.trim().toLowerCase()===nm);
+  const filter = V.exTplFilter || null;
+  const st = exStats(k, name, filter);
   let h = `<div style="height:8px"></div>`;
   if(info) h += `<div style="color:var(--dim);font-size:14px;margin:0 4px 12px">${t('g_'+info.g)} · ${t('e_'+info.e)}</div>`;
+  /* filter chips: analyse this exercise per template (e.g. Upper A vs Upper B) */
+  V.exFilterNames = [...new Set(S.history.filter(w=>!w.arch && w.exercises.some(matches)).map(w=>w.name))];
+  if(V.exFilterNames.length>1){
+    h += `<div class="chips">
+      <button class="chip ${!filter?'on':''}" onclick="V.exTplFilter=''; render()">${t('g_all')}</button>` +
+      V.exFilterNames.map((n,i)=>
+        `<button class="chip ${filter===n?'on':''}" onclick="V.exTplFilter=V.exFilterNames[${i}]; render()">${esc(n)}</button>`).join('') +
+      `</div>`;
+  }
   h += `<div class="statrow">
     <div class="stat"><div class="v">${st.best?fmtW(st.best)+' kg':'—'}</div><div class="l">${t('exBest')}</div></div>
     <div class="stat"><div class="v">${st.sessions}</div><div class="l">${t('exSessions')}</div></div>
     <div class="stat"><div class="v" style="font-size:16px;padding-top:6px">${st.lastDate?daysAgoStr(st.lastDate):'—'}</div><div class="l">${t('exLastDone')}</div></div>
   </div>`;
   if(!st.sessions) return h + `<div class="empty">${t('exNoHistory')}</div>`;
-  h += `<div id="chartbox" class="card">${chartSVG(k, name)}</div>`;
+  h += `<div id="chartbox" class="card">${chartSVG(k, name, filter)}</div>`;
   /* session log */
   const rows = [];
   for(const w of S.history){
+    if(w.arch || (filter && w.name!==filter)) continue;
     for(const e of w.exercises){
-      if(e.k===k || (e.name && e.name.trim().toLowerCase()===name.trim().toLowerCase())){
-        rows.push(`<div class="exl"><span class="n">${fmtDate(w.date)}</span>
+      if(matches(e)){
+        rows.push(`<div class="exl"><span class="n">${fmtDate(w.date)} <span style="opacity:.6">· ${esc(w.name)}</span></span>
           <span class="s">${e.sets.map(s=>(s.warm?'W ':s.drop?'D ':'')+fmtW(s.weight)+'×'+s.reps).join('&nbsp; ')}</span></div>`);
       }
     }
@@ -979,11 +1027,12 @@ function htmlExDetail(){
   h += `<div class="card"><div class="histdetail" style="border:none;margin:0;padding:0">${rows.join('')}</div></div>`;
   return h;
 }
-function chartSVG(k, name){
+function chartSVG(k, name, tplName){
   const nm = (name||'').trim().toLowerCase();
   const pts = [];
   for(let i=S.history.length-1; i>=0; i--){
     const w = S.history[i];
+    if(w.arch || (tplName && w.name!==tplName)) continue;
     for(const e of w.exercises){
       if(e.k===k || (e.name && e.name.trim().toLowerCase()===nm)){
         const work = e.sets.filter(s=>!s.warm && !s.drop);
@@ -1046,29 +1095,44 @@ function htmlHistory(){
     </div>
     <h2 class="sec">${t('tabHistory')}</h2>`;
   if(!S.history.length) return h + `<div class="empty">${t('histEmpty')}</div>`;
-  h += S.history.map(w=>{
-    const nsets = w.exercises.reduce((a,e)=>a+e.sets.length,0);
-    const vol = w.exercises.reduce((a,e)=>a+e.sets.filter(s=>!s.warm).reduce((b,s)=>b+s.weight*s.reps,0),0);
-    const open = V.expanded===w.id;
-    let detail = '';
-    if(open){
-      detail = `<div class="histdetail">` + w.exercises.map(e=>
-        `<div class="exl"><span class="n">${esc(e.name)}${e.note?` <em style="opacity:.8">— ${esc(e.note)}</em>`:''}</span>
-         <span class="s">${e.sets.map(s=>(s.warm?'W ':s.drop?'D ':'')+fmtW(s.weight)+'×'+s.reps).join('&nbsp; ')}</span></div>`).join('') +
-        `<div style="display:flex;gap:8px;margin-top:10px;align-items:center">
-          <span style="color:var(--ghost);font-size:13px">${t('histVolume')}: ${Math.round(vol)} kg${w.dur?' · ⏱ '+fmtTime(w.dur):''}</span>
-          <button class="btn small" style="margin-left:auto;background:var(--accent-bg);color:var(--accent-soft)" onclick="event.stopPropagation();openHistEdit('${w.id}')">✎</button>
-          <button class="btn danger small" onclick="event.stopPropagation();delHist('${w.id}')">✕</button>
-        </div></div>`;
-    }
-    return `<div class="card histrow" onclick="V.expanded=V.expanded==='${w.id}'?null:'${w.id}'; render()">
-      <div class="hd">
-        <span class="dt">${fmtDate(w.date)}</span>
-        <span class="dn">${esc(w.name)}</span>
-        <span class="sm">${nsets} ${t('histSets')}${w.dur?' · '+fmtTime(w.dur):''}</span>
-      </div>${detail}</div>`;
-  }).join('');
+  const act = S.history.filter(w=>!w.arch);
+  const arch = S.history.filter(w=>w.arch);
+  h += act.map(histRowHtml).join('') || `<div class="empty">—</div>`;
+  if(arch.length){
+    h += `<h2 class="sec" style="cursor:pointer" onclick="V.showArch=!V.showArch; render()">
+            ${V.showArch?'▾':'▸'} 📦 ${t('archTitle')} (${arch.length})</h2>`;
+    if(V.showArch) h += arch.map(histRowHtml).join('');
+  }
   return h;
+}
+function histRowHtml(w){
+  const nsets = w.exercises.reduce((a,e)=>a+e.sets.length,0);
+  const vol = w.exercises.reduce((a,e)=>a+e.sets.filter(s=>!s.warm).reduce((b,s)=>b+s.weight*s.reps,0),0);
+  const open = V.expanded===w.id;
+  let detail = '';
+  if(open){
+    detail = `<div class="histdetail">` + w.exercises.map(e=>
+      `<div class="exl"><span class="n">${esc(e.name)}${e.note?` <em style="opacity:.8">— ${esc(e.note)}</em>`:''}</span>
+       <span class="s">${e.sets.map(s=>(s.warm?'W ':s.drop?'D ':'')+fmtW(s.weight)+'×'+s.reps).join('&nbsp; ')}</span></div>`).join('') +
+      `<div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
+        <span style="color:var(--ghost);font-size:13px">${t('histVolume')}: ${Math.round(vol)} kg${w.dur?' · ⏱ '+fmtTime(w.dur):''}</span>
+        <button class="btn small" style="margin-left:auto;background:var(--input);color:var(--dim)" onclick="event.stopPropagation();toggleArch('${w.id}')">${w.arch?'↩ '+t('histUnarch'):'📦'}</button>
+        <button class="btn small" style="background:var(--accent-bg);color:var(--accent-soft)" onclick="event.stopPropagation();openHistEdit('${w.id}')">✎</button>
+        <button class="btn danger small" onclick="event.stopPropagation();delHist('${w.id}')">✕</button>
+      </div></div>`;
+  }
+  return `<div class="card histrow" style="${w.arch?'opacity:.65':''}" onclick="V.expanded=V.expanded==='${w.id}'?null:'${w.id}'; render()">
+    <div class="hd">
+      <span class="dt">${fmtDate(w.date)}</span>
+      <span class="dn">${esc(w.name)}</span>
+      <span class="sm">${nsets} ${t('histSets')}${w.dur?' · '+fmtTime(w.dur):''}</span>
+    </div>${detail}</div>`;
+}
+function toggleArch(id){
+  const w = S.history.find(x=>x.id===id);
+  if(!w) return;
+  w.arch = !w.arch;
+  save(); render();
 }
 function delHist(id){
   if(!confirm(t('histDel'))) return;
