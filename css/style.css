@@ -105,7 +105,7 @@ h2.sec{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(
 .lastnote{background:var(--accent-bg); color:var(--accent-soft); border-radius:9px;
   padding:8px 12px; font-size:13px; margin-top:10px; font-style:italic;}
 .exnote{width:100%; background:var(--input); color:var(--text); border:none; border-radius:9px;
-  min-height:38px; padding:8px 12px; font-size:14px; margin-top:10px; -webkit-appearance:none;}
+  min-height:38px; padding:8px 12px; font-size:16px; margin-top:10px; -webkit-appearance:none;}
 .exnote::placeholder{color:var(--ghost);}
 .exnote:focus{outline:none;}
 /* home: grid of split cards with their templates inside */
@@ -137,7 +137,7 @@ h2.sec{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(
 /* dropset rows — smaller, indented */
 .setrow-wrap.droprow{margin-left:20px;}
 .droprow .setgrid{margin-top:4px;}
-.droprow .setgrid input{min-height:34px; font-size:15px;}
+.droprow .setgrid input{min-height:34px; font-size:16px;}
 .droprow .checkbtn{min-height:34px; font-size:13px;}
 .droprow .setnum{min-height:34px; font-size:13px;}
 .droprow .prev{font-size:11px;}
@@ -248,7 +248,7 @@ h2.sec{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(
 #modal .sheet h3 .x{margin-left:auto; background:var(--input); border:none;
   color:var(--dim); width:34px; height:34px; border-radius:50%; font-size:14px;}
 .codebox{width:100%; background:var(--input); border:none; border-radius:12px;
-  color:var(--text); font-size:12px; font-family:ui-monospace,Consolas,monospace; padding:12px;
+  color:var(--text); font-size:16px; font-family:ui-monospace,Consolas,monospace; padding:12px;
   min-height:110px; word-break:break-all; resize:none;}
 .codebox:focus{outline:none; box-shadow:0 0 0 2px var(--accent);}
 

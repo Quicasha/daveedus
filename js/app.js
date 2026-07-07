@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.3.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.3.1'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -36,6 +36,8 @@ const I18N = {
     folderName:'Programos pavadinimas', folderDel:'Ištrinti programą „{n}“? Treniruotės liks, tik be programos.',
     folderShare:'Programos kodas', folderShareHint:'Nusiųsk šį kodą draugui — jis gaus visą programą su visomis treniruotėmis.',
     folderImported:'Programa „{n}“ pridėta ✓', tplFolder:'Programa', deleteBtn:'Ištrinti', nextBadge:'KITA',
+    progEmpty:'Programų dar nėra — spausk „+ Nauja programa“ apačioje ir susikurk savo splitą.',
+    homeNoProg:'Programų nėra — susikurk skiltyje „Programos“.',
     histEditTitle:'Redaguoti treniruotę',
     tplDup:'Dubliuoti', tplDupSuffix:'(kopija)',
     woSec:'sek.',
@@ -110,6 +112,8 @@ const I18N = {
     folderName:'Program name', folderDel:'Delete program “{n}”? Workouts will remain, just without the program.',
     folderShare:'Program code', folderShareHint:'Send this code to a friend — they get the whole program with all workouts.',
     folderImported:'Program “{n}” added ✓', tplFolder:'Program', deleteBtn:'Delete', nextBadge:'NEXT',
+    progEmpty:'No programs yet — tap “+ New program” below and build your split.',
+    homeNoProg:'No programs — create one in the Programs tab.',
     histEditTitle:'Edit workout',
     tplDup:'Duplicate', tplDupSuffix:'(copy)',
     woSec:'sec',
@@ -184,21 +188,24 @@ function seedTemplates(fid){
 }
 function defaultState(){
   const fid = uid();
-  return { lang:'lt', theme:'auto', keepAwake:true, lastBackup:0, bakSnooze:0,
+  return { lang:'lt', theme:'auto', keepAwake:true, lastBackup:0, bakSnooze:0, mig13:true,
            folders:[{ id:fid, name:'Upper / Lower', open:true, pinned:true }],
            customEx:[], templates:seedTemplates(fid), history:[], weights:[], active:null };
 }
 /* validate + migrate a raw state object; returns null if unusable */
 function hydrate(s){
   if(!s || !Array.isArray(s.templates)) return null;
+  try{ delete s.__proto__; }catch(e){} /* harden against crafted import codes */
   /* migration: older data had no program folders */
   if(!Array.isArray(s.folders)) s.folders = [];
-  if(!s.folders.length && s.templates.length){
-    /* recover data from the flat era: group everything under one program */
+  if(!s.mig13 && !s.folders.length && s.templates.length){
+    /* one-time recovery of flat-era data: group everything under one program.
+       Guarded by mig13 so deleting all programs later does not resurrect them. */
     const fid = uid();
     s.folders = [{ id:fid, name:'Upper / Lower', open:true, pinned:true }];
     s.templates.forEach(tp=>{ tp.folderId = fid; });
   }
+  s.mig13 = true;
   s.folders.forEach(f=>{ if(typeof f.pinned==='undefined') f.pinned = true; });
   if(!Array.isArray(s.weights)) s.weights = [];
   return Object.assign(defaultState(), s);
@@ -480,6 +487,9 @@ function htmlHome(){
   if(loose.length && !pinned.length){
     h += `<h2 class="sec">${S.folders.length?t('folderNone'):t('homeTemplates')}</h2>` + loose.map(d=>tplBtn(d,false)).join('');
   }
+  if(!cards.length && !loose.length){
+    h += `<div class="empty">${t('homeNoProg')}</div>`;
+  }
   return h;
 }
 
@@ -651,7 +661,7 @@ function toggleSet(xi,si){
   if(isNaN(w) && g) w = g.weight;
   if(isNaN(r) && g) r = g.reps;
   if(isNaN(w) && isTimeEx(ex.k)) w = 0; /* plank & co: weight optional */
-  if(isNaN(w) || isNaN(r)){ toast(t('woEmptyVals')); return; }
+  if(isNaN(w) || isNaN(r) || w<0 || r<1 || w>2000 || r>2000){ toast(t('woEmptyVals')); return; }
   s.w = fmtW(w); s.r = String(Math.round(r)); s.done = true;
   const real = realPrev(ex,si);
   if(!real || s.warm || s.drop) s.cls = 'none';
@@ -686,7 +696,12 @@ function toggleWoSS(xi){
 function removeWorkoutEx(xi){
   const ex = S.active.exercises[xi];
   if(!confirm(t('woDelEx',{n:ex.name}))) return;
-  if(S.active.rest && S.active.rest.key.split('-')[0]==String(xi)) S.active.rest=null;
+  const r = S.active.rest;
+  if(r){
+    const [rx, rs] = r.key.split('-').map(Number);
+    if(rx===xi) S.active.rest = null;              /* rest belonged to the removed exercise */
+    else if(rx>xi) r.key = (rx-1)+'-'+rs;          /* exercises after it shift down by one */
+  }
   S.active.exercises.splice(xi,1);
   save(); render();
 }
@@ -789,12 +804,16 @@ function htmlProgram(){
       <div class="tsub">${esc(names)||'—'}</div></div>
       <button class="minibtn ${f.pinned?'acc':''}" style="${f.pinned?'':'opacity:.4'}"
         onclick="event.stopPropagation(); togglePin('${f.id}')">📌</button>
+      <button class="minibtn del" onclick="event.stopPropagation(); delFolder('${f.id}')">✕</button>
       <div class="go">›</div></div>`;
   }).join('');
   const loose = looseTemplates();
   if(loose.length){
     if(S.folders.length) h += `<h2 class="sec">${t('folderNone')}</h2>`;
     h += loose.map(tplCardHtml).join('');
+  }
+  if(!S.folders.length && !loose.length){
+    h += `<div class="empty">${t('progEmpty')}</div>`;
   }
   h += `<div style="height:8px"></div>
         <button class="btn ghostbtn" onclick="addFolder()">${t('folderNew')}</button>
@@ -865,7 +884,6 @@ function closeTplEdit(){
   if(d && d.folderId && S.folders.some(f=>f.id===d.folderId)) openSplit(d.folderId);
   else go('program');
 }
-function addTpl(){ addTplTo(null); }
 function addTplTo(fid){
   const d = { id:uid(), name:t('tplDefaultName'), folderId:fid||null, ex:[] };
   S.templates.push(d);
@@ -1352,6 +1370,13 @@ function delHistSet(id,ei,si){
   if(!w || !w.exercises[ei]) return;
   w.exercises[ei].sets.splice(si,1);
   if(!w.exercises[ei].sets.length) w.exercises.splice(ei,1);
+  if(!w.exercises.length){
+    /* last set of the last exercise deleted — the workout itself is gone */
+    S.history = S.history.filter(x=>x.id!==id);
+    V.expanded = null;
+    save(); closeModal(); render();
+    return;
+  }
   save();
   const b = $('#he-body');
   if(b) b.innerHTML = histEditBody(id);
