@@ -6,6 +6,8 @@
    ============================================================ */
 'use strict';
 
+const APP_VER = '1.1.0'; /* bump together with CACHE in sw.js on every release */
+
 /* ======================= i18n ======================= */
 const I18N = {
   lt: {
@@ -48,6 +50,7 @@ const I18N = {
     protNoSnaps:'Kopijų dar nėra — atsiras po kito išsaugojimo.',
     protRestored:'Atkurta ✓', protRecovered:'Duomenys atkurti iš atsarginės saugyklos ✓',
     protHint:'Kasdien automatiškai išsaugoma kopija įrenginyje, o duomenys dubliuojami į antrą saugyklą — jei viena sugestų, atsistatys iš kitos. Retkarčiais nusikopijuok ir atsarginį kodą: jis vienintelis padės pametus telefoną.',
+    updToast:'Atnaujinta į naujausią versiją ✓',
     exCreateMode:'Tipas', modeReps:'Kartai', modeTime:'Laikas (sek.)',
     histArch:'Archyvuoti', histUnarch:'Grąžinti', archTitle:'Archyvas',
     exMine:'Mano', exMineEmpty:'Dar nieko nedarei — pasirink „Visi“ ir pradėk!',
@@ -121,6 +124,7 @@ const I18N = {
     protNoSnaps:'No snapshots yet — one will appear after the next save.',
     protRestored:'Restored ✓', protRecovered:'Data recovered from backup storage ✓',
     protHint:'A daily snapshot is kept on this device and data is mirrored to a second storage — if one breaks, the other restores it. Still copy a backup code occasionally: it is the only thing that survives losing the phone.',
+    updToast:'Updated to the latest version ✓',
     exCreateMode:'Type', modeReps:'Reps', modeTime:'Time (sec)',
     histArch:'Archive', histUnarch:'Restore', archTitle:'Archive',
     exMine:'Mine', exMineEmpty:'Nothing done yet — pick “All” and get started!',
@@ -1462,7 +1466,7 @@ function htmlSettings(){
   <div class="card">${snapListHtml()}</div>
   <h2 class="sec" style="color:var(--red)">${t('setDanger')}</h2>
   <button class="btn danger" onclick="wipeAll()">${t('setWipe')}</button>
-  <div style="text-align:center;color:var(--ghost);font-size:12px;margin-top:24px">Daveedus v1.0</div>`;
+  <div style="text-align:center;color:var(--ghost);font-size:12px;margin-top:24px">Daveedus v${APP_VER}</div>`;
 }
 function setTheme(m){ S.theme=m; save(); applyTheme(); render(); }
 function snapListHtml(){
@@ -1645,8 +1649,29 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   if(S.active) V.screen = 'workout';
   render();
   setInterval(tick, 500);
+  /* auto-update: check for a new version on every open/foreground; when the
+     new service worker takes over, reload once so fresh code is used */
   if('serviceWorker' in navigator && /^https?:/.test(location.protocol)){
-    navigator.serviceWorker.register('sw.js').catch(()=>{});
+    try{
+      if(sessionStorage.getItem('dvd-upd')){
+        sessionStorage.removeItem('dvd-upd');
+        toast(t('updToast'));
+      }
+    }catch(e){}
+    navigator.serviceWorker.register('sw.js').then(reg=>{
+      reg.update().catch(()=>{});
+      document.addEventListener('visibilitychange', ()=>{
+        if(document.visibilityState==='visible') reg.update().catch(()=>{});
+      });
+    }).catch(()=>{});
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+      if(!hadController || reloaded) return; /* first install — nothing to refresh */
+      reloaded = true;
+      try{ sessionStorage.setItem('dvd-upd','1'); }catch(e){}
+      location.reload();
+    });
   }
 });
 
