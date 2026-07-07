@@ -6,12 +6,12 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.2.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.3.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
   lt: {
-    tabHome:'Treniruotė', tabProgram:'Programa', tabExercises:'Pratimai', tabHistory:'Istorija', tabSettings:'Nustatymai',
+    tabHome:'Treniruotė', tabProgram:'Programos', tabExercises:'Pratimai', tabHistory:'Istorija', tabSettings:'Nustatymai',
     today:'šiandien', yesterday:'vakar', daysAgo:'prieš {n} d.', never:'dar nedaryta',
     statWeek:'šią savaitę', statTotal:'iš viso',
     homeContinue:'Tęsti treniruotę',
@@ -26,13 +26,16 @@ const I18N = {
     woFinishEmpty:'Nėra atliktų setų. Atšaukti treniruotę?',
     woFinishPart:'Ne visi setai atlikti. Baigti ir išsaugoti?',
     woFirst:'pirmas kartas', restLabel:'Poilsis',
-    tplNew:'+ Nauja programa', tplImport:'⤓ Įvesti kodą', tplDefaultName:'Nauja programa',
-    tplDel:'Ištrinti programą „{n}“?', tplExCount:'{n} prat.',
-    tplName:'Programos pavadinimas', tplAddEx:'+ Pridėti pratimą', tplDelEx:'Išimti pratimą „{n}“?',
-    tplShare:'Programos kodas', tplShareHint:'Nusiųsk šį kodą draugui — jis įves jį ir gaus tavo programą.',
+    tplNew:'+ Nauja treniruotė', tplImport:'⤓ Įvesti kodą', tplDefaultName:'Nauja treniruotė',
+    tplDel:'Ištrinti treniruotę „{n}“?', tplExCount:'{n} prat.',
+    tplName:'Treniruotės pavadinimas', tplAddEx:'+ Pridėti pratimą', tplDelEx:'Išimti pratimą „{n}“?',
+    tplShare:'Treniruotės kodas', tplShareHint:'Nusiųsk šį kodą draugui — jis įves jį ir gaus tavo treniruotę.',
     tplImportTitle:'Įvesti kodą', tplImportHint:'Įklijuok gautą kodą čia:',
-    tplImportBtn:'Importuoti', tplImported:'Programa „{n}“ pridėta ✓',
-    folderImported:'Pridėta programų: {n} ✓', deleteBtn:'Ištrinti', nextBadge:'KITA',
+    tplImportBtn:'Importuoti', tplImported:'Treniruotė „{n}“ pridėta ✓',
+    folderNew:'+ Nauja programa', folderDefault:'Nauja programa', folderNone:'Be programos',
+    folderName:'Programos pavadinimas', folderDel:'Ištrinti programą „{n}“? Treniruotės liks, tik be programos.',
+    folderShare:'Programos kodas', folderShareHint:'Nusiųsk šį kodą draugui — jis gaus visą programą su visomis treniruotėmis.',
+    folderImported:'Programa „{n}“ pridėta ✓', tplFolder:'Programa', deleteBtn:'Ištrinti', nextBadge:'KITA',
     histEditTitle:'Redaguoti treniruotę',
     tplDup:'Dubliuoti', tplDupSuffix:'(kopija)',
     woSec:'sek.',
@@ -82,7 +85,7 @@ const I18N = {
     e_bodyweight:'Savo svoris', e_kettlebell:'Girja', e_other:'Kita'
   },
   en: {
-    tabHome:'Workout', tabProgram:'Program', tabExercises:'Exercises', tabHistory:'History', tabSettings:'Settings',
+    tabHome:'Workout', tabProgram:'Programs', tabExercises:'Exercises', tabHistory:'History', tabSettings:'Settings',
     today:'today', yesterday:'yesterday', daysAgo:'{n} days ago', never:'not done yet',
     statWeek:'this week', statTotal:'total',
     homeContinue:'Continue workout',
@@ -97,13 +100,16 @@ const I18N = {
     woFinishEmpty:'No completed sets. Discard workout?',
     woFinishPart:'Not all sets completed. Finish and save?',
     woFirst:'first time', restLabel:'Rest',
-    tplNew:'+ New template', tplImport:'⤓ Enter code', tplDefaultName:'New template',
-    tplDel:'Delete template “{n}”?', tplExCount:'{n} ex.',
-    tplName:'Template name', tplAddEx:'+ Add exercise', tplDelEx:'Remove exercise “{n}”?',
-    tplShare:'Template code', tplShareHint:'Send this code to a friend — they enter it and get your template.',
+    tplNew:'+ New workout', tplImport:'⤓ Enter code', tplDefaultName:'New workout',
+    tplDel:'Delete workout “{n}”?', tplExCount:'{n} ex.',
+    tplName:'Workout name', tplAddEx:'+ Add exercise', tplDelEx:'Remove exercise “{n}”?',
+    tplShare:'Workout code', tplShareHint:'Send this code to a friend — they enter it and get your workout.',
     tplImportTitle:'Enter code', tplImportHint:'Paste the received code here:',
-    tplImportBtn:'Import', tplImported:'Template “{n}” added ✓',
-    folderImported:'Templates added: {n} ✓', deleteBtn:'Delete', nextBadge:'NEXT',
+    tplImportBtn:'Import', tplImported:'Workout “{n}” added ✓',
+    folderNew:'+ New program', folderDefault:'New program', folderNone:'No program',
+    folderName:'Program name', folderDel:'Delete program “{n}”? Workouts will remain, just without the program.',
+    folderShare:'Program code', folderShareHint:'Send this code to a friend — they get the whole program with all workouts.',
+    folderImported:'Program “{n}” added ✓', tplFolder:'Program', deleteBtn:'Delete', nextBadge:'NEXT',
     histEditTitle:'Edit workout',
     tplDup:'Duplicate', tplDupSuffix:'(copy)',
     woSec:'sec',
@@ -163,30 +169,38 @@ function t(k, vars){
 const LS_KEY = 'daveedus.v1';
 const uid = () => Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-3);
 
-function seedTemplates(){
+function seedTemplates(fid){
   const tex = (k,s,r) => ({ id:uid(), k, s, r });
   return [
-    { id:uid(), name:'Upper A', pinned:true, ex:[ tex('bench-press',3,8), tex('barbell-row',3,8),
+    { id:uid(), name:'Upper A', folderId:fid, ex:[ tex('bench-press',3,8), tex('barbell-row',3,8),
       tex('overhead-press',3,10), tex('lat-pulldown',3,10), tex('db-curl',3,12), tex('triceps-pushdown',3,12) ]},
-    { id:uid(), name:'Lower A', pinned:true, ex:[ tex('back-squat',3,8), tex('romanian-deadlift',3,10),
+    { id:uid(), name:'Lower A', folderId:fid, ex:[ tex('back-squat',3,8), tex('romanian-deadlift',3,10),
       tex('leg-press',3,12), tex('lying-leg-curl',3,12), tex('standing-calf-raise',4,15), tex('ab-crunch',3,15) ]},
-    { id:uid(), name:'Upper B', pinned:true, ex:[ tex('incline-db-press',3,10), tex('pull-up',3,8),
+    { id:uid(), name:'Upper B', folderId:fid, ex:[ tex('incline-db-press',3,10), tex('pull-up',3,8),
       tex('seated-cable-row',3,10), tex('seated-db-press',3,10), tex('ez-bar-curl',3,10), tex('overhead-triceps-ext',3,12) ]},
-    { id:uid(), name:'Lower B', pinned:true, ex:[ tex('deadlift',3,5), tex('bulgarian-split-squat',3,10),
+    { id:uid(), name:'Lower B', folderId:fid, ex:[ tex('deadlift',3,5), tex('bulgarian-split-squat',3,10),
       tex('leg-extension',3,12), tex('seated-leg-curl',3,12), tex('standing-calf-raise',4,15), tex('hanging-leg-raise',3,12) ]}
   ];
 }
 function defaultState(){
+  const fid = uid();
   return { lang:'lt', theme:'auto', keepAwake:true, lastBackup:0, bakSnooze:0,
-           folders:[], customEx:[], templates:seedTemplates(), history:[], weights:[], active:null };
+           folders:[{ id:fid, name:'Upper / Lower', open:true, pinned:true }],
+           customEx:[], templates:seedTemplates(fid), history:[], weights:[], active:null };
 }
 /* validate + migrate a raw state object; returns null if unusable */
 function hydrate(s){
   if(!s || !Array.isArray(s.templates)) return null;
+  /* migration: older data had no program folders */
   if(!Array.isArray(s.folders)) s.folders = [];
+  if(!s.folders.length && s.templates.length){
+    /* recover data from the flat era: group everything under one program */
+    const fid = uid();
+    s.folders = [{ id:fid, name:'Upper / Lower', open:true, pinned:true }];
+    s.templates.forEach(tp=>{ tp.folderId = fid; });
+  }
+  s.folders.forEach(f=>{ if(typeof f.pinned==='undefined') f.pinned = true; });
   if(!Array.isArray(s.weights)) s.weights = [];
-  /* migration: splits were flattened — pinning now lives on templates */
-  s.templates.forEach(tp=>{ if(typeof tp.pinned==='undefined') tp.pinned = true; });
   return Object.assign(defaultState(), s);
 }
 let LS_OK = false; /* did localStorage contain valid data at boot? */
@@ -256,7 +270,7 @@ function save(){
   idbTimer = setTimeout(()=>idbSet(JSON.stringify(S)), 800);
 }
 /* view state (not persisted) */
-const V = { screen:'home', editTpl:null, exDetail:null, expanded:null,
+const V = { screen:'home', editTpl:null, viewFolder:null, exDetail:null, expanded:null,
             pickerCb:null, pickerQ:'', pickerG:'all', exQ:'', exG:'mine',
             exTplFilter:'', exFilterNames:[], showArch:false };
 
@@ -348,6 +362,7 @@ function render(){
   if(V.screen==='home')          el.innerHTML = htmlHome();
   else if(V.screen==='workout')  el.innerHTML = htmlWorkout();
   else if(V.screen==='program')  el.innerHTML = htmlProgram();
+  else if(V.screen==='splitview')el.innerHTML = htmlSplitView();
   else if(V.screen==='tpledit')  el.innerHTML = htmlTplEdit();
   else if(V.screen==='exercises')el.innerHTML = htmlExercises();
   else if(V.screen==='exdetail') el.innerHTML = htmlExDetail();
@@ -366,6 +381,10 @@ function renderTopbar(){
     const d = S.templates.find(x=>x.id===V.editTpl);
     h = `<button class="iconbtn" onclick="closeTplEdit()">‹</button><h1>${d?esc(d.name):''}</h1>
          <button class="finishbtn" onclick="closeTplEdit()">✓ ${t('saveDone')}</button>`;
+  }else if(V.screen==='splitview'){
+    const f = S.folders.find(x=>x.id===V.viewFolder);
+    h = `<button class="iconbtn" onclick="go('program')">‹</button><h1>${f?esc(f.name):''}</h1>
+         <button class="finishbtn" onclick="go('program')">✓ ${t('saveDone')}</button>`;
   }else if(V.screen==='exdetail'){
     h = `<button class="iconbtn" onclick="go('exercises')">‹</button><h1>${esc(exName(V.exDetail, V.exDetailName))}</h1>`;
   }else{
@@ -388,7 +407,7 @@ const TAB_ICONS = {
 function renderTabbar(){
   const tabs = [
     ['home', t('tabHome'), ['home','workout']],
-    ['program', t('tabProgram'), ['program','tpledit']],
+    ['program', t('tabProgram'), ['program','splitview','tpledit']],
     ['exercises', t('tabExercises'), ['exercises','exdetail']],
     ['history', t('tabHistory'), ['history']],
     ['settings', t('tabSettings'), ['settings']]
@@ -437,17 +456,29 @@ function htmlHome(){
       <div class="tsub">${last?daysAgoStr(last.date):t('never')} · ${esc(names)}</div></div>
       <div class="go">▶</div></button>`;
   };
-  /* home shows pinned templates (fallback: all); NEXT = the one after the last done, cyclic */
-  const pinned = S.templates.filter(x=>x.pinned);
-  const list = pinned.length ? pinned : S.templates;
-  if(list.length){
-    let nextId = list[0].id;
+  /* home shows only PINNED splits as a grid of split cards; fall back to all when none pinned */
+  const pinned = S.folders.filter(f=>f.pinned);
+  const showFolders = pinned.length ? pinned : S.folders;
+  const cards = showFolders.map(f=>{
+    const tpls = S.templates.filter(x=>x.folderId===f.id);
+    if(!tpls.length) return '';
+    /* suggest the workout AFTER the most recently done one in this split (cyclic) */
+    let nextId = tpls[0].id;
     for(const hw of S.history){
       if(hw.arch) continue;
-      const idx = list.findIndex(x=>x.id===hw.tplId);
-      if(idx>=0){ nextId = list[(idx+1)%list.length].id; break; }
+      const idx = tpls.findIndex(x=>x.id===hw.tplId);
+      if(idx>=0){ nextId = tpls[(idx+1)%tpls.length].id; break; }
     }
-    h += `<h2 class="sec">${t('homeTemplates')}</h2>` + list.map(d=>tplBtn(d, d.id===nextId)).join('');
+    const rows = tpls.map(d=>`<button class="sprow ${d.id===nextId?'next':''}" onclick="startWorkout('${d.id}')">
+      <span class="spn">${esc(d.name)}</span>
+      ${d.id===nextId?`<span class="nextchip">${t('nextBadge')}</span>`:''}</button>`).join('');
+    return `<div class="splitcard">
+      <div class="sphead" onclick="openSplit('${f.id}')">${esc(f.name)} ›</div>${rows}</div>`;
+  }).filter(Boolean);
+  if(cards.length) h += `<h2 class="sec">${t('homeTemplates')}</h2><div class="splitgrid">${cards.join('')}</div>`;
+  const loose = looseTemplates();
+  if(loose.length && !pinned.length){
+    h += `<h2 class="sec">${S.folders.length?t('folderNone'):t('homeTemplates')}</h2>` + loose.map(d=>tplBtn(d,false)).join('');
   }
   return h;
 }
@@ -732,7 +763,7 @@ function tick(){
   }
 }
 
-/* ======================= PROGRAM (templates) ======================= */
+/* ======================= PROGRAM (splits + templates) ======================= */
 function tplCardHtml(d){
   const groups = [...new Set(d.ex.map(e=>{ const i=exInfo(e.k); return i?t('g_'+i.g):null; }).filter(Boolean))].slice(0,3).join(', ');
   return `<div class="card"><div class="tplrow">
@@ -741,29 +772,102 @@ function tplCardHtml(d){
       <div class="ct">${t('tplExCount',{n:d.ex.length})}${groups?' · '+esc(groups):''}</div>
     </div>
     <button class="minibtn acc" onclick="startWorkout('${d.id}')">▶</button>
-    <button class="minibtn ${d.pinned?'acc':''}" style="${d.pinned?'':'opacity:.4'}" onclick="togglePinTpl('${d.id}')">📌</button>
     <button class="minibtn" onclick="openTpl('${d.id}')">✎</button>
     <button class="minibtn del" onclick="delTpl('${d.id}')">✕</button>
   </div></div>`;
 }
+function looseTemplates(){
+  return S.templates.filter(x=>!x.folderId || !S.folders.some(f=>f.id===x.folderId));
+}
 function htmlProgram(){
   let h = '<div style="height:8px"></div>';
-  h += S.templates.map(tplCardHtml).join('') || `<div class="empty">—</div>`;
+  h += S.folders.map(f=>{
+    const tpls = S.templates.filter(x=>x.folderId===f.id);
+    const names = tpls.slice(0,4).map(x=>x.name).join(', ');
+    return `<div class="tplbtn" onclick="openSplit('${f.id}')">
+      <div class="tinfo"><div class="tname">${esc(f.name)} <span style="color:var(--dim);font-weight:700;font-size:14px">(${tpls.length})</span></div>
+      <div class="tsub">${esc(names)||'—'}</div></div>
+      <button class="minibtn ${f.pinned?'acc':''}" style="${f.pinned?'':'opacity:.4'}"
+        onclick="event.stopPropagation(); togglePin('${f.id}')">📌</button>
+      <div class="go">›</div></div>`;
+  }).join('');
+  const loose = looseTemplates();
+  if(loose.length){
+    if(S.folders.length) h += `<h2 class="sec">${t('folderNone')}</h2>`;
+    h += loose.map(tplCardHtml).join('');
+  }
   h += `<div style="height:8px"></div>
-        <button class="btn ghostbtn" onclick="addTpl()">${t('tplNew')}</button>
+        <button class="btn ghostbtn" onclick="addFolder()">${t('folderNew')}</button>
         <button class="btn" onclick="openImportModal('tpl')">${t('tplImport')}</button>`;
   return h;
 }
-function togglePinTpl(id){
-  const d = S.templates.find(x=>x.id===id);
-  if(!d) return;
-  d.pinned = !d.pinned;
+function openSplit(id){
+  V.viewFolder = id;
+  go('splitview');
+}
+function togglePin(id){
+  const f = S.folders.find(x=>x.id===id);
+  if(!f) return;
+  f.pinned = !f.pinned;
   save(); render();
 }
+function htmlSplitView(){
+  const f = S.folders.find(x=>x.id===V.viewFolder);
+  if(!f){ V.screen='program'; return htmlProgram(); }
+  const tpls = S.templates.filter(x=>x.folderId===f.id);
+  let h = `<div style="height:8px"></div>
+    <div class="card">
+      <div style="color:var(--dim);font-size:13px;margin-bottom:6px">${t('folderName')}</div>
+      <input class="nameinput" type="text" value="${esc(f.name)}" oninput="renameFolder('${f.id}',this.value)">
+    </div>`;
+  h += tpls.map(tplCardHtml).join('') || `<div class="empty">—</div>`;
+  h += `<button class="btn ghostbtn" onclick="addTplTo('${f.id}')">${t('tplNew')}</button>
+        <button class="btn primary" onclick="go('program')">✓ ${t('saveDone')}</button>
+        <button class="btn" onclick="shareFolder('${f.id}')">⤴ ${t('folderShare')}</button>
+        <button class="btn danger" onclick="delFolder('${f.id}')">✕ ${t('deleteBtn')}</button>`;
+  return h;
+}
+function addFolder(){
+  const f = { id:uid(), name:t('folderDefault'), open:true };
+  S.folders.push(f);
+  save();
+  openSplit(f.id);
+}
+function renameFolder(id,v){
+  const f = S.folders.find(x=>x.id===id);
+  if(!f) return;
+  f.name = v;
+  save(); renderTopbar();
+}
+function delFolder(id){
+  const f = S.folders.find(x=>x.id===id);
+  if(!f || !confirm(t('folderDel',{n:f.name}))) return;
+  S.templates.forEach(tp=>{ if(tp.folderId===id) tp.folderId=null; });
+  S.folders = S.folders.filter(x=>x.id!==id);
+  save();
+  go('program');
+}
+function shareFolder(id){
+  const f = S.folders.find(x=>x.id===id);
+  if(!f) return;
+  const tpls = S.templates.filter(x=>x.folderId===id);
+  const payload = { t:'folder', name:f.name,
+    tpls: tpls.map(d=>({ name:d.name, ex:d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0 })) })) };
+  const code = encodeShare(payload);
+  openModal(`<h3>${t('folderShare')}<button class="x" onclick="closeModal()">✕</button></h3>
+    <div style="color:var(--dim);font-size:14px;margin:0 4px 10px">${t('folderShareHint')}</div>
+    <textarea class="codebox" readonly onclick="this.select()">${esc(code)}</textarea>
+    <button class="btn primary" style="margin-top:12px" onclick="copyText(document.querySelector('.codebox').value)">⤴ ${t('copy')}</button>`);
+}
 function openTpl(id){ V.editTpl=id; go('tpledit'); }
-function closeTplEdit(){ go('program'); }
-function addTpl(){
-  const d = { id:uid(), name:t('tplDefaultName'), pinned:true, ex:[] };
+function closeTplEdit(){
+  const d = S.templates.find(x=>x.id===V.editTpl);
+  if(d && d.folderId && S.folders.some(f=>f.id===d.folderId)) openSplit(d.folderId);
+  else go('program');
+}
+function addTpl(){ addTplTo(null); }
+function addTplTo(fid){
+  const d = { id:uid(), name:t('tplDefaultName'), folderId:fid||null, ex:[] };
   S.templates.push(d);
   save();
   openTpl(d.id);
@@ -777,10 +881,14 @@ function delTpl(id){
 function htmlTplEdit(){
   const d = S.templates.find(x=>x.id===V.editTpl);
   if(!d){ V.screen='program'; return htmlProgram(); }
+  const folderOpts = `<option value="">${t('folderNone')}</option>` +
+    S.folders.map(f=>`<option value="${f.id}" ${d.folderId===f.id?'selected':''}>${esc(f.name)}</option>`).join('');
   let h = `<div style="height:8px"></div>
     <div class="card">
       <div class="ct" style="color:var(--dim);font-size:13px;margin-bottom:6px">${t('tplName')}</div>
       <input class="nameinput" type="text" value="${esc(d.name)}" oninput="renameTpl('${d.id}',this.value)">
+      <div class="ct" style="color:var(--dim);font-size:13px;margin:12px 0 6px">${t('tplFolder')}</div>
+      <select class="nameinput" style="width:100%" onchange="setTplFolder('${d.id}',this.value)">${folderOpts}</select>
     </div>
     <div class="card">`;
   h += d.ex.map((e,i)=>{
@@ -820,7 +928,7 @@ function htmlTplEdit(){
 function dupTpl(id){
   const d = S.templates.find(x=>x.id===id);
   if(!d) return;
-  const copy = { id:uid(), name:(d.name+' '+t('tplDupSuffix')).slice(0,60), pinned:!!d.pinned,
+  const copy = { id:uid(), name:(d.name+' '+t('tplDupSuffix')).slice(0,60), folderId:d.folderId,
     ex: d.ex.map(e=>({ id:uid(), k:e.k, s:e.s, r:e.r, ss:!!e.ss })) };
   S.templates.splice(S.templates.indexOf(d)+1, 0, copy);
   save();
@@ -831,6 +939,12 @@ function renameTpl(id,v){
   if(!d) return;
   d.name = v;
   save(); renderTopbar();
+}
+function setTplFolder(id,fid){
+  const d = S.templates.find(x=>x.id===id);
+  if(!d) return;
+  d.folderId = fid || null;
+  save();
 }
 function moveTplEx(id,i,dir){
   const d = S.templates.find(x=>x.id===id);
@@ -1444,9 +1558,9 @@ function openImportModal(kind){
     <button class="btn primary" style="margin-top:12px" onclick="doImport()">${t('tplImportBtn')}</button>`);
   setTimeout(()=>{ const i=$('#import-code'); if(i) i.focus(); }, 50);
 }
-function importTplPayload(d){
+function importTplPayload(d, folderId){
   const tpl = { id:uid(), name:String(d.name||t('tplDefaultName')).slice(0,60),
-                pinned:true, ex:[] };
+                folderId:folderId||null, ex:[] };
   for(const e of (d.ex||[])){
     let k = e.k;
     if(!exInfo(k)){
@@ -1470,22 +1584,26 @@ function doImport(){
   const d = decodeShare(code);
   if(!d || !d.t){ toast(t('codeBad')); return; }
   if(d.t==='tpl' && Array.isArray(d.ex)){
-    const tpl = importTplPayload(d);
+    const tpl = importTplPayload(d, null);
     save(); closeModal();
     go('program');
     toast(t('tplImported',{n:tpl.name}));
   }else if(d.t==='folder' && Array.isArray(d.tpls)){
-    /* old split codes still work — templates just land in the flat list */
-    d.tpls.forEach(x=>importTplPayload(x));
+    const f = { id:uid(), name:String(d.name||t('folderDefault')).slice(0,60), open:true };
+    S.folders.push(f);
+    d.tpls.forEach(x=>importTplPayload(x, f.id));
     save(); closeModal();
     go('program');
-    toast(t('folderImported',{n:d.tpls.length}));
+    toast(t('folderImported',{n:f.name}));
   }else if(d.t==='bak' && d.s && Array.isArray(d.s.templates)){
     if(!confirm(t('bakConfirm'))) return;
-    const s2 = hydrate(d.s);
-    if(!s2){ toast(t('codeBad')); return; }
-    s2.active = null;
-    S = s2;
+    if(!Array.isArray(d.s.folders)){ /* backup from pre-split version */
+      const fid = uid();
+      d.s.folders = [{ id:fid, name:'Upper / Lower', open:true }];
+      d.s.templates.forEach(tp=>{ if(!tp.folderId) tp.folderId=fid; });
+    }
+    d.s.folders.forEach(f=>{ if(typeof f.pinned==='undefined') f.pinned=true; });
+    S = Object.assign(defaultState(), d.s, { active:null });
     save(); applyTheme(); closeModal();
     go('home');
     toast(t('bakDone'));
