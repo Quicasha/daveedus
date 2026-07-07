@@ -102,6 +102,8 @@ h2.sec{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(
 .exname{flex:1; font-size:17px; font-weight:700; color:var(--accent-soft); min-width:0;}
 .extarget{color:var(--dim); font-size:13px; font-weight:600; flex:none;}
 .exhead .minibtn{width:34px; min-height:34px; font-size:13px; background:none; color:var(--ghost);}
+.lastnote{background:var(--accent-bg); color:var(--accent-soft); border-radius:9px;
+  padding:8px 12px; font-size:13px; margin-top:10px; font-style:italic;}
 .exnote{width:100%; background:var(--input); color:var(--text); border:none; border-radius:9px;
   min-height:38px; padding:8px 12px; font-size:14px; margin-top:10px; -webkit-appearance:none;}
 .exnote::placeholder{color:var(--ghost);}

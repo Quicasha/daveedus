@@ -94,7 +94,7 @@ const EX_DB = [
   { id:'seated-calf-raise',      n:'Seated Calf Raise',           g:'calves', e:'machine' },
   { id:'calf-press',             n:'Calf Press (Leg Press)',      g:'calves', e:'machine' },
   /* ------- core ------- */
-  { id:'plank',                  n:'Plank',                       g:'core', e:'bodyweight' },
+  { id:'plank',                  n:'Plank',                       g:'core', e:'bodyweight', m:'t' },
   { id:'ab-crunch',              n:'Ab Crunch',                   g:'core', e:'bodyweight' },
   { id:'cable-crunch',           n:'Cable Crunch',                g:'core', e:'cable' },
   { id:'hanging-leg-raise',      n:'Hanging Leg Raise',           g:'core', e:'bodyweight' },
@@ -102,7 +102,7 @@ const EX_DB = [
   { id:'russian-twist',          n:'Russian Twist',               g:'core', e:'bodyweight' },
   { id:'ab-wheel',               n:'Ab Wheel Rollout',            g:'core', e:'other' },
   { id:'sit-up',                 n:'Sit-Up',                      g:'core', e:'bodyweight' },
-  { id:'side-plank',             n:'Side Plank',                  g:'core', e:'bodyweight' },
+  { id:'side-plank',             n:'Side Plank',                  g:'core', e:'bodyweight', m:'t' },
   /* ------- other / full body ------- */
   { id:'power-clean',            n:'Power Clean',                 g:'other', e:'barbell' },
   { id:'kettlebell-swing',       n:'Kettlebell Swing',            g:'other', e:'kettlebell' },

@@ -35,6 +35,13 @@ const I18N = {
     folderShare:'Splito kodas', folderShareHint:'Nusiųsk šį kodą draugui — jis gaus visą splitą su visomis programomis.',
     folderImported:'Splitas „{n}“ pridėtas ✓', tplFolder:'Splitas', deleteBtn:'Ištrinti', nextBadge:'KITA',
     histEditTitle:'Redaguoti treniruotę',
+    tplDup:'Dubliuoti', tplDupSuffix:'(kopija)',
+    woSec:'sek.',
+    sumTitle:'Treniruotė išsaugota 💪', sumDur:'Trukmė', sumVol:'Apimtis', sumSets:'Setai',
+    sumPRs:'Nauji rekordai', sumOk:'Super!',
+    recTitle:'Rekordai', rec1RM:'~1RM (apytikslis)', recBestSet:'Geriausias setas', recTime:'Ilgiausiai',
+    bakRemind:'Seniai nekopijavai atsarginio kodo!',
+    exCreateMode:'Tipas', modeReps:'Kartai', modeTime:'Laikas (sek.)',
     histArch:'Archyvuoti', histUnarch:'Grąžinti', archTitle:'Archyvas',
     exMine:'Mano', exMineEmpty:'Dar nieko nedarei — pasirink „Visi“ ir pradėk!',
     saveDone:'Išsaugoti',
@@ -94,6 +101,13 @@ const I18N = {
     folderShare:'Split code', folderShareHint:'Send this code to a friend — they get the whole split with all templates.',
     folderImported:'Split “{n}” added ✓', tplFolder:'Split', deleteBtn:'Delete', nextBadge:'NEXT',
     histEditTitle:'Edit workout',
+    tplDup:'Duplicate', tplDupSuffix:'(copy)',
+    woSec:'sec',
+    sumTitle:'Workout saved 💪', sumDur:'Duration', sumVol:'Volume', sumSets:'Sets',
+    sumPRs:'New records', sumOk:'Nice!',
+    recTitle:'Records', rec1RM:'~1RM (estimated)', recBestSet:'Best set', recTime:'Longest',
+    bakRemind:"You haven't copied a backup code in a while!",
+    exCreateMode:'Type', modeReps:'Reps', modeTime:'Time (sec)',
     histArch:'Archive', histUnarch:'Restore', archTitle:'Archive',
     exMine:'Mine', exMineEmpty:'Nothing done yet — pick “All” and get started!',
     saveDone:'Save',
@@ -152,7 +166,7 @@ function seedTemplates(fid){
 }
 function defaultState(){
   const fid = uid();
-  return { lang:'lt', theme:'auto', keepAwake:true,
+  return { lang:'lt', theme:'auto', keepAwake:true, lastBackup:0, bakSnooze:0,
            folders:[{ id:fid, name:'Upper / Lower', open:true, pinned:true }],
            customEx:[], templates:seedTemplates(fid), history:[], weights:[], active:null };
 }
@@ -192,6 +206,13 @@ function exInfo(k){
 }
 function allExercises(){ return EX_DB.concat(S.customEx); }
 function exName(k, fallback){ const i = exInfo(k); return i ? i.n : (fallback || k); }
+/* time-based exercise (plank etc.): "reps" column means seconds */
+function isTimeEx(k){ const i = exInfo(k); return !!(i && i.m==='t'); }
+function fmtSet(s, tm){
+  const p = s.warm ? 'W ' : s.drop ? 'D ' : '';
+  if(tm) return p + (s.weight ? fmtW(s.weight)+'kg·' : '') + s.reps + 's';
+  return p + fmtW(s.weight) + '×' + s.reps;
+}
 
 /* ======================= helpers ======================= */
 const $ = s => document.querySelector(s);
@@ -331,8 +352,15 @@ function weekCount(){
 function htmlHome(){
   const dateStr = new Date().toLocaleDateString(S.lang==='lt'?'lt-LT':'en-GB',
     { weekday:'long', month:'long', day:'numeric' });
-  let h = `<div class="hero"><div class="date">${esc(dateStr)}</div></div>
-    <div class="statrow">
+  let h = `<div class="hero"><div class="date">${esc(dateStr)}</div></div>`;
+  if(needBackupReminder()){
+    h += `<div class="card" style="display:flex;align-items:center;gap:10px">
+      <span style="flex:1;font-size:13px;font-weight:600;color:var(--orange)">💾 ${t('bakRemind')}</span>
+      <button class="btn small" style="background:var(--accent);color:var(--on-accent)" onclick="copyBackup();render()">${t('copy')}</button>
+      <button class="minibtn" style="width:32px;min-height:32px;font-size:12px" onclick="S.bakSnooze=Date.now(); save(); render()">✕</button>
+    </div>`;
+  }
+  h += `<div class="statrow">
       <div class="stat"><div class="v">${weekCount()}</div><div class="l">${t('statWeek')}</div></div>
       <div class="stat"><div class="v">${S.history.length}</div><div class="l">${t('statTotal')}</div></div>
       <div class="stat" style="cursor:pointer" onclick="go('history')">
@@ -393,7 +421,7 @@ function lastForExercise(k, name){
     if(h.arch) continue;
     for(const e of h.exercises){
       if(e.k===k || (nm && e.name && e.name.trim().toLowerCase()===nm)){
-        if(e.sets && e.sets.length) return { date:h.date, sets:e.sets };
+        if(e.sets && e.sets.length) return { date:h.date, sets:e.sets, note:e.note||'' };
       }
     }
   }
@@ -449,12 +477,14 @@ function htmlWorkout(){
   if(!S.active){ V.screen='home'; return htmlHome(); }
   let h = '<div style="height:8px"></div>';
   h += S.active.exercises.map((ex,xi)=>{
+    const tm = isTimeEx(ex.k);
     const hdr = `<div class="setgrid hdr"><div>${t('woSet')}</div><div>${t('woPrev')}</div>
-      <div>${t('woKg')}</div><div>${t('woReps')}</div><div>✓</div><div></div></div>`;
+      <div>${t('woKg')}</div><div>${tm?t('woSec'):t('woReps')}</div><div>✓</div><div></div></div>`;
     let workNum = 0;
     const rows = ex.sets.map((s,si)=>{
       const g = ghostFor(ex,si);
-      const prevTxt = g ? `${fmtW(g.weight)} ${t('woKg')} × ${g.reps}` : '—';
+      const prevTxt = g ? (tm ? `${g.weight?fmtW(g.weight)+' kg · ':''}${g.reps} s`
+                              : `${fmtW(g.weight)} ${t('woKg')} × ${g.reps}`) : '—';
       const label = s.warm ? 'W' : s.drop ? 'D' : String(++workNum);
       const chkCls = s.done ? (s.cls==='loss' ? 'loss' : 'done') : '';
       const restHere = S.active.rest && S.active.rest.key===xi+'-'+si;
@@ -467,7 +497,7 @@ function htmlWorkout(){
           <div class="prev">${prevTxt}</div>
           <input type="text" inputmode="decimal" placeholder="${g?fmtW(g.weight):t('woKg')}" value="${esc(s.w)}"
             ${s.done?'disabled':''} oninput="onSetInput(${xi},${si},'w',this.value)">
-          <input type="text" inputmode="numeric" placeholder="${g?g.reps:'×'}" value="${esc(s.r)}"
+          <input type="text" inputmode="numeric" placeholder="${g?g.reps:(tm?'s':'×')}" value="${esc(s.r)}"
             ${s.done?'disabled':''} oninput="onSetInput(${xi},${si},'r',this.value)">
           <button class="checkbtn ${chkCls}" onclick="toggleSet(${xi},${si})">✓</button>
           ${rowBtn}
@@ -485,6 +515,7 @@ function htmlWorkout(){
         ${notLast?`<button class="minibtn ${ex.ss?'acc':''}" onclick="toggleWoSS(${xi})">🔗</button>`:''}
         <button class="minibtn del" onclick="removeWorkoutEx(${xi})">✕</button>
       </div>
+      ${ex.last && ex.last.note ? `<div class="lastnote">💬 ${esc(ex.last.note)}</div>` : ''}
       <input class="exnote" placeholder="${t('woNote')}" value="${esc(ex.note)}" oninput="onNoteInput(${xi},this.value)">
       ${hdr}${rows}
       <div class="setctl">
@@ -545,6 +576,7 @@ function toggleSet(xi,si){
   let w = parseNum(s.w), r = parseNum(s.r);
   if(isNaN(w) && g) w = g.weight;
   if(isNaN(r) && g) r = g.reps;
+  if(isNaN(w) && isTimeEx(ex.k)) w = 0; /* plank & co: weight optional */
   if(isNaN(w) || isNaN(r)){ toast(t('woEmptyVals')); return; }
   s.w = fmtW(w); s.r = String(Math.round(r)); s.done = true;
   const real = realPrev(ex,si);
@@ -597,15 +629,44 @@ function finishWorkout(){
   const total = S.active.exercises.reduce((a,e)=>a+e.sets.length,0);
   const done  = S.active.exercises.reduce((a,e)=>a+e.sets.filter(s=>s.done).length,0);
   if(done < total && !confirm(t('woFinishPart'))) return;
+  /* detect all-time PRs BEFORE this workout enters history */
+  const prs = [];
+  for(const e of exercises){
+    const work = e.sets.filter(s=>!s.warm && !s.drop);
+    if(!work.length) continue;
+    const prev = exStats(e.k, e.name);
+    if(isTimeEx(e.k)){
+      const bt = Math.max(...work.map(s=>s.reps));
+      if(prev.bestTime>0 && bt>prev.bestTime) prs.push({ name:e.name, txt:bt+' s' });
+    }else{
+      const bw = Math.max(...work.map(s=>s.weight));
+      if(prev.best>0 && bw>prev.best) prs.push({ name:e.name, txt:fmtW(bw)+' kg' });
+    }
+  }
+  const dur = Math.round((Date.now()-new Date(S.active.startedAt).getTime())/1000);
+  const vol = exercises.reduce((a,e)=>a+e.sets.filter(s=>!s.warm).reduce((b,s)=>b+s.weight*s.reps,0),0);
   S.history.unshift({
     id:uid(), tplId:S.active.tplId, name:S.active.name, date:new Date().toISOString(),
-    dur: Math.round((Date.now()-new Date(S.active.startedAt).getTime())/1000),
-    exercises
+    dur, exercises
   });
   S.active = null;
   save();
-  toast(t('woSaved'));
   go('home');
+  showSummary(dur, vol, done, prs);
+}
+function showSummary(dur, vol, setsDone, prs){
+  const prHtml = prs.length ? `<h2 class="sec" style="margin-top:14px">🏆 ${t('sumPRs')}</h2>` +
+    prs.map(p=>`<div class="card" style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px">
+      <span style="flex:1;font-weight:700">${esc(p.name)}</span>
+      <span style="font-weight:800;color:var(--accent-soft);font-size:18px">${p.txt} 🎉</span></div>`).join('') : '';
+  openModal(`<h3>${t('sumTitle')}<button class="x" onclick="closeModal()">✕</button></h3>
+    <div class="statrow">
+      <div class="stat"><div class="v">${fmtTime(dur)}</div><div class="l">${t('sumDur')}</div></div>
+      <div class="stat"><div class="v">${Math.round(vol)}</div><div class="l">${t('sumVol')}, kg</div></div>
+      <div class="stat"><div class="v">${setsDone}</div><div class="l">${t('sumSets')}</div></div>
+    </div>
+    ${prHtml}
+    <button class="btn primary" style="margin-top:14px" onclick="closeModal()">${t('sumOk')}</button>`);
 }
 function cancelWorkout(){
   if(!confirm(t('woCancelConfirm'))) return;
@@ -718,7 +779,7 @@ function shareFolder(id){
   if(!f) return;
   const tpls = S.templates.filter(x=>x.folderId===id);
   const payload = { t:'folder', name:f.name,
-    tpls: tpls.map(d=>({ name:d.name, ex:d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0 })) })) };
+    tpls: tpls.map(d=>({ name:d.name, ex:d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0 })) })) };
   const code = encodeShare(payload);
   openModal(`<h3>${t('folderShare')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div style="color:var(--dim);font-size:14px;margin:0 4px 10px">${t('folderShareHint')}</div>
@@ -787,8 +848,18 @@ function htmlTplEdit(){
   h += `</div>
     <button class="btn ghostbtn" onclick="addTplEx('${d.id}')">${t('tplAddEx')}</button>
     <button class="btn primary" onclick="closeTplEdit()">✓ ${t('saveDone')}</button>
+    <button class="btn" onclick="dupTpl('${d.id}')">⧉ ${t('tplDup')}</button>
     <button class="btn" onclick="shareTpl('${d.id}')">⤴ ${t('tplShare')}</button>`;
   return h;
+}
+function dupTpl(id){
+  const d = S.templates.find(x=>x.id===id);
+  if(!d) return;
+  const copy = { id:uid(), name:(d.name+' '+t('tplDupSuffix')).slice(0,60), folderId:d.folderId,
+    ex: d.ex.map(e=>({ id:uid(), k:e.k, s:e.s, r:e.r, ss:!!e.ss })) };
+  S.templates.splice(S.templates.indexOf(d)+1, 0, copy);
+  save();
+  openTpl(copy.id);
 }
 function renameTpl(id,v){
   const d = S.templates.find(x=>x.id===id);
@@ -898,6 +969,11 @@ function openCustomExForm(){
       <input class="nameinput" id="cx-name" type="text">
       <div style="color:var(--dim);font-size:13px;margin:12px 0 6px">${t('exCreateGroup')}</div>
       <select class="nameinput" id="cx-group" style="width:100%">${groups}</select>
+      <div style="color:var(--dim);font-size:13px;margin:12px 0 6px">${t('exCreateMode')}</div>
+      <select class="nameinput" id="cx-mode" style="width:100%">
+        <option value="r">${t('modeReps')}</option>
+        <option value="t">${t('modeTime')}</option>
+      </select>
     </div>
     <button class="btn primary" onclick="saveCustomEx()">${t('exCreateSave')}</button>`);
   setTimeout(()=>{ const i=$('#cx-name'); if(i) i.focus(); }, 50);
@@ -907,6 +983,7 @@ function saveCustomEx(){
   const g = $('#cx-group').value;
   if(!name){ toast(t('exNameReq')); return; }
   const info = { id:'custom-'+uid(), n:name, g, e:'other' };
+  if($('#cx-mode') && $('#cx-mode').value==='t') info.m = 't';
   S.customEx.push(info);
   save();
   if(V.pickerCb){ V.pickerCb(info); }
@@ -930,7 +1007,7 @@ function doneExerciseList(){
 function chipLabel(g){ return g==='mine' ? t('exMine') : t('g_'+g); }
 function exStats(k, name, tplName){
   const nm = (name||'').trim().toLowerCase();
-  let best = 0, sessions = 0, lastDate = null;
+  let best = 0, bestTime = 0, e1rm = 0, bestVol = 0, bestSet = null, sessions = 0, lastDate = null;
   for(const h of S.history){
     if(h.arch || (tplName && h.name!==tplName)) continue;
     for(const e of h.exercises){
@@ -939,12 +1016,19 @@ function exStats(k, name, tplName){
         if(work.length){
           sessions++;
           if(!lastDate) lastDate = h.date;
-          best = Math.max(best, ...work.map(s=>s.weight));
+          for(const s of work){
+            best = Math.max(best, s.weight);
+            bestTime = Math.max(bestTime, s.reps);
+            const est = s.weight * (1 + s.reps/30); /* Epley */
+            if(est > e1rm) e1rm = est;
+            const v = s.weight * s.reps;
+            if(v > bestVol){ bestVol = v; bestSet = s; }
+          }
         }
       }
     }
   }
-  return { best, sessions, lastDate };
+  return { best, bestTime, e1rm, bestSet, sessions, lastDate };
 }
 function htmlExercises(){
   let h = `<div style="height:8px"></div>
@@ -1006,12 +1090,24 @@ function htmlExDetail(){
         `<button class="chip ${filter===n?'on':''}" onclick="V.exTplFilter=V.exFilterNames[${i}]; render()">${esc(n)}</button>`).join('') +
       `</div>`;
   }
+  const tm = isTimeEx(k);
   h += `<div class="statrow">
-    <div class="stat"><div class="v">${st.best?fmtW(st.best)+' kg':'—'}</div><div class="l">${t('exBest')}</div></div>
+    <div class="stat"><div class="v">${tm ? (st.bestTime?st.bestTime+' s':'—') : (st.best?fmtW(st.best)+' kg':'—')}</div><div class="l">${tm?t('recTime'):t('exBest')}</div></div>
     <div class="stat"><div class="v">${st.sessions}</div><div class="l">${t('exSessions')}</div></div>
     <div class="stat"><div class="v" style="font-size:16px;padding-top:6px">${st.lastDate?daysAgoStr(st.lastDate):'—'}</div><div class="l">${t('exLastDone')}</div></div>
   </div>`;
   if(!st.sessions) return h + `<div class="empty">${t('exNoHistory')}</div>`;
+  if(!tm && st.bestSet){
+    h += `<div class="card">
+      <div style="font-size:12px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);margin-bottom:8px">🏆 ${t('recTitle')}</div>
+      <div style="display:flex;gap:8px;padding:4px 0;align-items:baseline;font-size:14px">
+        <span style="color:var(--dim);flex:1">${t('rec1RM')}</span>
+        <span style="font-weight:800;font-size:16px">${fmtW(Math.round(st.e1rm*10)/10)} kg</span></div>
+      <div style="display:flex;gap:8px;padding:4px 0;align-items:baseline;font-size:14px">
+        <span style="color:var(--dim);flex:1">${t('recBestSet')}</span>
+        <span style="font-weight:800;font-size:16px">${fmtW(st.bestSet.weight)} kg × ${st.bestSet.reps}</span></div>
+    </div>`;
+  }
   h += `<div id="chartbox" class="card">${chartSVG(k, name, filter)}</div>`;
   /* session log */
   const rows = [];
@@ -1020,7 +1116,7 @@ function htmlExDetail(){
     for(const e of w.exercises){
       if(matches(e)){
         rows.push(`<div class="exl"><span class="n">${fmtDate(w.date)} <span style="opacity:.6">· ${esc(w.name)}</span></span>
-          <span class="s">${e.sets.map(s=>(s.warm?'W ':s.drop?'D ':'')+fmtW(s.weight)+'×'+s.reps).join('&nbsp; ')}</span></div>`);
+          <span class="s">${e.sets.map(s=>fmtSet(s, tm)).join('&nbsp; ')}</span></div>`);
       }
     }
   }
@@ -1029,6 +1125,7 @@ function htmlExDetail(){
 }
 function chartSVG(k, name, tplName){
   const nm = (name||'').trim().toLowerCase();
+  const tm = isTimeEx(k);
   const pts = [];
   for(let i=S.history.length-1; i>=0; i--){
     const w = S.history[i];
@@ -1036,11 +1133,11 @@ function chartSVG(k, name, tplName){
     for(const e of w.exercises){
       if(e.k===k || (e.name && e.name.trim().toLowerCase()===nm)){
         const work = e.sets.filter(s=>!s.warm && !s.drop);
-        if(work.length) pts.push({ d:w.date, w:Math.max(...work.map(s=>s.weight)) });
+        if(work.length) pts.push({ d:w.date, w:Math.max(...work.map(s=>tm?s.reps:s.weight)) });
       }
     }
   }
-  return lineChartSVG(pts, t('chartTop'));
+  return lineChartSVG(pts, tm ? t('woSec') : t('chartTop'));
 }
 /* generic line chart: pts = [{d:dateIso, w:number}] chronological */
 function lineChartSVG(pts, label){
@@ -1113,7 +1210,7 @@ function histRowHtml(w){
   if(open){
     detail = `<div class="histdetail">` + w.exercises.map(e=>
       `<div class="exl"><span class="n">${esc(e.name)}${e.note?` <em style="opacity:.8">— ${esc(e.note)}</em>`:''}</span>
-       <span class="s">${e.sets.map(s=>(s.warm?'W ':s.drop?'D ':'')+fmtW(s.weight)+'×'+s.reps).join('&nbsp; ')}</span></div>`).join('') +
+       <span class="s">${e.sets.map(s=>fmtSet(s, isTimeEx(e.k))).join('&nbsp; ')}</span></div>`).join('') +
       `<div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
         <span style="color:var(--ghost);font-size:13px">${t('histVolume')}: ${Math.round(vol)} kg${w.dur?' · ⏱ '+fmtTime(w.dur):''}</span>
         <button class="btn small" style="margin-left:auto;background:var(--input);color:var(--dim)" onclick="event.stopPropagation();toggleArch('${w.id}')">${w.arch?'↩ '+t('histUnarch'):'📦'}</button>
@@ -1316,7 +1413,7 @@ function shareTpl(id){
   const d = S.templates.find(x=>x.id===id);
   if(!d) return;
   const payload = { t:'tpl', name:d.name,
-    ex: d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0 })) };
+    ex: d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0 })) };
   const code = encodeShare(payload);
   openModal(`<h3>${t('tplShare')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div style="color:var(--dim);font-size:14px;margin:0 4px 10px">${t('tplShareHint')}</div>
@@ -1326,7 +1423,15 @@ function shareTpl(id){
 function copyBackup(){
   const payload = { t:'bak', s:{ lang:S.lang, theme:S.theme, keepAwake:S.keepAwake,
     folders:S.folders, customEx:S.customEx, templates:S.templates, history:S.history, weights:S.weights } };
+  S.lastBackup = Date.now();
+  save();
   copyText(encodeShare(payload));
+}
+/* nag when there is real data but no recent backup (localStorage is fragile on iOS) */
+function needBackupReminder(){
+  if(S.history.length < 5) return false;
+  const D = 24*3600*1000;
+  return (Date.now()-(S.lastBackup||0) > 21*D) && (Date.now()-(S.bakSnooze||0) > 7*D);
 }
 function openImportModal(kind){
   const hint = kind==='bak' ? t('bakHint') : t('tplImportHint');
@@ -1347,6 +1452,7 @@ function importTplPayload(d, folderId){
       if(existing) k = existing.id;
       else if(e.n){
         const info = { id:'custom-'+uid(), n:String(e.n).slice(0,60), g:'other', e:'other' };
+        if(e.m==='t') info.m = 't';
         S.customEx.push(info);
         k = info.id;
       } else continue;
