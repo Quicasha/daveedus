@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.3.1'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.3.2'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -494,19 +494,29 @@ function htmlHome(){
 }
 
 /* ======================= WORKOUT ======================= */
-function buildActiveEx(k, name, sets, reps, ss){
-  const last = lastForExercise(k, name);
+function buildActiveEx(k, name, sets, reps, ss, tplId){
+  const last = lastForExercise(k, name, tplId);
   return { id:uid(), k, name, targetSets:sets, targetReps:reps, note:'', ss:!!ss, last,
     sets: Array.from({length:sets}, ()=>({ w:'', r:'', warm:false, drop:false, done:false, cls:'' })) };
 }
-function lastForExercise(k, name){
+function lastForExercise(k, name, tplId){
   const nm = (name||'').trim().toLowerCase();
+  const match = e => (e.k===k || (nm && e.name && e.name.trim().toLowerCase()===nm))
+                     && e.sets && e.sets.length;
+  /* prefer the last session of the SAME workout — exercise order/fatigue context matters */
+  if(tplId){
+    for(const h of S.history){
+      if(h.arch || h.tplId!==tplId) continue;
+      for(const e of h.exercises){
+        if(match(e)) return { date:h.date, sets:e.sets, note:e.note||'', sameTpl:true };
+      }
+    }
+  }
+  /* fallback: any workout that had this exercise (marked as approximate in the UI) */
   for(const h of S.history){
     if(h.arch) continue;
     for(const e of h.exercises){
-      if(e.k===k || (nm && e.name && e.name.trim().toLowerCase()===nm)){
-        if(e.sets && e.sets.length) return { date:h.date, sets:e.sets, note:e.note||'' };
-      }
+      if(match(e)) return { date:h.date, sets:e.sets, note:e.note||'', sameTpl:false };
     }
   }
   return null;
@@ -519,7 +529,7 @@ function startWorkout(tplId){
   }
   S.active = {
     tplId: tpl.id, name: tpl.name, startedAt: new Date().toISOString(), rest:null,
-    exercises: tpl.ex.map(e => buildActiveEx(e.k, exName(e.k,e.n), e.s, e.r, e.ss))
+    exercises: tpl.ex.map(e => buildActiveEx(e.k, exName(e.k,e.n), e.s, e.r, e.ss, tpl.id))
   };
   save();
   go('workout');
@@ -565,10 +575,11 @@ function htmlWorkout(){
     const hdr = `<div class="setgrid hdr"><div>${t('woSet')}</div><div>${t('woPrev')}</div>
       <div>${t('woKg')}</div><div>${tm?t('woSec'):t('woReps')}</div><div>✓</div><div></div></div>`;
     let workNum = 0;
+    const approx = ex.last && !ex.last.sameTpl ? '~' : ''; /* values borrowed from another workout */
     const rows = ex.sets.map((s,si)=>{
       const g = ghostFor(ex,si);
-      const prevTxt = g ? (tm ? `${g.weight?fmtW(g.weight)+' kg · ':''}${g.reps} s`
-                              : `${fmtW(g.weight)} ${t('woKg')} × ${g.reps}`) : '—';
+      const prevTxt = g ? approx + (tm ? `${g.weight?fmtW(g.weight)+' kg · ':''}${g.reps} s`
+                                       : `${fmtW(g.weight)} ${t('woKg')} × ${g.reps}`) : '—';
       const label = s.warm ? 'W' : s.drop ? 'D' : String(++workNum);
       const chkCls = s.done ? (s.cls==='loss' ? 'loss' : 'done') : '';
       const restHere = S.active.rest && S.active.rest.key===xi+'-'+si;
@@ -684,7 +695,7 @@ function removeSet(xi){
 }
 function addWorkoutEx(){
   openPicker(info=>{
-    S.active.exercises.push(buildActiveEx(info.id, info.n, 3, 10));
+    S.active.exercises.push(buildActiveEx(info.id, info.n, 3, 10, false, S.active.tplId));
     save(); closeModal(); render();
   });
 }
