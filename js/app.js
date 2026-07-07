@@ -41,6 +41,13 @@ const I18N = {
     sumPRs:'Nauji rekordai', sumOk:'Super!',
     recTitle:'Rekordai', rec1RM:'~1RM (apytikslis)', recBestSet:'Geriausias setas', recTime:'Ilgiausiai',
     bakRemind:'Seniai nekopijavai atsarginio kodo!',
+    protTitle:'Duomenų apsauga', protPersist:'Nuolatinė saugykla',
+    protOn:'✓ Įjungta', protOff:'Nesuteikta',
+    protSnaps:'Automatinės kopijos įrenginyje',
+    protRestore:'Atkurti', protRestoreConfirm:'Atkurti duomenis iš {d}? Dabartiniai duomenys bus pakeisti.',
+    protNoSnaps:'Kopijų dar nėra — atsiras po kito išsaugojimo.',
+    protRestored:'Atkurta ✓', protRecovered:'Duomenys atkurti iš atsarginės saugyklos ✓',
+    protHint:'Kasdien automatiškai išsaugoma kopija įrenginyje, o duomenys dubliuojami į antrą saugyklą — jei viena sugestų, atsistatys iš kitos. Retkarčiais nusikopijuok ir atsarginį kodą: jis vienintelis padės pametus telefoną.',
     exCreateMode:'Tipas', modeReps:'Kartai', modeTime:'Laikas (sek.)',
     histArch:'Archyvuoti', histUnarch:'Grąžinti', archTitle:'Archyvas',
     exMine:'Mano', exMineEmpty:'Dar nieko nedarei — pasirink „Visi“ ir pradėk!',
@@ -107,6 +114,13 @@ const I18N = {
     sumPRs:'New records', sumOk:'Nice!',
     recTitle:'Records', rec1RM:'~1RM (estimated)', recBestSet:'Best set', recTime:'Longest',
     bakRemind:"You haven't copied a backup code in a while!",
+    protTitle:'Data protection', protPersist:'Persistent storage',
+    protOn:'✓ On', protOff:'Not granted',
+    protSnaps:'Automatic on-device snapshots',
+    protRestore:'Restore', protRestoreConfirm:'Restore data from {d}? Current data will be replaced.',
+    protNoSnaps:'No snapshots yet — one will appear after the next save.',
+    protRestored:'Restored ✓', protRecovered:'Data recovered from backup storage ✓',
+    protHint:'A daily snapshot is kept on this device and data is mirrored to a second storage — if one breaks, the other restores it. Still copy a backup code occasionally: it is the only thing that survives losing the phone.',
     exCreateMode:'Type', modeReps:'Reps', modeTime:'Time (sec)',
     histArch:'Archive', histUnarch:'Restore', archTitle:'Archive',
     exMine:'Mine', exMineEmpty:'Nothing done yet — pick “All” and get started!',
@@ -170,30 +184,84 @@ function defaultState(){
            folders:[{ id:fid, name:'Upper / Lower', open:true, pinned:true }],
            customEx:[], templates:seedTemplates(fid), history:[], weights:[], active:null };
 }
+/* validate + migrate a raw state object; returns null if unusable */
+function hydrate(s){
+  if(!s || !Array.isArray(s.templates)) return null;
+  /* migration: older data had no split folders */
+  if(!Array.isArray(s.folders)){
+    const fid = uid();
+    s.folders = [{ id:fid, name:'Upper / Lower', open:true }];
+    s.templates.forEach(tp=>{ if(!tp.folderId) tp.folderId = fid; });
+  }
+  s.folders.forEach(f=>{ if(typeof f.pinned==='undefined') f.pinned = true; });
+  if(!Array.isArray(s.weights)) s.weights = [];
+  return Object.assign(defaultState(), s);
+}
+let LS_OK = false; /* did localStorage contain valid data at boot? */
 function load(){
   try{
     const raw = localStorage.getItem(LS_KEY);
     if(raw){
-      const s = JSON.parse(raw);
-      if(s && Array.isArray(s.templates)){
-        /* migration: older data had no split folders */
-        if(!Array.isArray(s.folders)){
-          const fid = uid();
-          s.folders = [{ id:fid, name:'Upper / Lower', open:true }];
-          s.templates.forEach(tp=>{ if(!tp.folderId) tp.folderId = fid; });
-        }
-        s.folders.forEach(f=>{ if(typeof f.pinned==='undefined') f.pinned = true; });
-        if(!Array.isArray(s.weights)) s.weights = [];
-        return Object.assign(defaultState(), s);
-      }
+      const s = hydrate(JSON.parse(raw));
+      if(s){ LS_OK = true; return s; }
     }
   }catch(e){}
   return defaultState();
 }
 let S = load();
+
+/* ---- storage safety net: daily snapshots + IndexedDB mirror ---- */
+const SNAP_PREFIX = 'daveedus.snap.';
+function maybeSnapshot(){
+  /* once per day, keep the previous state as an on-device snapshot (newest 3) */
+  try{
+    const today = new Date().toISOString().slice(0,10);
+    if(localStorage.getItem('daveedus.lastSnap')===today) return;
+    const prev = localStorage.getItem(LS_KEY);
+    if(prev) localStorage.setItem(SNAP_PREFIX+today, prev);
+    localStorage.setItem('daveedus.lastSnap', today);
+    const keys = Object.keys(localStorage).filter(k=>k.startsWith(SNAP_PREFIX)).sort();
+    while(keys.length>3) localStorage.removeItem(keys.shift());
+  }catch(e){}
+}
+function idbOpen(){
+  return new Promise((res,rej)=>{
+    const q = indexedDB.open('daveedus', 1);
+    q.onupgradeneeded = ()=>q.result.createObjectStore('kv');
+    q.onsuccess = ()=>res(q.result);
+    q.onerror = ()=>rej(q.error);
+  });
+}
+async function idbSet(val){
+  try{
+    const db = await idbOpen();
+    await new Promise((res,rej)=>{
+      const tx = db.transaction('kv','readwrite');
+      tx.objectStore('kv').put(val, 'state');
+      tx.oncomplete = res; tx.onerror = ()=>rej(tx.error);
+    });
+    db.close();
+  }catch(e){}
+}
+async function idbGet(){
+  try{
+    const db = await idbOpen();
+    const v = await new Promise((res,rej)=>{
+      const q = db.transaction('kv','readonly').objectStore('kv').get('state');
+      q.onsuccess = ()=>res(q.result); q.onerror = ()=>rej(q.error);
+    });
+    db.close();
+    return v;
+  }catch(e){ return null; }
+}
+let idbTimer = null;
 function save(){
-  try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }
-  catch(e){ toast(t('saveError')); }
+  try{
+    maybeSnapshot();
+    localStorage.setItem(LS_KEY, JSON.stringify(S));
+  }catch(e){ toast(t('saveError')); }
+  clearTimeout(idbTimer);
+  idbTimer = setTimeout(()=>idbSet(JSON.stringify(S)), 800);
 }
 /* view state (not persisted) */
 const V = { screen:'home', editTpl:null, viewFolder:null, exDetail:null, expanded:null,
@@ -1382,16 +1450,60 @@ function htmlSettings(){
   <h2 class="sec">${t('setBackup')}</h2>
   <button class="btn" onclick="copyBackup()">⤴ ${t('setBackupCopy')}</button>
   <button class="btn" onclick="openImportModal('bak')">⤓ ${t('setBackupLoad')}</button>
+  <h2 class="sec">${t('protTitle')}</h2>
+  <div class="card">
+    <div class="setline">
+      <span class="lb">${t('protPersist')}</span>
+      <span id="persist-status" style="color:var(--dim);font-weight:700;font-size:14px">…</span>
+    </div>
+    <div style="font-size:12px;color:var(--ghost);line-height:1.5;margin-top:2px">${t('protHint')}</div>
+  </div>
+  <h2 class="sec">${t('protSnaps')}</h2>
+  <div class="card">${snapListHtml()}</div>
   <h2 class="sec" style="color:var(--red)">${t('setDanger')}</h2>
   <button class="btn danger" onclick="wipeAll()">${t('setWipe')}</button>
   <div style="text-align:center;color:var(--ghost);font-size:12px;margin-top:24px">Daveedus v1.0</div>`;
 }
 function setTheme(m){ S.theme=m; save(); applyTheme(); render(); }
+function snapListHtml(){
+  const keys = Object.keys(localStorage).filter(k=>k.startsWith(SNAP_PREFIX)).sort().reverse();
+  if(!keys.length) return `<div style="color:var(--dim);font-size:14px;padding:4px 0">${t('protNoSnaps')}</div>`;
+  return keys.map(k=>`<div class="setline">
+    <span class="lb" style="font-weight:600">📄 ${k.slice(SNAP_PREFIX.length)}</span>
+    <button class="btn small" style="background:var(--accent-bg);color:var(--accent-soft)"
+      onclick="restoreSnapshot('${k}')">${t('protRestore')}</button>
+  </div>`).join('');
+}
+function restoreSnapshot(key){
+  try{
+    const s = hydrate(JSON.parse(localStorage.getItem(key)));
+    if(!s){ toast(t('codeBad')); return; }
+    if(!confirm(t('protRestoreConfirm',{d:key.slice(SNAP_PREFIX.length)}))) return;
+    s.active = null;
+    S = s;
+    save(); applyTheme();
+    go('home');
+    toast(t('protRestored'));
+  }catch(e){ toast(t('codeBad')); }
+}
+function updatePersistStatus(){
+  const el = $('#persist-status');
+  if(!el) return;
+  if(navigator.storage && navigator.storage.persisted){
+    navigator.storage.persisted().then(p=>{
+      el.textContent = p ? t('protOn') : t('protOff');
+      el.style.color = p ? 'var(--green)' : 'var(--orange)';
+    }).catch(()=>{ el.textContent='—'; });
+  }else el.textContent = '—';
+}
 function wipeAll(){
   if(!confirm(t('setWipeConfirm'))) return;
   if(!confirm(t('setWipeConfirm'))) return;
-  localStorage.removeItem(LS_KEY);
+  /* wipe everything, including snapshots and the IndexedDB mirror */
+  Object.keys(localStorage).filter(k=>k.startsWith('daveedus.')).forEach(k=>localStorage.removeItem(k));
+  idbSet(null);
   S = defaultState();
+  save();
   go('home');
 }
 
@@ -1513,21 +1625,35 @@ document.addEventListener('visibilitychange', ()=>{
 });
 
 /* ======================= boot ======================= */
-document.addEventListener('DOMContentLoaded', ()=>{
+document.addEventListener('DOMContentLoaded', async ()=>{
   applyTheme();
   $('#modal').addEventListener('click', e=>{ if(e.target.id==='modal') closeModal(); });
+  /* localStorage empty or corrupt? try the IndexedDB mirror before showing defaults */
+  if(!LS_OK){
+    try{
+      const raw = await idbGet();
+      if(raw){
+        const s = hydrate(typeof raw==='string' ? JSON.parse(raw) : raw);
+        if(s){ S = s; save(); applyTheme(); toast(t('protRecovered')); }
+      }
+    }catch(e){}
+  }
+  /* ask the browser to protect our storage from eviction */
+  if(navigator.storage && navigator.storage.persist){
+    navigator.storage.persist().catch(()=>{});
+  }
   if(S.active) V.screen = 'workout';
   render();
-  if(V.screen==='exercises') renderExList();
   setInterval(tick, 500);
   if('serviceWorker' in navigator && /^https?:/.test(location.protocol)){
     navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
 });
 
-/* exercises tab needs its list rendered after each full render */
+/* screens with async bits need a follow-up after each full render */
 const _origRender = render;
 render = function(){
   _origRender();
   if(V.screen==='exercises') renderExList();
+  if(V.screen==='settings') updatePersistStatus();
 };
