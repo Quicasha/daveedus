@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.6.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.6.1'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -70,7 +70,7 @@ const I18N = {
     platesRem:'{n} kg pusėj netelpa iš standartinių svarelių', platesEmpty:'Tuščias grifas',
     superset:'Superset',
     codeBad:'Neteisingas kodas', copy:'Kopijuoti', copied:'Nukopijuota ✓',
-    daySets:'setai', dayReps:'kart.',
+    daySets:'setai', dayReps:'kart.', repsRangeTog:'nuo–iki',
     exSearch:'Ieškoti pratimo...', exAll:'Visi', exCreate:'+ Sukurti savo pratimą',
     exCreateTitle:'Naujas pratimas', exCreateName:'Pavadinimas', exCreateGroup:'Raumenų grupė',
     exCreateSave:'Išsaugoti', exNameReq:'Įvesk pavadinimą',
@@ -154,7 +154,7 @@ const I18N = {
     platesRem:"{n} kg per side doesn't fit standard plates", platesEmpty:'Empty bar',
     superset:'Superset',
     codeBad:'Invalid code', copy:'Copy', copied:'Copied ✓',
-    daySets:'sets', dayReps:'reps',
+    daySets:'sets', dayReps:'reps', repsRangeTog:'range',
     exSearch:'Search exercises...', exAll:'All', exCreate:'+ Create your own exercise',
     exCreateTitle:'New exercise', exCreateName:'Name', exCreateGroup:'Muscle group',
     exCreateSave:'Save', exNameReq:'Enter a name',
@@ -506,7 +506,7 @@ function htmlHome(){
   h += `<div class="statrow">
       <div class="stat" style="cursor:pointer" onclick="go('history')"><div class="v">${weekCount()}</div><div class="l">${t('statWeek')}</div></div>
       <div class="stat" style="cursor:pointer" onclick="go('history')"><div class="v">${S.history.length}</div><div class="l">${t('statTotal')}</div></div>
-      <div class="stat" style="cursor:pointer" onclick="go('history')">
+      <div class="stat" style="cursor:pointer" onclick="openBwModal()">
         <div class="v">${S.weights.length?wu(S.weights[0].kg):'—'}</div><div class="l">${t('bw').toLowerCase()}, ${unitL()}</div></div>
     </div>`;
   if(S.active){
@@ -1128,6 +1128,13 @@ function htmlTplEdit(){
     <div class="card">`;
   h += d.ex.map((e,i)=>{
     const info = exInfo(e.k);
+    const p = repsParse(e.r);
+    const rnum = (which,val) => `<div class="numfield">
+      <button onclick="stepReps('${d.id}',${i},'${which}',-1)">−</button><span class="val">${val}</span>
+      <button onclick="stepReps('${d.id}',${i},'${which}',1)">+</button></div>`;
+    const repsCtl = p.range
+      ? rnum('lo',p.lo) + `<span class="rgdash">–</span>` + rnum('hi',p.hi)
+      : rnum('single',p.lo);
     return `<div class="exedit">
       <div class="row1">
         <div class="exlabel">
@@ -1143,12 +1150,12 @@ function htmlTplEdit(){
           <button onclick="bumpTplEx('${d.id}',${i},'s',-1)">−</button><span class="val">${e.s}</span>
           <button onclick="bumpTplEx('${d.id}',${i},'s',1)">+</button><span class="lbl">${t('daySets')}</span>
         </div>
-        <div class="numfield repsfield">
-          <input type="text" inputmode="text" class="repsinput" value="${esc(String(e.r))}"
-            placeholder="8-12" onchange="setTplReps('${d.id}',${i},this.value)">
-          <span class="lbl">${t('dayReps')}</span>
-        </div>
         ${i<d.ex.length-1?`<button class="minibtn ${e.ss?'acc':''}" style="margin-left:auto" onclick="toggleSS('${d.id}',${i})">🔗</button>`:''}
+      </div>
+      <div class="row2 repsrow">
+        <span class="rlead">${t('dayReps')}</span>
+        ${repsCtl}
+        <button class="rangetog ${p.range?'acc':''}" onclick="toggleRepsRange('${d.id}',${i})">${t('repsRangeTog')}</button>
       </div>
       ${e.ss && i<d.ex.length-1?`<div class="ssline">🔗 ${t('superset')}</div>`:''}
     </div>`;
@@ -1196,10 +1203,34 @@ function bumpTplEx(id,i,f,delta){
   save(); render();
 }
 /* reps target may be a single number or a range (e.g. "10-12") */
-function setTplReps(id,i,v){
+function repsParse(r){
+  const m = String(r).match(/^(\d+)-(\d+)$/);
+  if(m) return { range:true, lo:+m[1], hi:+m[2] };
+  const n = parseInt(r,10)||10;
+  return { range:false, lo:n, hi:n };
+}
+function stepReps(id,i,which,delta){
   const d = S.templates.find(x=>x.id===id);
   if(!d || !d.ex[i]) return;
-  d.ex[i].r = normReps(v);
+  const cl = n => Math.max(1, Math.min(50, n));
+  const p = repsParse(d.ex[i].r);
+  if(!p.range){
+    d.ex[i].r = String(cl(p.lo+delta));
+  } else if(which==='hi'){
+    const hi = cl(p.hi+delta);
+    d.ex[i].r = Math.min(p.lo,hi)+'-'+hi;
+  } else {
+    const lo = cl(p.lo+delta);
+    d.ex[i].r = lo+'-'+Math.max(p.hi,lo);
+  }
+  save(); render();
+}
+/* toggle a rep target between a single value and a "from–to" range */
+function toggleRepsRange(id,i){
+  const d = S.templates.find(x=>x.id===id);
+  if(!d || !d.ex[i]) return;
+  const p = repsParse(d.ex[i].r);
+  d.ex[i].r = p.range ? String(p.lo) : p.lo+'-'+Math.min(50,p.lo+2);
   save(); render();
 }
 function addTplEx(id){
@@ -1736,12 +1767,42 @@ function delHistSet(id,ei,si){
 }
 
 /* ---- body weight ---- */
+function logWeight(n){
+  if(isNaN(n) || n<=0 || n>(S.unit==='lb'?900:400)){ toast(t('bwEnter')); return false; }
+  S.weights.unshift({ id:uid(), date:new Date().toISOString(), kg:Math.round(u2kg(n)*10)/10 });
+  return true;
+}
 function addWeight(){
   const inp = $('#bw-input');
-  const n = parseNum(inp ? inp.value : '');
-  if(isNaN(n) || n<=0 || n>(S.unit==='lb'?900:400)){ toast(t('bwEnter')); return; }
-  S.weights.unshift({ id:uid(), date:new Date().toISOString(), kg:Math.round(u2kg(n)*10)/10 });
-  save(); render();
+  if(logWeight(parseNum(inp ? inp.value : ''))){ save(); render(); }
+}
+/* quick body-weight logging modal (opened from the home stat card):
+   prefilled with the last logged weight, adjustable ±0.1 with the ▾/▴ buttons */
+function openBwModal(){
+  const last = S.weights.length ? kg2u(S.weights[0].kg) : null;
+  openModal(`<h3>${t('bwEnter')}<button class="x" onclick="closeModal()">✕</button></h3>
+    <div class="bwmodal">
+      <button class="bwmstep" onclick="stepBwModal(-0.1)" aria-label="-0.1">▾</button>
+      <input id="bwm-input" type="text" inputmode="decimal" class="bwminput"
+        value="${last!=null?esc(fmtW(last)):''}" placeholder="${last!=null?esc(fmtW(last)):'—'}">
+      <span class="bwmu">${unitL()}</span>
+      <button class="bwmstep" onclick="stepBwModal(0.1)" aria-label="+0.1">▴</button>
+    </div>
+    <button class="btn primary" onclick="saveBwModal()">${t('bwLog')} ✓</button>`);
+  setTimeout(()=>{ const i=$('#bwm-input'); if(i) i.focus(); }, 60);
+}
+function stepBwModal(d){
+  const inp = $('#bwm-input');
+  if(!inp) return;
+  let cur = parseNum(inp.value);
+  if(isNaN(cur)) cur = S.weights.length ? kg2u(S.weights[0].kg) : 0;
+  let v = Math.round((cur + d)*10)/10;
+  if(v < 0) v = 0;
+  inp.value = fmtW(v);
+}
+function saveBwModal(){
+  const inp = $('#bwm-input');
+  if(logWeight(parseNum(inp ? inp.value : ''))){ save(); closeModal(); render(); }
 }
 function delWeight(id){
   if(!confirm(t('bwDel'))) return;
