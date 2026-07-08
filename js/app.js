@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.3.2'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.4.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -55,6 +55,10 @@ const I18N = {
     updToast:'Atnaujinta į naujausią versiją ✓',
     exCreateMode:'Tipas', modeReps:'Kartai', modeTime:'Laikas (sek.)',
     histArch:'Archyvuoti', histUnarch:'Grąžinti', archTitle:'Archyvas',
+    statsCal:'Kalendorius', statsWeeks:'Treniruotės per savaitę', statsVolW:'Apimtis per savaitę (kg)',
+    statsMuscle:'Setai raumenų grupėms (per 7 d.)',
+    metricW:'Svoris', metricVol:'Apimtis', metric1RM:'~1RM',
+    calDows:'Pr An Tr Kt Pn Št Sk',
     exMine:'Mano', exMineEmpty:'Dar nieko nedarei — pasirink „Visi“ ir pradėk!',
     saveDone:'Išsaugoti',
     bw:'Kūno svoris', bwLog:'Įrašyti', bwDel:'Ištrinti šį įrašą?',
@@ -131,6 +135,10 @@ const I18N = {
     updToast:'Updated to the latest version ✓',
     exCreateMode:'Type', modeReps:'Reps', modeTime:'Time (sec)',
     histArch:'Archive', histUnarch:'Restore', archTitle:'Archive',
+    statsCal:'Calendar', statsWeeks:'Workouts per week', statsVolW:'Volume per week (kg)',
+    statsMuscle:'Sets per muscle group (last 7 d)',
+    metricW:'Weight', metricVol:'Volume', metric1RM:'~1RM',
+    calDows:'Mo Tu We Th Fr Sa Su',
     exMine:'Mine', exMineEmpty:'Nothing done yet — pick “All” and get started!',
     saveDone:'Save',
     bw:'Body weight', bwLog:'Log', bwDel:'Delete this entry?',
@@ -279,7 +287,7 @@ function save(){
 /* view state (not persisted) */
 const V = { screen:'home', editTpl:null, viewFolder:null, exDetail:null, expanded:null,
             pickerCb:null, pickerQ:'', pickerG:'all', exQ:'', exG:'mine',
-            exTplFilter:'', exFilterNames:[], showArch:false };
+            exTplFilter:'', exFilterNames:[], exMetric:'w', calOff:0, showArch:false };
 
 /* exercise lookup: built-in DB + user's custom exercises */
 function exInfo(k){
@@ -442,8 +450,8 @@ function htmlHome(){
     </div>`;
   }
   h += `<div class="statrow">
-      <div class="stat"><div class="v">${weekCount()}</div><div class="l">${t('statWeek')}</div></div>
-      <div class="stat"><div class="v">${S.history.length}</div><div class="l">${t('statTotal')}</div></div>
+      <div class="stat" style="cursor:pointer" onclick="go('history')"><div class="v">${weekCount()}</div><div class="l">${t('statWeek')}</div></div>
+      <div class="stat" style="cursor:pointer" onclick="go('history')"><div class="v">${S.history.length}</div><div class="l">${t('statTotal')}</div></div>
       <div class="stat" style="cursor:pointer" onclick="go('history')">
         <div class="v">${S.weights.length?fmtW(S.weights[0].kg):'—'}</div><div class="l">${t('bw').toLowerCase()}, kg</div></div>
     </div>`;
@@ -1168,6 +1176,7 @@ function renderExList(){
 function openExDetailByKey(k){
   V.exDetail = k;
   V.exTplFilter = '';
+  V.exMetric = 'w';
   const i = exInfo(k);
   V.exDetailName = i ? i.n : k;
   closeModal();
@@ -1210,7 +1219,13 @@ function htmlExDetail(){
         <span style="font-weight:800;font-size:16px">${fmtW(st.bestSet.weight)} kg × ${st.bestSet.reps}</span></div>
     </div>`;
   }
-  h += `<div id="chartbox" class="card">${chartSVG(k, name, filter)}</div>`;
+  if(!tm){
+    h += `<div class="chips" style="padding-bottom:6px">` +
+      [['w',t('metricW')],['vol',t('metricVol')],['1rm',t('metric1RM')]].map(([m,lb])=>
+        `<button class="chip ${(V.exMetric||'w')===m?'on':''}" onclick="V.exMetric='${m}'; render()">${lb}</button>`).join('') +
+      `</div>`;
+  }
+  h += `<div id="chartbox" class="card">${chartSVG(k, name, filter, V.exMetric)}</div>`;
   /* session log */
   const rows = [];
   for(const w of S.history){
@@ -1225,7 +1240,7 @@ function htmlExDetail(){
   h += `<div class="card"><div class="histdetail" style="border:none;margin:0;padding:0">${rows.join('')}</div></div>`;
   return h;
 }
-function chartSVG(k, name, tplName){
+function chartSVG(k, name, tplName, metric){
   const nm = (name||'').trim().toLowerCase();
   const tm = isTimeEx(k);
   const pts = [];
@@ -1235,16 +1250,32 @@ function chartSVG(k, name, tplName){
     for(const e of w.exercises){
       if(e.k===k || (e.name && e.name.trim().toLowerCase()===nm)){
         const work = e.sets.filter(s=>!s.warm && !s.drop);
-        if(work.length) pts.push({ d:w.date, w:Math.max(...work.map(s=>tm?s.reps:s.weight)) });
+        if(!work.length) continue;
+        let v;
+        if(tm) v = Math.max(...work.map(s=>s.reps));
+        else if(metric==='vol') v = Math.round(work.reduce((a,s)=>a+s.weight*s.reps,0));
+        else if(metric==='1rm') v = Math.round(Math.max(...work.map(s=>s.weight*(1+s.reps/30)))*10)/10;
+        else v = Math.max(...work.map(s=>s.weight));
+        pts.push({ d:w.date, w:v });
       }
     }
   }
-  return lineChartSVG(pts, tm ? t('woSec') : t('chartTop'));
+  const label = tm ? t('woSec')
+    : metric==='vol' ? t('metricVol')+' (kg)'
+    : metric==='1rm' ? t('metric1RM')+' (kg)'
+    : t('chartTop');
+  return lineChartSVG(pts, label, tm?'s':'kg');
+}
+/* tap on a chart point -> exact value with date */
+function chartTap(i){
+  const d = window.__chartData && window.__chartData[i];
+  if(d) toast(fmtDate(d.d)+' · '+fmtW(d.w)+' '+(window.__chartUnit||''));
 }
 /* generic line chart: pts = [{d:dateIso, w:number}] chronological */
-function lineChartSVG(pts, label){
+function lineChartSVG(pts, label, unit){
   if(!pts.length) return `<div class="empty">${t('chartNoData')}</div>`;
   const data = pts.slice(-24);
+  window.__chartData = data; window.__chartUnit = unit||'';
   const W=360, H=210, padL=44, padR=14, padT=18, padB=30;
   let min = Math.min(...data.map(p=>p.w)), max = Math.max(...data.map(p=>p.w));
   if(min===max){ min-=5; max+=5; }
@@ -1262,6 +1293,7 @@ function lineChartSVG(pts, label){
   const line = data.map((p,i)=>`${X(i)},${Y(p.w)}`).join(' ');
   const dots = data.map((p,i)=>
     `<circle cx="${X(i)}" cy="${Y(p.w)}" r="4" fill="var(--accent)"/>` +
+    `<circle cx="${X(i)}" cy="${Y(p.w)}" r="13" fill="transparent" style="cursor:pointer" onclick="chartTap(${i})"/>` +
     (data.length<=10 ? `<text x="${X(i)}" y="${Y(p.w)-9}" fill="var(--text)" font-size="11" font-weight="700" text-anchor="middle">${fmtW(p.w)}</text>` : '')
   ).join('');
   const d0 = fmtDate(data[0].d), d1 = fmtDate(data[data.length-1].d);
@@ -1275,9 +1307,108 @@ function lineChartSVG(pts, label){
   </svg>`;
 }
 
+/* ======================= STATS DASHBOARD ======================= */
+function barChartSVG(data){ /* data = [{l:label, v:number}] */
+  if(!data.some(d=>d.v)) return `<div class="empty" style="padding:14px">${t('chartNoData')}</div>`;
+  const W=360, H=150, padL=6, padR=6, padT=20, padB=20;
+  const max = Math.max(1, ...data.map(d=>d.v));
+  const bw = (W-padL-padR)/data.length;
+  let out = '';
+  data.forEach((d,i)=>{
+    const bh = (H-padT-padB)*(d.v/max);
+    const x = padL+i*bw, y = H-padB-bh;
+    out += `<rect x="${x+bw*0.16}" y="${d.v?y:H-padB-2}" width="${bw*0.68}" height="${Math.max(bh,2)}" rx="4" fill="${d.v?'var(--accent)':'var(--input)'}"/>`;
+    if(d.v) out += `<text x="${x+bw/2}" y="${y-5}" fill="var(--dim)" font-size="10" font-weight="700" text-anchor="middle">${d.v>=10000?Math.round(d.v/1000)+'k':d.v}</text>`;
+    out += `<text x="${x+bw/2}" y="${H-6}" fill="var(--ghost)" font-size="9" text-anchor="middle">${d.l}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${out}</svg>`;
+}
+function statsWeekly(){
+  const now = new Date();
+  const day = (now.getDay()+6)%7;
+  const mon = new Date(now); mon.setHours(0,0,0,0); mon.setDate(now.getDate()-day);
+  const wk = [], vol = [];
+  for(let i=7; i>=0; i--){
+    const s = new Date(mon); s.setDate(mon.getDate()-7*i);
+    const e = new Date(s); e.setDate(s.getDate()+7);
+    let cnt = 0, v = 0;
+    for(const h of S.history){
+      if(h.arch) continue;
+      const d = new Date(h.date);
+      if(d>=s && d<e){
+        cnt++;
+        v += h.exercises.reduce((a,ex)=>a+ex.sets.filter(x=>!x.warm).reduce((b,x)=>b+x.weight*x.reps,0),0);
+      }
+    }
+    const l = s.getDate()+'.'+String(s.getMonth()+1).padStart(2,'0');
+    wk.push({l, v:cnt});
+    vol.push({l, v:Math.round(v)});
+  }
+  return { wk, vol };
+}
+function muscleBalanceHtml(){
+  const cutoff = Date.now() - 7*864e5;
+  const counts = {};
+  for(const h of S.history){
+    if(h.arch || new Date(h.date).getTime() < cutoff) continue;
+    for(const e of h.exercises){
+      const info = exInfo(e.k);
+      const g = info ? info.g : 'other';
+      counts[g] = (counts[g]||0) + e.sets.filter(s=>!s.warm).length;
+    }
+  }
+  const rows = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  if(!rows.length) return `<div class="empty" style="padding:14px">${t('chartNoData')}</div>`;
+  const max = rows[0][1];
+  return rows.map(([g,n])=>`<div class="mb-row">
+    <span class="mb-name">${t('g_'+g)}</span>
+    <span class="mb-bar"><i style="width:${Math.round(100*n/max)}%"></i></span>
+    <span class="mb-val">${n}</span>
+  </div>`).join('');
+}
+function calHtml(){
+  const base = new Date();
+  base.setDate(1);
+  base.setMonth(base.getMonth() + (V.calOff||0));
+  const y = base.getFullYear(), m = base.getMonth();
+  const startDow = (new Date(y,m,1).getDay()+6)%7; /* Monday = 0 */
+  const dim = new Date(y, m+1, 0).getDate();
+  const trained = new Set();
+  for(const h of S.history){
+    if(h.arch) continue;
+    const d = new Date(h.date);
+    if(d.getFullYear()===y && d.getMonth()===m) trained.add(d.getDate());
+  }
+  const now = new Date();
+  const isThisMonth = now.getFullYear()===y && now.getMonth()===m;
+  const monthName = base.toLocaleDateString(S.lang==='lt'?'lt-LT':'en-GB', {month:'long', year:'numeric'});
+  let cells = t('calDows').split(' ').map(d=>`<div class="c dow">${d}</div>`).join('');
+  for(let i=0;i<startDow;i++) cells += `<div class="c"></div>`;
+  for(let d=1; d<=dim; d++){
+    const cls = (trained.has(d)?' on':'') + (isThisMonth && d===now.getDate()?' today':'');
+    cells += `<div class="c${cls}">${d}</div>`;
+  }
+  return `<div class="calhead">
+      <button class="minibtn" onclick="V.calOff=Math.max((V.calOff||0)-1,-36); render()">‹</button>
+      <span>${esc(monthName)}</span>
+      <button class="minibtn" ${V.calOff>=0?'style="visibility:hidden"':''} onclick="V.calOff=Math.min((V.calOff||0)+1,0); render()">›</button>
+    </div>
+    <div class="cal">${cells}</div>`;
+}
+
 /* ======================= HISTORY ======================= */
 function htmlHistory(){
   let h = '<div style="height:8px"></div>';
+  /* stats dashboard */
+  const sw = statsWeekly();
+  h += `<h2 class="sec" style="margin-top:8px">${t('statsCal')}</h2>
+    <div class="card">${calHtml()}</div>
+    <h2 class="sec">${t('statsWeeks')}</h2>
+    <div class="card">${barChartSVG(sw.wk)}</div>
+    <h2 class="sec">${t('statsVolW')}</h2>
+    <div class="card">${barChartSVG(sw.vol)}</div>
+    <h2 class="sec">${t('statsMuscle')}</h2>
+    <div class="card">${muscleBalanceHtml()}</div>`;
   /* body weight tracking */
   h += `<h2 class="sec" style="margin-top:8px">${t('bw')}</h2>
     <div class="card">
@@ -1286,7 +1417,7 @@ function htmlHistory(){
           placeholder="${S.weights.length?fmtW(S.weights[0].kg)+' kg':'kg'}" style="flex:1">
         <button class="btn small" style="background:var(--accent);color:var(--on-accent);min-height:46px;padding:0 20px" onclick="addWeight()">${t('bwLog')}</button>
       </div>
-      ${S.weights.length>1?`<div style="margin-top:12px">${lineChartSVG(S.weights.slice(0,24).slice().reverse().map(x=>({d:x.date,w:x.kg})), 'kg')}</div>`:''}
+      ${S.weights.length>1?`<div style="margin-top:12px">${lineChartSVG(S.weights.slice(0,24).slice().reverse().map(x=>({d:x.date,w:x.kg})), 'kg', 'kg')}</div>`:''}
       ${S.weights.slice(0,5).map(x=>`<div style="display:flex;gap:8px;padding:6px 0;align-items:center;font-size:14px">
         <span style="color:var(--dim);flex:1">${fmtDate(x.date)}</span>
         <span style="font-weight:700">${fmtW(x.kg)} kg</span>
