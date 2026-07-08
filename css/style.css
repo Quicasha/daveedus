@@ -99,8 +99,9 @@ h2.sec{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(
 
 /* ============ workout ============ */
 .exhead{display:flex; align-items:center; gap:8px;}
-.exname{flex:1; font-size:17px; font-weight:700; color:var(--accent-soft); min-width:0;}
-.extarget{color:var(--dim); font-size:13px; font-weight:600; flex:none;}
+.exname{flex:1; font-size:17px; font-weight:700; color:var(--text); min-width:0;}
+.extarget{color:var(--dim); font-size:12px; font-weight:700; flex:none; background:var(--input);
+  border-radius:8px; padding:4px 9px; font-variant-numeric:tabular-nums;}
 .exhead .minibtn{width:34px; min-height:34px; font-size:13px; background:none; color:var(--ghost);}
 .lastnote{background:var(--accent-bg); color:var(--accent-soft); border-radius:9px;
   padding:8px 12px; font-size:13px; margin-top:10px; font-style:italic;}
@@ -123,7 +124,7 @@ h2.sec{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(
 .sprow.next .nextchip{background:rgba(255,255,255,.25); margin-left:0;}
 .setgrid{display:grid; grid-template-columns:30px 1fr 66px 54px 42px 24px; gap:6px; align-items:center; margin-top:8px;}
 .setgrid.hdr{margin-top:14px;}
-.setgrid.hdr div{font-size:10px; font-weight:700; letter-spacing:.5px; color:var(--dim); text-transform:uppercase; text-align:center;}
+.setgrid.hdr div{font-size:11px; font-weight:700; letter-spacing:.4px; color:var(--dim); text-transform:uppercase; text-align:center;}
 .setgrid.hdr div:nth-child(2){text-align:left; padding-left:2px;}
 .setrow-wrap{border-radius:10px;}
 .setrow-wrap.done{background:var(--green-bg);}
@@ -142,10 +143,11 @@ h2.sec{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(
 .droprow .checkbtn{min-height:34px; font-size:13px;}
 .droprow .setnum{min-height:34px; font-size:13px;}
 .droprow .prev{font-size:11px;}
-.prev{color:var(--ghost); font-size:13px; font-weight:500; padding-left:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.prev{color:var(--dim); font-size:13px; font-weight:600; padding-left:2px; white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis; font-variant-numeric:tabular-nums;}
 .setgrid input{width:100%; background:var(--input); border:none;
   border-radius:9px; min-height:42px; font-size:17px; font-weight:700; text-align:center;
-  -webkit-appearance:none; appearance:none;}
+  font-variant-numeric:tabular-nums; -webkit-appearance:none; appearance:none;}
 .setgrid input::placeholder{color:var(--ghost); font-weight:500;}
 .setgrid input:focus{outline:none; box-shadow:0 0 0 2px var(--accent);}
 .setrow-wrap.done .setgrid input{background:transparent;}
@@ -183,11 +185,19 @@ h2.sec{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(
 #stepper button:active{opacity:.6;}
 
 /* bodyweight line: separate body-weight value shown per bodyweight exercise */
-.bwline{display:flex; align-items:center; gap:6px; margin-top:10px; font-size:12px;
+.bwline{display:flex; align-items:center; gap:8px; margin-top:10px; font-size:12px;
   font-weight:700; color:var(--dim); flex-wrap:wrap;}
-.bwline .bwinput{width:70px; background:var(--input); border:none; border-radius:8px;
-  min-height:34px; font-size:15px; font-weight:700; text-align:center; -webkit-appearance:none;}
-.bwline .bwinput:focus{outline:none; box-shadow:0 0 0 2px var(--accent);}
+.bwline .bwlbl{cursor:pointer; user-select:none;}
+/* pill grouping the −/+ steppers around the value, so it reads as one quick control */
+.bwstepper{flex:none; display:flex; align-items:center; background:var(--input); border-radius:10px; overflow:hidden;}
+.bwstepper:focus-within{box-shadow:0 0 0 2px var(--accent);}
+.bwstepper .bwstep{flex:none; width:38px; min-height:36px; border:none; background:none;
+  color:var(--accent-soft); font-size:15px; font-weight:800; padding:0; line-height:1;}
+.bwstepper .bwstep:active{opacity:.45;}
+.bwline .bwinput{flex:none; width:50px; background:none; border:none; min-height:36px;
+  font-size:16px; font-weight:800; text-align:center; -webkit-appearance:none;
+  font-variant-numeric:tabular-nums;}
+.bwline .bwinput:focus{outline:none;}
 .bwline .bwu{color:var(--dim);}
 .bwline .bwhint{color:var(--ghost); font-weight:500; font-size:11px; flex:1; min-width:120px;}
 
@@ -222,9 +232,16 @@ h2.sec{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(
   border-radius:10px; min-height:46px; font-size:16px; font-weight:600; padding:0 12px; -webkit-appearance:none;}
 .nameinput:focus{outline:none; box-shadow:0 0 0 2px var(--accent);}
 .numfield{display:flex; align-items:center; background:var(--input); border:none; border-radius:10px; overflow:hidden;}
+.numfield:focus-within{box-shadow:0 0 0 2px var(--accent);}
 .numfield button{width:40px; min-height:44px; background:none; border:none; color:var(--accent-soft); font-size:20px; font-weight:700;}
 .numfield .val{min-width:32px; text-align:center; font-size:16px; font-weight:700; font-variant-numeric:tabular-nums;}
-.numfield .lbl{color:var(--dim); font-size:12px; margin-right:10px;}
+.numfield .lbl{color:var(--dim); font-size:12px; margin:0 10px;}
+/* reps target accepts a range like "10-12", so it's a free text field, not a stepper */
+.numfield.repsfield{padding-left:4px;}
+.repsfield .repsinput{width:60px; background:none; border:none; min-height:44px; text-align:center;
+  font-size:16px; font-weight:700; color:var(--text); -webkit-appearance:none; font-variant-numeric:tabular-nums;}
+.repsfield .repsinput:focus{outline:none;}
+.repsfield .repsinput::placeholder{color:var(--ghost); font-weight:600;}
 
 /* ============ exercise browser ============ */
 .searchbox{display:flex; align-items:center; gap:10px; background:var(--card); border:none;

@@ -16,6 +16,7 @@ const EX_DB = [
   { id:'cable-fly',              n:'Cable Fly',                   g:'chest', e:'cable' },
   { id:'pec-deck',               n:'Pec Deck',                    g:'chest', e:'machine' },
   { id:'machine-chest-press',    n:'Machine Chest Press',         g:'chest', e:'machine' },
+  { id:'smith-incline-press',    n:'Smith Incline Press',         g:'chest', e:'machine' },
   { id:'push-up',                n:'Push-Up',                     g:'chest', e:'bodyweight' },
   { id:'chest-dip',              n:'Chest Dip',                   g:'chest', e:'bodyweight' },
   /* ------- back ------- */
@@ -30,6 +31,7 @@ const EX_DB = [
   { id:'pull-up',                n:'Pull-Up',                     g:'back', e:'bodyweight' },
   { id:'chin-up',                n:'Chin-Up',                     g:'back', e:'bodyweight' },
   { id:'machine-row',            n:'Machine Row',                 g:'back', e:'machine' },
+  { id:'chest-supported-row',    n:'Chest-Supported Row',         g:'back', e:'dumbbell' },
   { id:'rack-pull',              n:'Rack Pull',                   g:'back', e:'barbell' },
   { id:'barbell-shrug',          n:'Barbell Shrug',               g:'back', e:'barbell' },
   { id:'db-shrug',               n:'Dumbbell Shrug',              g:'back', e:'dumbbell' },

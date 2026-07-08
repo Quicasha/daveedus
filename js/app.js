@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.5.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.6.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -192,14 +192,24 @@ const uid = () => Math.random().toString(36).slice(2,10) + Date.now().toString(3
 function seedTemplates(fid){
   const tex = (k,s,r) => ({ id:uid(), k, s, r });
   return [
-    { id:uid(), name:'Upper A', folderId:fid, ex:[ tex('bench-press',3,8), tex('barbell-row',3,8),
-      tex('overhead-press',3,10), tex('lat-pulldown',3,10), tex('db-curl',3,12), tex('triceps-pushdown',3,12) ]},
-    { id:uid(), name:'Lower A', folderId:fid, ex:[ tex('back-squat',3,8), tex('romanian-deadlift',3,10),
-      tex('leg-press',3,12), tex('lying-leg-curl',3,12), tex('standing-calf-raise',4,15), tex('ab-crunch',3,15) ]},
-    { id:uid(), name:'Upper B', folderId:fid, ex:[ tex('incline-db-press',3,10), tex('pull-up',3,8),
-      tex('seated-cable-row',3,10), tex('seated-db-press',3,10), tex('ez-bar-curl',3,10), tex('overhead-triceps-ext',3,12) ]},
-    { id:uid(), name:'Lower B', folderId:fid, ex:[ tex('deadlift',3,5), tex('bulgarian-split-squat',3,10),
-      tex('leg-extension',3,12), tex('seated-leg-curl',3,12), tex('standing-calf-raise',4,15), tex('hanging-leg-raise',3,12) ]}
+    { id:uid(), name:'Upper A', folderId:fid, ex:[
+      tex('bench-press',4,'4-6'), tex('barbell-row',3,'6-8'), tex('smith-incline-press',2,'8-10'),
+      tex('lat-pulldown',2,'10-12'), tex('cable-lateral-raise',2,'12-15'), tex('incline-db-curl',2,'8-12'),
+      tex('triceps-pushdown',2,'10-12') ]},
+    { id:uid(), name:'Lower A', folderId:fid, ex:[
+      tex('back-squat',4,'4-6'), tex('romanian-deadlift',3,'6-8'), tex('leg-press',2,'10-12'),
+      tex('lying-leg-curl',2,'10-12'), tex('leg-extension',2,'12-15'), tex('seated-calf-raise',3,'10-15') ]},
+    { id:uid(), name:'Upper B', folderId:fid, ex:[
+      tex('overhead-press',4,'5-7'), tex('chest-dip',3,'6-8'), tex('pull-up',3,'6-8'),
+      tex('chest-supported-row',2,'10-12'), tex('face-pull',2,'15-20'), tex('hammer-curl',2,'8-12'),
+      tex('overhead-triceps-ext',2,'10-12') ]},
+    { id:uid(), name:'Lower B', folderId:fid, ex:[
+      tex('back-squat',3,'8-10'), tex('bulgarian-split-squat',2,'8-12'), tex('leg-press',2,'12-15'),
+      tex('lying-leg-curl',2,'10-12'), tex('leg-extension',2,'15-20'), tex('calf-press',3,'12-20') ]},
+    { id:uid(), name:'Upper C', folderId:fid, ex:[
+      tex('smith-incline-press',2,'8-10'), tex('seated-cable-row',2,'10-12'), tex('lat-pulldown',2,'12-15'),
+      tex('lateral-raise',3,'12-20'), tex('face-pull',2,'15-20'), tex('preacher-curl',2,'8-12'),
+      tex('overhead-triceps-ext',2,'10-15') ]}
   ];
 }
 function defaultState(){
@@ -338,6 +348,20 @@ function parseNum(v){
 function fmtW(w){
   if(w==null || isNaN(w)) return '';
   return String(Math.round(w*100)/100);
+}
+/* normalize a template rep target to a clean "N" or "N-M" string (1..50) */
+function normReps(v){
+  if(v==null) return '10';
+  const m = String(v).replace(/[^\d-]/g,'').match(/^(\d+)(?:\s*-\s*(\d+))?/);
+  if(!m) return '10';
+  const clamp = n => Math.max(1, Math.min(50, parseInt(n,10)||10));
+  let lo = clamp(m[1]);
+  if(m[2]!=null && m[2]!==''){
+    let hi = clamp(m[2]);
+    if(hi < lo){ const x=lo; lo=hi; hi=x; }
+    return lo===hi ? String(lo) : lo+'-'+hi;
+  }
+  return String(lo);
 }
 function fmtTime(sec){
   sec = Math.max(0, Math.floor(sec));
@@ -550,6 +574,17 @@ function onBwInput(xi,v){
   ex.bw = isNaN(n) ? null : u2kg(n);
   save();
 }
+/* quick ±0.1 (display unit) stepper for the body-weight field; updates in place, no full re-render */
+function stepBw(xi,d){
+  const ex = S.active.exercises[xi];
+  const base = ex.bw!=null ? kg2u(ex.bw) : (latestBw()!=null ? kg2u(latestBw()) : 0);
+  let v = Math.round((base + d)*10)/10;
+  if(v < 0) v = 0;
+  ex.bw = u2kg(v);
+  const inp = document.getElementById('bw-'+xi);
+  if(inp) inp.value = fmtW(v);
+  save();
+}
 /* previous-session text for a ghost set, per exercise type */
 function ghostText(g, tm, bw){
   if(!g) return '—';
@@ -662,9 +697,14 @@ function htmlWorkout(){
       </div>`;
     }).join('');
     const bwPh = latestBw()!=null ? fmtW(kg2u(latestBw())) : '';
-    const bwField = bw ? `<div class="bwline">⚖ ${t('woBwCol')}
-      <input type="text" inputmode="decimal" class="bwinput" placeholder="${bwPh}"
-        value="${ex.bw!=null?esc(fmtW(kg2u(ex.bw))):''}" oninput="onBwInput(${xi},this.value)">
+    const bwField = bw ? `<div class="bwline">
+      <span class="bwlbl" onclick="document.getElementById('bw-${xi}').focus()">⚖ ${t('woBwCol')}</span>
+      <div class="bwstepper">
+        <button class="bwstep" onclick="stepBw(${xi},-0.1)" aria-label="-0.1">▾</button>
+        <input type="text" inputmode="decimal" class="bwinput" id="bw-${xi}" placeholder="${bwPh}"
+          value="${ex.bw!=null?esc(fmtW(kg2u(ex.bw))):''}" oninput="onBwInput(${xi},this.value)">
+        <button class="bwstep" onclick="stepBw(${xi},0.1)" aria-label="+0.1">▴</button>
+      </div>
       <span class="bwu">${unitL()}</span><span class="bwhint">${t('woBwHint')}</span></div>` : '';
     const notLast = xi < S.active.exercises.length-1;
     const ssConn = (ex.ss && notLast) ? `<div class="ssline">🔗 ${t('superset')}</div>` : '';
@@ -1103,9 +1143,10 @@ function htmlTplEdit(){
           <button onclick="bumpTplEx('${d.id}',${i},'s',-1)">−</button><span class="val">${e.s}</span>
           <button onclick="bumpTplEx('${d.id}',${i},'s',1)">+</button><span class="lbl">${t('daySets')}</span>
         </div>
-        <div class="numfield">
-          <button onclick="bumpTplEx('${d.id}',${i},'r',-1)">−</button><span class="val">${e.r}</span>
-          <button onclick="bumpTplEx('${d.id}',${i},'r',1)">+</button><span class="lbl">${t('dayReps')}</span>
+        <div class="numfield repsfield">
+          <input type="text" inputmode="text" class="repsinput" value="${esc(String(e.r))}"
+            placeholder="8-12" onchange="setTplReps('${d.id}',${i},this.value)">
+          <span class="lbl">${t('dayReps')}</span>
         </div>
         ${i<d.ex.length-1?`<button class="minibtn ${e.ss?'acc':''}" style="margin-left:auto" onclick="toggleSS('${d.id}',${i})">🔗</button>`:''}
       </div>
@@ -1151,7 +1192,14 @@ function moveTplEx(id,i,dir){
 function bumpTplEx(id,i,f,delta){
   const d = S.templates.find(x=>x.id===id);
   if(!d || !d.ex[i]) return;
-  d.ex[i][f] = Math.max(1, Math.min(f==='s'?12:50, d.ex[i][f]+delta));
+  d.ex[i][f] = Math.max(1, Math.min(f==='s'?12:50, (parseInt(d.ex[i][f],10)||0)+delta));
+  save(); render();
+}
+/* reps target may be a single number or a range (e.g. "10-12") */
+function setTplReps(id,i,v){
+  const d = S.templates.find(x=>x.id===id);
+  if(!d || !d.ex[i]) return;
+  d.ex[i].r = normReps(v);
   save(); render();
 }
 function addTplEx(id){
@@ -1914,7 +1962,7 @@ function importTplPayload(d, folderId){
         k = info.id;
       } else continue;
     }
-    tpl.ex.push({ id:uid(), k, s:Math.max(1,Math.min(12,e.s|0||3)), r:Math.max(1,Math.min(50,e.r|0||10)), ss:!!e.ss });
+    tpl.ex.push({ id:uid(), k, s:Math.max(1,Math.min(12,e.s|0||3)), r:normReps(e.r), ss:!!e.ss });
   }
   S.templates.push(tpl);
   return tpl;
