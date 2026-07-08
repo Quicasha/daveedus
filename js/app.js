@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.6.1'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.6.2'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -472,6 +472,17 @@ const TAB_ICONS = {
   exercises: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>',
   history: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>',
   settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 21v-6M4 9V3M12 21v-9M12 6V3M20 21v-4M20 11V3M2 15h4M10 12h4M18 17h4"/></svg>'
+};
+/* small line icons for card/row actions (clean SVG, no emoji) */
+const ACT_ICONS = {
+  up:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
+  down:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>',
+  link:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2M15 7h2a5 5 0 0 1 0 10h-2M8 12h8"/></svg>',
+  x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+  pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.8V6a1 1 0 0 1 1-1 2 2 0 0 0 0-4h4a2 2 0 0 0 0 4 1 1 0 0 1 1 1v4.8l2 2.2H7l2-2.2Z"/></svg>',
+  chevron:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+  play:'<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M7 4.5v15l12-7.5z"/></svg>',
+  edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>'
 };
 function renderTabbar(){
   const tabs = [
@@ -1003,9 +1014,11 @@ function tplCardHtml(d){
       <div class="nm">${esc(d.name)}</div>
       <div class="ct">${t('tplExCount',{n:d.ex.length})}${groups?' · '+esc(groups):''}</div>
     </div>
-    <button class="minibtn acc" onclick="startWorkout('${d.id}')">▶</button>
-    <button class="minibtn" onclick="openTpl('${d.id}')">✎</button>
-    <button class="minibtn del" onclick="delTpl('${d.id}')">✕</button>
+    <div class="rowacts">
+      <button class="iconbtn2" onclick="openTpl('${d.id}')" aria-label="edit">${ACT_ICONS.edit}</button>
+      <button class="iconbtn2 danger" onclick="delTpl('${d.id}')" aria-label="delete">${ACT_ICONS.x}</button>
+      <button class="iconbtn2 play" onclick="startWorkout('${d.id}')" aria-label="start">${ACT_ICONS.play}</button>
+    </div>
   </div></div>`;
 }
 function looseTemplates(){
@@ -1019,10 +1032,11 @@ function htmlProgram(){
     return `<div class="tplbtn" onclick="openSplit('${f.id}')">
       <div class="tinfo"><div class="tname">${esc(f.name)} <span style="color:var(--dim);font-weight:700;font-size:14px">(${tpls.length})</span></div>
       <div class="tsub">${esc(names)||'—'}</div></div>
-      <button class="minibtn ${f.pinned?'acc':''}" style="${f.pinned?'':'opacity:.4'}"
-        onclick="event.stopPropagation(); togglePin('${f.id}')">📌</button>
-      <button class="minibtn del" onclick="event.stopPropagation(); delFolder('${f.id}')">✕</button>
-      <div class="go">›</div></div>`;
+      <div class="rowacts">
+        <button class="iconbtn2 ${f.pinned?'on':''}" onclick="event.stopPropagation(); togglePin('${f.id}')" aria-label="pin">${ACT_ICONS.pin}</button>
+        <button class="iconbtn2 danger" onclick="event.stopPropagation(); delFolder('${f.id}')" aria-label="delete">${ACT_ICONS.x}</button>
+        <div class="go">${ACT_ICONS.chevron}</div>
+      </div></div>`;
   }).join('');
   const loose = looseTemplates();
   if(loose.length){
@@ -1135,29 +1149,33 @@ function htmlTplEdit(){
     const repsCtl = p.range
       ? rnum('lo',p.lo) + `<span class="rgdash">–</span>` + rnum('hi',p.hi)
       : rnum('single',p.lo);
+    const canSS = i < d.ex.length-1;
     return `<div class="exedit">
-      <div class="row1">
+      <div class="exhrow">
         <div class="exlabel">
           <div class="n">${esc(exName(e.k,e.n))}</div>
           <div class="gr">${info?t('g_'+info.g)+' · '+t('e_'+info.e):''}</div>
         </div>
-        <button class="minibtn" onclick="moveTplEx('${d.id}',${i},-1)">↑</button>
-        <button class="minibtn" onclick="moveTplEx('${d.id}',${i},1)">↓</button>
-        <button class="minibtn del" onclick="delTplEx('${d.id}',${i})">✕</button>
+        <div class="rowacts">
+          <button class="iconbtn2" onclick="moveTplEx('${d.id}',${i},-1)" aria-label="up">${ACT_ICONS.up}</button>
+          <button class="iconbtn2" onclick="moveTplEx('${d.id}',${i},1)" aria-label="down">${ACT_ICONS.down}</button>
+          ${canSS?`<button class="iconbtn2 ${e.ss?'on':''}" onclick="toggleSS('${d.id}',${i})" aria-label="superset">${ACT_ICONS.link}</button>`:''}
+          <button class="iconbtn2 danger" onclick="delTplEx('${d.id}',${i})" aria-label="delete">${ACT_ICONS.x}</button>
+        </div>
       </div>
-      <div class="row2">
+      <div class="ctlrow">
+        <span class="clbl">${t('daySets')}</span>
         <div class="numfield">
           <button onclick="bumpTplEx('${d.id}',${i},'s',-1)">−</button><span class="val">${e.s}</span>
-          <button onclick="bumpTplEx('${d.id}',${i},'s',1)">+</button><span class="lbl">${t('daySets')}</span>
+          <button onclick="bumpTplEx('${d.id}',${i},'s',1)">+</button>
         </div>
-        ${i<d.ex.length-1?`<button class="minibtn ${e.ss?'acc':''}" style="margin-left:auto" onclick="toggleSS('${d.id}',${i})">🔗</button>`:''}
       </div>
-      <div class="row2 repsrow">
-        <span class="rlead">${t('dayReps')}</span>
+      <div class="ctlrow repsrow">
+        <span class="clbl">${t('dayReps')}</span>
         ${repsCtl}
         <button class="rangetog ${p.range?'acc':''}" onclick="toggleRepsRange('${d.id}',${i})">${t('repsRangeTog')}</button>
       </div>
-      ${e.ss && i<d.ex.length-1?`<div class="ssline">🔗 ${t('superset')}</div>`:''}
+      ${e.ss && canSS?`<div class="ssline">${ACT_ICONS.link} ${t('superset')}</div>`:''}
     </div>`;
   }).join('');
   if(!d.ex.length) h += `<div class="empty">—</div>`;

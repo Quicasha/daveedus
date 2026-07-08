@@ -232,29 +232,42 @@ h2.sec{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(
 .tplrow .info{flex:1; min-width:0; cursor:pointer; padding:2px 0;}
 .tplrow .nm{font-size:17px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 .tplrow .ct{color:var(--dim); font-size:13px; margin-top:2px;}
-.exedit{border-top:1px solid var(--line); padding-top:12px; margin-top:12px;}
-.exedit:first-child{border-top:none; margin-top:0; padding-top:0;}
-.exedit .row1{display:flex; gap:8px; align-items:center;}
-.exedit .exlabel{flex:1; min-width:0;}
-.exedit .exlabel .n{font-weight:700; font-size:15px;}
-.exedit .exlabel .gr{color:var(--dim); font-size:12px; margin-top:1px;}
-.exedit .row2{display:flex; gap:8px; align-items:center; margin-top:8px;}
+.exedit{border-top:1px solid var(--line); padding-top:14px; margin-top:14px;}
+.exedit:first-child{border-top:none; margin-top:0; padding-top:2px;}
+.exhrow{display:flex; gap:8px; align-items:flex-start;}
+.exedit .exlabel{flex:1; min-width:0; padding-top:3px;}
+.exedit .exlabel .n{font-weight:700; font-size:16px;}
+.exedit .exlabel .gr{color:var(--dim); font-size:12px; margin-top:2px;}
+/* aligned control rows: fixed-width label + stepper(s) */
+.ctlrow{display:flex; gap:6px; align-items:center; margin-top:10px; flex-wrap:wrap;}
+.ctlrow .clbl{width:34px; flex:none; color:var(--dim); font-size:11px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.3px;}
+.repsrow .rgdash{color:var(--dim); font-weight:800; font-size:15px;}
+/* clean square icon buttons for row actions (no emoji) */
+.rowacts{display:flex; gap:6px; align-items:center; flex:none;}
+.iconbtn2{width:34px; height:34px; flex:none; border:none; border-radius:9px; background:var(--input);
+  color:var(--dim); display:flex; align-items:center; justify-content:center; padding:0;}
+.iconbtn2 svg{width:17px; height:17px;}
+.iconbtn2:active{opacity:.5;}
+.iconbtn2.on{background:var(--accent-bg); color:var(--accent-soft);}
+.iconbtn2.danger{color:var(--red);}
+.iconbtn2.play{background:var(--accent); color:var(--on-accent);}
+.iconbtn2.play svg{width:15px; height:15px; margin-left:1px;}
 .nameinput{width:100%; background:var(--input); border:none;
   border-radius:10px; min-height:46px; font-size:16px; font-weight:600; padding:0 12px; -webkit-appearance:none;}
 .nameinput:focus{outline:none; box-shadow:0 0 0 2px var(--accent);}
 .numfield{display:flex; align-items:center; background:var(--input); border:none; border-radius:10px; overflow:hidden;}
 .numfield:focus-within{box-shadow:0 0 0 2px var(--accent);}
-.numfield button{width:40px; min-height:44px; background:none; border:none; color:var(--accent-soft); font-size:20px; font-weight:700;}
-.numfield .val{min-width:32px; text-align:center; font-size:16px; font-weight:700; font-variant-numeric:tabular-nums;}
+.numfield button{width:34px; min-height:42px; background:none; border:none; color:var(--accent-soft); font-size:19px; font-weight:700;}
+.numfield .val{min-width:20px; text-align:center; font-size:16px; font-weight:700; font-variant-numeric:tabular-nums;}
 .numfield .lbl{color:var(--dim); font-size:12px; margin:0 10px;}
-/* reps row: a single value, or a from–to range, toggled by the "range" button */
-.repsrow{flex-wrap:wrap;}
-.repsrow .rlead{color:var(--dim); font-size:12px; font-weight:600;}
-.repsrow .rgdash{color:var(--dim); font-weight:800; font-size:16px;}
-.rangetog{min-height:44px; padding:0 14px; border:none; border-radius:10px; background:var(--input);
-  color:var(--dim); font-size:12px; font-weight:700; margin-left:auto;}
+/* reps range toggle — flows right after the steppers (no floating gap) */
+.rangetog{min-height:36px; padding:0 11px; border:none; border-radius:9px; background:var(--input);
+  color:var(--dim); font-size:12px; font-weight:700;}
 .rangetog.acc{background:var(--accent-bg); color:var(--accent-soft);}
 .rangetog:active{opacity:.6;}
+.go svg{width:18px; height:18px;}
+.ssline svg{width:13px; height:13px;}
 
 /* ============ exercise browser ============ */
 .searchbox{display:flex; align-items:center; gap:10px; background:var(--card); border:none;
