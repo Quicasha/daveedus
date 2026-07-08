@@ -1,9 +1,10 @@
 /* Daveedus service worker — offline-first app shell */
-const CACHE = 'daveedus-v1.4.0';
+const CACHE = 'daveedus-v1.4.1';
 const ASSETS = [
   './', './index.html', './css/style.css', './js/app.js', './js/exercises.js',
   './manifest.webmanifest',
-  './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'
+  './icons/favicon.png', './icons/pwa-icon.png', './icons/splash-icon.png',
+  './icons/apple-touch-icon.png'
 ];
 
 self.addEventListener('install', e => {
