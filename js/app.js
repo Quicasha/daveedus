@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.4.1'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.5.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -53,6 +53,10 @@ const I18N = {
     protRestored:'Atkurta ✓', protRecovered:'Duomenys atkurti iš atsarginės saugyklos ✓',
     protHint:'Kasdien automatiškai išsaugoma kopija įrenginyje, o duomenys dubliuojami į antrą saugyklą — jei viena sugestų, atsistatys iš kitos. Retkarčiais nusikopijuok ir atsarginį kodą: jis vienintelis padės pametus telefoną.',
     updToast:'Atnaujinta į naujausią versiją ✓',
+    setUnit:'Matavimo vienetai',
+    bwEnter:'Įvesk savo kūno svorį', bwEx:'Kūno svorio pratimas',
+    woBwCol:'Kūno sv.', woAddCol:'Papild.', woBwHint:'Kūno svoris (tik statistikai)',
+    setFail:'iki nesėkmės', setWarm:'apšilimas',
     exCreateMode:'Tipas', modeReps:'Kartai', modeTime:'Laikas (sek.)',
     histArch:'Archyvuoti', histUnarch:'Grąžinti', archTitle:'Archyvas',
     statsCal:'Kalendorius', statsWeeks:'Treniruotės per savaitę', statsVolW:'Apimtis per savaitę (kg)',
@@ -133,6 +137,10 @@ const I18N = {
     protRestored:'Restored ✓', protRecovered:'Data recovered from backup storage ✓',
     protHint:'A daily snapshot is kept on this device and data is mirrored to a second storage — if one breaks, the other restores it. Still copy a backup code occasionally: it is the only thing that survives losing the phone.',
     updToast:'Updated to the latest version ✓',
+    setUnit:'Units',
+    bwEnter:'Enter your body weight', bwEx:'Bodyweight exercise',
+    woBwCol:'BW', woAddCol:'Added', woBwHint:'Body weight (stats only)',
+    setFail:'to failure', setWarm:'warm-up',
     exCreateMode:'Type', modeReps:'Reps', modeTime:'Time (sec)',
     histArch:'Archive', histUnarch:'Restore', archTitle:'Archive',
     statsCal:'Calendar', statsWeeks:'Workouts per week', statsVolW:'Volume per week (kg)',
@@ -196,7 +204,7 @@ function seedTemplates(fid){
 }
 function defaultState(){
   const fid = uid();
-  return { lang:'lt', theme:'auto', keepAwake:true, lastBackup:0, bakSnooze:0, mig13:true,
+  return { lang:'en', unit:'kg', theme:'auto', keepAwake:true, lastBackup:0, bakSnooze:0, mig13:true,
            folders:[{ id:fid, name:'Upper / Lower', open:true, pinned:true }],
            customEx:[], templates:seedTemplates(fid), history:[], weights:[], active:null };
 }
@@ -297,10 +305,26 @@ function allExercises(){ return EX_DB.concat(S.customEx); }
 function exName(k, fallback){ const i = exInfo(k); return i ? i.n : (fallback || k); }
 /* time-based exercise (plank etc.): "reps" column means seconds */
 function isTimeEx(k){ const i = exInfo(k); return !!(i && i.m==='t'); }
-function fmtSet(s, tm){
-  const p = s.warm ? 'W ' : s.drop ? 'D ' : '';
-  if(tm) return p + (s.weight ? fmtW(s.weight)+'kg·' : '') + s.reps + 's';
-  return p + fmtW(s.weight) + '×' + s.reps;
+/* bodyweight exercise (pull-up, dip...): weight column is ADDED load (empty = BW only) */
+function isBwEx(k){ const i = exInfo(k); return !!(i && i.e==='bodyweight' && i.m!=='t'); }
+
+/* ---- units: weights are stored canonically in kg, shown in the chosen unit ---- */
+const LB_PER_KG = 2.2046226218;
+function unitL(){ return S.unit==='lb' ? 'lb' : 'kg'; }
+function kg2u(kg){ if(kg==null||isNaN(kg)) return kg; return S.unit==='lb' ? Math.round(kg*LB_PER_KG*100)/100 : kg; }
+function u2kg(v){ if(v==null||isNaN(v)) return v; return S.unit==='lb' ? v/LB_PER_KG : v; }
+/* format a kg value in display unit; withUnit appends the label */
+function wu(kg, withUnit){ const n = fmtW(kg2u(kg)); return withUnit ? n+' '+unitL() : n; }
+
+function fmtSet(s, k){
+  const tm = isTimeEx(k), bw = isBwEx(k);
+  const p = s.warm ? 'W ' : s.drop ? 'D ' : s.fail ? 'F ' : '';
+  if(tm) return p + (s.weight ? wu(s.weight)+'·' : '') + s.reps + 's';
+  if(bw){
+    const add = s.weight ? (s.weight>0?'+':'') + wu(s.weight) + ' ' : '';
+    return p + add + '×' + s.reps;
+  }
+  return p + wu(s.weight) + '×' + s.reps;
 }
 
 /* ======================= helpers ======================= */
@@ -368,6 +392,12 @@ mediaDark.addEventListener('change', ()=>{ if(S.theme==='auto') applyTheme(); })
 function go(screen){
   V.screen = screen;
   render();
+  /* entrance animation only on navigation, not on every re-render */
+  const el = $('#screen');
+  el.classList.remove('screen-in'); void el.offsetWidth;
+  el.classList.add('screen-in');
+  clearTimeout(go._t);
+  go._t = setTimeout(()=>el.classList.remove('screen-in'), 450);
   window.scrollTo(0,0);
 }
 function render(){
@@ -453,7 +483,7 @@ function htmlHome(){
       <div class="stat" style="cursor:pointer" onclick="go('history')"><div class="v">${weekCount()}</div><div class="l">${t('statWeek')}</div></div>
       <div class="stat" style="cursor:pointer" onclick="go('history')"><div class="v">${S.history.length}</div><div class="l">${t('statTotal')}</div></div>
       <div class="stat" style="cursor:pointer" onclick="go('history')">
-        <div class="v">${S.weights.length?fmtW(S.weights[0].kg):'—'}</div><div class="l">${t('bw').toLowerCase()}, kg</div></div>
+        <div class="v">${S.weights.length?wu(S.weights[0].kg):'—'}</div><div class="l">${t('bw').toLowerCase()}, ${unitL()}</div></div>
     </div>`;
   if(S.active){
     const n = S.active.exercises.reduce((a,e)=>a+e.sets.filter(s=>s.done).length,0);
@@ -502,10 +532,30 @@ function htmlHome(){
 }
 
 /* ======================= WORKOUT ======================= */
+function latestBw(){ return S.weights.length ? S.weights[0].kg : null; }
+function newSet(extra){ return Object.assign({ w:'', r:'', warm:false, drop:false, fail:false, done:false, cls:'' }, extra||{}); }
 function buildActiveEx(k, name, sets, reps, ss, tplId){
   const last = lastForExercise(k, name, tplId);
-  return { id:uid(), k, name, targetSets:sets, targetReps:reps, note:'', ss:!!ss, last,
-    sets: Array.from({length:sets}, ()=>({ w:'', r:'', warm:false, drop:false, done:false, cls:'' })) };
+  const ex = { id:uid(), k, name, targetSets:sets, targetReps:reps, note:'', ss:!!ss, last,
+    sets: Array.from({length:sets}, ()=>newSet()) };
+  if(isBwEx(k)){
+    /* body weight prefilled from the latest log (or last session), kept separate from the logged load */
+    ex.bw = latestBw() != null ? latestBw() : (last && last.bw != null ? last.bw : null);
+  }
+  return ex;
+}
+function onBwInput(xi,v){
+  const ex = S.active.exercises[xi];
+  const n = parseNum(v);
+  ex.bw = isNaN(n) ? null : u2kg(n);
+  save();
+}
+/* previous-session text for a ghost set, per exercise type */
+function ghostText(g, tm, bw){
+  if(!g) return '—';
+  if(tm) return (g.weight ? wu(g.weight,true)+' · ' : '') + g.reps + ' s';
+  if(bw) return (g.weight ? (g.weight>0?'+':'')+wu(g.weight,true)+' ' : '') + '× ' + g.reps;
+  return wu(g.weight,true) + ' × ' + g.reps;
 }
 function lastForExercise(k, name, tplId){
   const nm = (name||'').trim().toLowerCase();
@@ -516,7 +566,7 @@ function lastForExercise(k, name, tplId){
     for(const h of S.history){
       if(h.arch || h.tplId!==tplId) continue;
       for(const e of h.exercises){
-        if(match(e)) return { date:h.date, sets:e.sets, note:e.note||'', sameTpl:true };
+        if(match(e)) return { date:h.date, sets:e.sets, note:e.note||'', bw:e.bw, sameTpl:true };
       }
     }
   }
@@ -524,7 +574,7 @@ function lastForExercise(k, name, tplId){
   for(const h of S.history){
     if(h.arch) continue;
     for(const e of h.exercises){
-      if(match(e)) return { date:h.date, sets:e.sets, note:e.note||'', sameTpl:false };
+      if(match(e)) return { date:h.date, sets:e.sets, note:e.note||'', bw:e.bw, sameTpl:false };
     }
   }
   return null;
@@ -579,26 +629,29 @@ function htmlWorkout(){
   if(!S.active){ V.screen='home'; return htmlHome(); }
   let h = '<div style="height:8px"></div>';
   h += S.active.exercises.map((ex,xi)=>{
-    const tm = isTimeEx(ex.k);
+    const tm = isTimeEx(ex.k), bw = isBwEx(ex.k);
+    const wcol = bw ? t('woAddCol') : (tm ? unitL() : unitL());
     const hdr = `<div class="setgrid hdr"><div>${t('woSet')}</div><div>${t('woPrev')}</div>
-      <div>${t('woKg')}</div><div>${tm?t('woSec'):t('woReps')}</div><div>✓</div><div></div></div>`;
+      <div>${wcol}</div><div>${tm?t('woSec'):t('woReps')}</div><div>✓</div><div></div></div>`;
     let workNum = 0;
     const approx = ex.last && !ex.last.sameTpl ? '~' : ''; /* values borrowed from another workout */
     const rows = ex.sets.map((s,si)=>{
       const g = ghostFor(ex,si);
-      const prevTxt = g ? approx + (tm ? `${g.weight?fmtW(g.weight)+' kg · ':''}${g.reps} s`
-                                       : `${fmtW(g.weight)} ${t('woKg')} × ${g.reps}`) : '—';
-      const label = s.warm ? 'W' : s.drop ? 'D' : String(++workNum);
-      const chkCls = s.done ? (s.cls==='loss' ? 'loss' : 'done') : '';
+      const prevTxt = g ? approx + ghostText(g, tm, bw) : '—';
+      if(!s.warm && !s.drop) workNum++;
+      const label = s.warm ? 'W' : s.drop ? 'D' : s.fail ? 'F' : String(workNum);
+      const chkCls = (s.done ? (s.cls==='loss' ? 'loss' : 'done') : '')
+                   + (V.lastDone===xi+'-'+si ? ' pop' : '');
       const restHere = S.active.rest && S.active.rest.key===xi+'-'+si;
       const rowBtn = s.drop
         ? `<button class="dropbtn del" onclick="removeDrop(${xi},${si})">✕</button>`
         : `<button class="dropbtn" onclick="addDrop(${xi},${si})">D+</button>`;
+      const wph = g ? wu(g.weight) : (bw ? '+' : unitL());
       return `<div class="setrow-wrap ${s.done?'done':''} ${s.drop?'droprow':''}">
         <div class="setgrid">
-          <button class="setnum ${s.warm?'warm':''} ${s.drop?'dropn':''}" onclick="toggleWarm(${xi},${si})">${label}</button>
+          <button class="setnum ${s.warm?'warm':''} ${s.drop?'dropn':''} ${s.fail?'failn':''}" onclick="toggleWarm(${xi},${si})">${label}</button>
           <div class="prev">${prevTxt}</div>
-          <input type="text" inputmode="decimal" placeholder="${g?fmtW(g.weight):t('woKg')}" value="${esc(s.w)}"
+          <input type="text" inputmode="decimal" id="w-${xi}-${si}" placeholder="${wph}" value="${esc(s.w)}"
             ${s.done?'disabled':''} oninput="onSetInput(${xi},${si},'w',this.value)">
           <input type="text" inputmode="numeric" placeholder="${g?g.reps:(tm?'s':'×')}" value="${esc(s.r)}"
             ${s.done?'disabled':''} oninput="onSetInput(${xi},${si},'r',this.value)">
@@ -608,19 +661,24 @@ function htmlWorkout(){
         ${restHere ? restBarHtml() : ''}
       </div>`;
     }).join('');
+    const bwPh = latestBw()!=null ? fmtW(kg2u(latestBw())) : '';
+    const bwField = bw ? `<div class="bwline">⚖ ${t('woBwCol')}
+      <input type="text" inputmode="decimal" class="bwinput" placeholder="${bwPh}"
+        value="${ex.bw!=null?esc(fmtW(kg2u(ex.bw))):''}" oninput="onBwInput(${xi},this.value)">
+      <span class="bwu">${unitL()}</span><span class="bwhint">${t('woBwHint')}</span></div>` : '';
     const notLast = xi < S.active.exercises.length-1;
     const ssConn = (ex.ss && notLast) ? `<div class="ssline">🔗 ${t('superset')}</div>` : '';
     return `<div class="card">
       <div class="exhead">
         <div class="exname" onclick="openExDetailByKey('${esc(ex.k)}')">${esc(ex.name)}</div>
         <div class="extarget">${ex.targetSets}×${ex.targetReps}</div>
-        <button class="minibtn" onclick="openPlates(${xi})">⚖</button>
+        ${bw?'':`<button class="minibtn" onclick="openPlates(${xi})">⚖</button>`}
         ${notLast?`<button class="minibtn ${ex.ss?'acc':''}" onclick="toggleWoSS(${xi})">🔗</button>`:''}
         <button class="minibtn del" onclick="removeWorkoutEx(${xi})">✕</button>
       </div>
       ${ex.last && ex.last.note ? `<div class="lastnote">💬 ${esc(ex.last.note)}</div>` : ''}
       <input class="exnote" placeholder="${t('woNote')}" value="${esc(ex.note)}" oninput="onNoteInput(${xi},this.value)">
-      ${hdr}${rows}
+      ${bwField}${hdr}${rows}
       <div class="setctl">
         <button onclick="addSet(${xi})">${t('woAddSet')}</button>
         <button onclick="removeSet(${xi})">${t('woRemoveSet')}</button>
@@ -630,6 +688,7 @@ function htmlWorkout(){
   h += `<button class="btn ghostbtn" onclick="addWorkoutEx()">${t('woAddEx')}</button>`;
   h += `<button class="btn primary" onclick="finishWorkout()">${t('woFinish')} ✓</button>`;
   h += `<button class="btn danger" onclick="cancelWorkout()">${t('woCancel')}</button>`;
+  V.lastDone = null; /* pop animation plays once */
   return h;
 }
 function restBarHtml(){
@@ -644,10 +703,13 @@ function dismissRest(){
 }
 function onSetInput(xi,si,f,v){ S.active.exercises[xi].sets[si][f]=v; save(); }
 function onNoteInput(xi,v){ S.active.exercises[xi].note=v; save(); }
+/* tap the set number to cycle its type: number -> W (warmup) -> F (failure) -> number */
 function toggleWarm(xi,si){
   const s = S.active.exercises[xi].sets[si];
   if(s.done || s.drop) return;
-  s.warm = !s.warm;
+  if(!s.warm && !s.fail){ s.warm = true; }
+  else if(s.warm){ s.warm = false; s.fail = true; }
+  else { s.fail = false; }
   save(); render();
 }
 function shiftRestKey(xi, fromSi, delta){
@@ -659,7 +721,7 @@ function shiftRestKey(xi, fromSi, delta){
   if(rs >= fromSi) r.key = xi+'-'+(rs+delta);
 }
 function addDrop(xi,si){
-  S.active.exercises[xi].sets.splice(si+1, 0, {w:'',r:'',warm:false,drop:true,done:false,cls:''});
+  S.active.exercises[xi].sets.splice(si+1, 0, newSet({drop:true}));
   shiftRestKey(xi, si+1, 1);
   save(); render();
 }
@@ -675,23 +737,37 @@ function toggleSet(xi,si){
   const ex = S.active.exercises[xi];
   const s = ex.sets[si];
   if(s.done){ s.done=false; s.cls=''; save(); render(); return; }
-  const g = ghostFor(ex,si);
-  let w = parseNum(s.w), r = parseNum(s.r);
-  if(isNaN(w) && g) w = g.weight;
+  const g = ghostFor(ex,si);                 /* g.weight is kg */
+  const tm = isTimeEx(ex.k), bw = isBwEx(ex.k);
+  let w = parseNum(s.w), r = parseNum(s.r);  /* w is in the display unit */
+  if(isNaN(w) && g) w = kg2u(g.weight);
   if(isNaN(r) && g) r = g.reps;
-  if(isNaN(w) && isTimeEx(ex.k)) w = 0; /* plank & co: weight optional */
-  if(isNaN(w) || isNaN(r) || w<0 || r<1 || w>2000 || r>2000){ toast(t('woEmptyVals')); return; }
+  if(isNaN(w) && (tm || bw)) w = 0;          /* weight optional for time & bodyweight */
+  if(isNaN(w) || isNaN(r) || Math.abs(w)>2000 || r<1 || r>5000){ toast(t('woEmptyVals')); return; }
+  if(!bw && w<0){ toast(t('woEmptyVals')); return; } /* only assisted bodyweight may be negative */
+  const wkg = u2kg(w);
   s.w = fmtW(w); s.r = String(Math.round(r)); s.done = true;
-  const real = realPrev(ex,si);
+  const real = realPrev(ex,si);              /* kg */
   if(!real || s.warm || s.drop) s.cls = 'none';
-  else if(w>real.weight || (w===real.weight && r>real.reps)) s.cls='win';
-  else if(w===real.weight && r===real.reps) s.cls='even';
+  else if(wkg>real.weight || (wkg===real.weight && r>real.reps)) s.cls='win';
+  else if(wkg===real.weight && r===real.reps) s.cls='even';
   else s.cls='loss';
   S.active.rest = { at:Date.now(), key:xi+'-'+si };
+  V.lastDone = xi+'-'+si;
   save(); render();
+  /* focus the next set's weight field only when it must be typed (no ghost to one-tap) */
+  for(let i=si+1; i<ex.sets.length; i++){
+    if(!ex.sets[i].done){
+      if(!ghostFor(ex,i)){
+        const el = document.getElementById('w-'+xi+'-'+i);
+        if(el) el.focus();
+      }
+      break;
+    }
+  }
 }
 function addSet(xi){
-  S.active.exercises[xi].sets.push({w:'',r:'',warm:false,drop:false,done:false,cls:''});
+  S.active.exercises[xi].sets.push(newSet());
   save(); render();
 }
 function removeSet(xi){
@@ -726,10 +802,12 @@ function removeWorkoutEx(xi){
 }
 function finishWorkout(){
   if(!S.active) return;
-  const exercises = S.active.exercises.map(ex=>({
-    k:ex.k, name:ex.name, targetSets:ex.targetSets, targetReps:ex.targetReps, note:ex.note||'', ss:!!ex.ss,
-    sets: ex.sets.filter(s=>s.done).map(s=>({ weight:parseNum(s.w), reps:parseNum(s.r), warm:!!s.warm, drop:!!s.drop }))
-  })).filter(e=>e.sets.length);
+  const exercises = S.active.exercises.map(ex=>{
+    const o = { k:ex.k, name:ex.name, targetSets:ex.targetSets, targetReps:ex.targetReps, note:ex.note||'', ss:!!ex.ss,
+      sets: ex.sets.filter(s=>s.done).map(s=>({ weight:u2kg(parseNum(s.w)), reps:parseNum(s.r), warm:!!s.warm, drop:!!s.drop, fail:!!s.fail })) };
+    if(isBwEx(ex.k) && ex.bw!=null) o.bw = ex.bw; /* body weight snapshot, stats only */
+    return o;
+  }).filter(e=>e.sets.length);
   if(!exercises.length){
     if(confirm(t('woFinishEmpty'))){ S.active=null; save(); go('home'); }
     return;
@@ -747,8 +825,8 @@ function finishWorkout(){
       const bt = Math.max(...work.map(s=>s.reps));
       if(prev.bestTime>0 && bt>prev.bestTime) prs.push({ name:e.name, txt:bt+' s' });
     }else{
-      const bw = Math.max(...work.map(s=>s.weight));
-      if(prev.best>0 && bw>prev.best) prs.push({ name:e.name, txt:fmtW(bw)+' kg' });
+      const topW = Math.max(...work.map(s=>s.weight));
+      if(prev.best>0 && topW>prev.best) prs.push({ name:e.name, txt:wu(topW,true) });
     }
   }
   const dur = Math.round((Date.now()-new Date(S.active.startedAt).getTime())/1000);
@@ -770,17 +848,97 @@ function showSummary(dur, vol, setsDone, prs){
   openModal(`<h3>${t('sumTitle')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div class="statrow">
       <div class="stat"><div class="v">${fmtTime(dur)}</div><div class="l">${t('sumDur')}</div></div>
-      <div class="stat"><div class="v">${Math.round(vol)}</div><div class="l">${t('sumVol')}, kg</div></div>
+      <div class="stat"><div class="v">${Math.round(kg2u(vol))}</div><div class="l">${t('sumVol')}, ${unitL()}</div></div>
       <div class="stat"><div class="v">${setsDone}</div><div class="l">${t('sumSets')}</div></div>
     </div>
     ${prHtml}
     <button class="btn primary" style="margin-top:14px" onclick="closeModal()">${t('sumOk')}</button>`);
+  if(prs.length) confetti();
+}
+/* lightweight one-shot confetti — CSS animated, no library, cleans itself up */
+function confetti(){
+  if(document.getElementById('confetti')) return;
+  const box = document.createElement('div');
+  box.id = 'confetti';
+  const cols = ['#3f82f7','#30d158','#ff9f0a','#ff453a','#6ca4ff','#ffd60a'];
+  let html = '';
+  for(let i=0;i<70;i++){
+    const l = Math.random()*100, delay = Math.random()*0.5, dur = 1.6+Math.random()*1.2;
+    const c = cols[i%cols.length], rot = Math.random()*360, drift = (Math.random()*2-1)*80;
+    html += `<i style="left:${l}%;background:${c};animation-delay:${delay}s;animation-duration:${dur}s;--rot:${rot}deg;--drift:${drift}px"></i>`;
+  }
+  box.innerHTML = html;
+  document.body.appendChild(box);
+  setTimeout(()=>box.remove(), 3400);
 }
 function cancelWorkout(){
   if(!confirm(t('woCancelConfirm'))) return;
   S.active = null;
   save();
   go('home');
+}
+
+/* ============== quick ±weight steppers (shown while a weight input is focused) ============== */
+let stepEl = null;
+function stepVal(){ return S.unit==='lb' ? 5 : 2.5; }
+function stepperInit(){
+  const bar = $('#stepper');
+  if(!bar) return;
+  bar.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('pointerdown', e=>{
+      e.preventDefault(); /* keep the input focused */
+      stepWeight(parseFloat(b.dataset.d) < 0 ? -stepVal() : stepVal());
+    });
+  });
+  document.addEventListener('focusin', e=>{
+    if(V.screen==='workout' && e.target.id && e.target.id.startsWith('w-')){
+      stepEl = e.target;
+      bar.querySelectorAll('button').forEach(b=>{
+        b.textContent = (parseFloat(b.dataset.d)<0?'−':'+') + stepVal();
+      });
+      bar.classList.add('show');
+      placeStepper();
+    }
+  });
+  document.addEventListener('focusout', ()=>{
+    setTimeout(()=>{
+      const a = document.activeElement;
+      if(!(a && a.id && a.id.startsWith('w-'))){
+        bar.classList.remove('show'); bar.style.bottom=''; stepEl=null;
+      }else stepEl = a;
+    }, 120);
+  });
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', placeStepper);
+    window.visualViewport.addEventListener('scroll', placeStepper);
+  }
+}
+function placeStepper(){
+  const bar = $('#stepper');
+  if(!bar || !bar.classList.contains('show')) return;
+  if(window.visualViewport){
+    /* keep the buttons above the on-screen keyboard */
+    const off = window.innerHeight - (window.visualViewport.height + window.visualViewport.offsetTop);
+    bar.style.bottom = off > 40 ? (off + 12) + 'px' : '';
+  }
+}
+function stepWeight(d){
+  if(!stepEl || !S.active) return;
+  const m = stepEl.id.match(/^w-(\d+)-(\d+)$/);
+  if(!m) return;
+  const xi = +m[1], si = +m[2];
+  const ex = S.active.exercises[xi];
+  if(!ex || !ex.sets[si] || ex.sets[si].done) return;
+  let cur = parseNum(stepEl.value);
+  if(isNaN(cur)){
+    const g = ghostFor(ex, si);
+    cur = g ? kg2u(g.weight) : 0;
+  }
+  cur = Math.round((cur + d) * 100) / 100;
+  if(!isBwEx(ex.k) && cur < 0) cur = 0; /* assisted bodyweight may go negative */
+  stepEl.value = fmtW(cur);
+  ex.sets[si].w = fmtW(cur);
+  save();
 }
 
 /* ============== elapsed + rest tick (no full re-render) ============== */
@@ -1117,6 +1275,7 @@ function doneExerciseList(){
 function chipLabel(g){ return g==='mine' ? t('exMine') : t('g_'+g); }
 function exStats(k, name, tplName){
   const nm = (name||'').trim().toLowerCase();
+  const bwKind = isBwEx(k);
   let best = 0, bestTime = 0, e1rm = 0, bestVol = 0, bestSet = null, sessions = 0, lastDate = null;
   for(const h of S.history){
     if(h.arch || (tplName && h.name!==tplName)) continue;
@@ -1126,13 +1285,15 @@ function exStats(k, name, tplName){
         if(work.length){
           sessions++;
           if(!lastDate) lastDate = h.date;
+          const add = bwKind ? (e.bw||0) : 0; /* records use TOTAL load = body weight + added */
           for(const s of work){
-            best = Math.max(best, s.weight);
+            const ew = s.weight + add;
+            best = Math.max(best, ew);
             bestTime = Math.max(bestTime, s.reps);
-            const est = s.weight * (1 + s.reps/30); /* Epley */
+            const est = ew * (1 + s.reps/30); /* Epley */
             if(est > e1rm) e1rm = est;
-            const v = s.weight * s.reps;
-            if(v > bestVol){ bestVol = v; bestSet = s; }
+            const v = ew * s.reps;
+            if(v > bestVol){ bestVol = v; bestSet = { weight:ew, reps:s.reps }; }
           }
         }
       }
@@ -1170,7 +1331,7 @@ function renderExList(){
     return `<button class="exitem" onclick="openExDetailByKey('${x.id}')">
       <div class="xi"><div class="xn">${esc(x.n)}</div>
       <div class="xg">${t('g_'+x.g)} · ${t('e_'+x.e)}</div></div>
-      ${st.best?`<div class="best">${fmtW(st.best)} kg</div>`:''}</button>`;
+      ${st.best?`<div class="best">${wu(st.best,true)}</div>`:''}</button>`;
   }).join('') + `<button class="btn ghostbtn" style="margin-top:4px" onclick="openCustomExForm()">${t('exCreate')}</button>`;
 }
 function openExDetailByKey(k){
@@ -1203,7 +1364,7 @@ function htmlExDetail(){
   }
   const tm = isTimeEx(k);
   h += `<div class="statrow">
-    <div class="stat"><div class="v">${tm ? (st.bestTime?st.bestTime+' s':'—') : (st.best?fmtW(st.best)+' kg':'—')}</div><div class="l">${tm?t('recTime'):t('exBest')}</div></div>
+    <div class="stat"><div class="v">${tm ? (st.bestTime?st.bestTime+' s':'—') : (st.best?wu(st.best,true):'—')}</div><div class="l">${tm?t('recTime'):t('exBest')}</div></div>
     <div class="stat"><div class="v">${st.sessions}</div><div class="l">${t('exSessions')}</div></div>
     <div class="stat"><div class="v" style="font-size:16px;padding-top:6px">${st.lastDate?daysAgoStr(st.lastDate):'—'}</div><div class="l">${t('exLastDone')}</div></div>
   </div>`;
@@ -1213,10 +1374,10 @@ function htmlExDetail(){
       <div style="font-size:12px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);margin-bottom:8px">🏆 ${t('recTitle')}</div>
       <div style="display:flex;gap:8px;padding:4px 0;align-items:baseline;font-size:14px">
         <span style="color:var(--dim);flex:1">${t('rec1RM')}</span>
-        <span style="font-weight:800;font-size:16px">${fmtW(Math.round(st.e1rm*10)/10)} kg</span></div>
+        <span style="font-weight:800;font-size:16px">${wu(Math.round(st.e1rm*10)/10,true)}</span></div>
       <div style="display:flex;gap:8px;padding:4px 0;align-items:baseline;font-size:14px">
         <span style="color:var(--dim);flex:1">${t('recBestSet')}</span>
-        <span style="font-weight:800;font-size:16px">${fmtW(st.bestSet.weight)} kg × ${st.bestSet.reps}</span></div>
+        <span style="font-weight:800;font-size:16px">${wu(st.bestSet.weight,true)} × ${st.bestSet.reps}</span></div>
     </div>`;
   }
   if(!tm){
@@ -1233,7 +1394,7 @@ function htmlExDetail(){
     for(const e of w.exercises){
       if(matches(e)){
         rows.push(`<div class="exl"><span class="n">${fmtDate(w.date)} <span style="opacity:.6">· ${esc(w.name)}</span></span>
-          <span class="s">${e.sets.map(s=>fmtSet(s, tm)).join('&nbsp; ')}</span></div>`);
+          <span class="s">${e.sets.map(s=>fmtSet(s, k)).join('&nbsp; ')}</span></div>`);
       }
     }
   }
@@ -1242,7 +1403,7 @@ function htmlExDetail(){
 }
 function chartSVG(k, name, tplName, metric){
   const nm = (name||'').trim().toLowerCase();
-  const tm = isTimeEx(k);
+  const tm = isTimeEx(k), bwKind = isBwEx(k);
   const pts = [];
   for(let i=S.history.length-1; i>=0; i--){
     const w = S.history[i];
@@ -1251,20 +1412,21 @@ function chartSVG(k, name, tplName, metric){
       if(e.k===k || (e.name && e.name.trim().toLowerCase()===nm)){
         const work = e.sets.filter(s=>!s.warm && !s.drop);
         if(!work.length) continue;
+        const add = bwKind ? (e.bw||0) : 0; /* charts use TOTAL load for bodyweight moves */
         let v;
         if(tm) v = Math.max(...work.map(s=>s.reps));
-        else if(metric==='vol') v = Math.round(work.reduce((a,s)=>a+s.weight*s.reps,0));
-        else if(metric==='1rm') v = Math.round(Math.max(...work.map(s=>s.weight*(1+s.reps/30)))*10)/10;
-        else v = Math.max(...work.map(s=>s.weight));
+        else if(metric==='vol') v = Math.round(kg2u(work.reduce((a,s)=>a+(s.weight+add)*s.reps,0)));
+        else if(metric==='1rm') v = Math.round(kg2u(Math.max(...work.map(s=>(s.weight+add)*(1+s.reps/30))))*10)/10;
+        else v = Math.round(kg2u(Math.max(...work.map(s=>s.weight+add)))*100)/100;
         pts.push({ d:w.date, w:v });
       }
     }
   }
   const label = tm ? t('woSec')
-    : metric==='vol' ? t('metricVol')+' (kg)'
-    : metric==='1rm' ? t('metric1RM')+' (kg)'
-    : t('chartTop');
-  return lineChartSVG(pts, label, tm?'s':'kg');
+    : metric==='vol' ? t('metricVol')+' ('+unitL()+')'
+    : metric==='1rm' ? t('metric1RM')+' ('+unitL()+')'
+    : t('chartTop').replace('kg', unitL());
+  return lineChartSVG(pts, label, tm?'s':unitL());
 }
 /* tap on a chart point -> exact value with date */
 function chartTap(i){
@@ -1342,7 +1504,7 @@ function statsWeekly(){
     }
     const l = s.getDate()+'.'+String(s.getMonth()+1).padStart(2,'0');
     wk.push({l, v:cnt});
-    vol.push({l, v:Math.round(v)});
+    vol.push({l, v:Math.round(kg2u(v))});
   }
   return { wk, vol };
 }
@@ -1405,7 +1567,7 @@ function htmlHistory(){
     <div class="card">${calHtml()}</div>
     <h2 class="sec">${t('statsWeeks')}</h2>
     <div class="card">${barChartSVG(sw.wk)}</div>
-    <h2 class="sec">${t('statsVolW')}</h2>
+    <h2 class="sec">${t('statsVolW').replace('kg', unitL())}</h2>
     <div class="card">${barChartSVG(sw.vol)}</div>
     <h2 class="sec">${t('statsMuscle')}</h2>
     <div class="card">${muscleBalanceHtml()}</div>`;
@@ -1414,13 +1576,13 @@ function htmlHistory(){
     <div class="card">
       <div style="display:flex;gap:8px;align-items:center">
         <input class="nameinput" id="bw-input" type="text" inputmode="decimal"
-          placeholder="${S.weights.length?fmtW(S.weights[0].kg)+' kg':'kg'}" style="flex:1">
+          placeholder="${S.weights.length?wu(S.weights[0].kg)+' '+unitL():unitL()}" style="flex:1">
         <button class="btn small" style="background:var(--accent);color:var(--on-accent);min-height:46px;padding:0 20px" onclick="addWeight()">${t('bwLog')}</button>
       </div>
-      ${S.weights.length>1?`<div style="margin-top:12px">${lineChartSVG(S.weights.slice(0,24).slice().reverse().map(x=>({d:x.date,w:x.kg})), 'kg', 'kg')}</div>`:''}
+      ${S.weights.length>1?`<div style="margin-top:12px">${lineChartSVG(S.weights.slice(0,24).slice().reverse().map(x=>({d:x.date,w:kg2u(x.kg)})), unitL(), unitL())}</div>`:''}
       ${S.weights.slice(0,5).map(x=>`<div style="display:flex;gap:8px;padding:6px 0;align-items:center;font-size:14px">
         <span style="color:var(--dim);flex:1">${fmtDate(x.date)}</span>
-        <span style="font-weight:700">${fmtW(x.kg)} kg</span>
+        <span style="font-weight:700">${wu(x.kg,true)}</span>
         <button class="dropbtn del" style="min-height:28px" onclick="delWeight('${x.id}')">✕</button></div>`).join('')}
     </div>
     <h2 class="sec">${t('tabHistory')}</h2>`;
@@ -1443,7 +1605,7 @@ function histRowHtml(w){
   if(open){
     detail = `<div class="histdetail">` + w.exercises.map(e=>
       `<div class="exl"><span class="n">${esc(e.name)}${e.note?` <em style="opacity:.8">— ${esc(e.note)}</em>`:''}</span>
-       <span class="s">${e.sets.map(s=>fmtSet(s, isTimeEx(e.k))).join('&nbsp; ')}</span></div>`).join('') +
+       <span class="s">${e.sets.map(s=>fmtSet(s, e.k)).join('&nbsp; ')}</span></div>`).join('') +
       `<div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
         <span style="color:var(--ghost);font-size:13px">${t('histVolume')}: ${Math.round(vol)} kg${w.dur?' · ⏱ '+fmtTime(w.dur):''}</span>
         <button class="btn small" style="margin-left:auto;background:var(--input);color:var(--dim)" onclick="event.stopPropagation();toggleArch('${w.id}')">${w.arch?'↩ '+t('histUnarch'):'📦'}</button>
@@ -1484,11 +1646,12 @@ function histEditBody(id){
   return w.exercises.map((e,ei)=>{
     let workNum = 0;
     const rows = e.sets.map((s,si)=>{
-      const label = s.warm ? 'W' : s.drop ? 'D' : String(++workNum);
+      if(!s.warm && !s.drop) workNum++;
+      const label = s.warm ? 'W' : s.drop ? 'D' : s.fail ? 'F' : String(workNum);
       return `<div class="setgrid" style="grid-template-columns:30px 1fr 70px 56px 34px">
-        <div class="setnum ${s.warm?'warm':s.drop?'dropn':''}" style="display:flex;align-items:center;justify-content:center;min-height:40px">${label}</div>
+        <div class="setnum ${s.warm?'warm':s.drop?'dropn':s.fail?'failn':''}" style="display:flex;align-items:center;justify-content:center;min-height:40px">${label}</div>
         <div></div>
-        <input type="text" inputmode="decimal" value="${fmtW(s.weight)}"
+        <input type="text" inputmode="decimal" value="${fmtW(kg2u(s.weight))}"
           oninput="editHistSet('${id}',${ei},${si},'weight',this.value)">
         <input type="text" inputmode="numeric" value="${s.reps}"
           oninput="editHistSet('${id}',${ei},${si},'reps',this.value)">
@@ -1502,8 +1665,8 @@ function editHistSet(id,ei,si,f,v){
   const w = S.history.find(x=>x.id===id);
   if(!w || !w.exercises[ei] || !w.exercises[ei].sets[si]) return;
   const n = parseNum(v);
-  if(!isNaN(n) && n>=0){
-    w.exercises[ei].sets[si][f] = f==='reps' ? Math.round(n) : n;
+  if(!isNaN(n) && (f==='reps' ? n>=0 : true)){
+    w.exercises[ei].sets[si][f] = f==='reps' ? Math.round(n) : u2kg(n);
     save();
   }
 }
@@ -1528,8 +1691,8 @@ function delHistSet(id,ei,si){
 function addWeight(){
   const inp = $('#bw-input');
   const n = parseNum(inp ? inp.value : '');
-  if(isNaN(n) || n<=0 || n>400){ toast(t('woEmptyVals')); return; }
-  S.weights.unshift({ id:uid(), date:new Date().toISOString(), kg:Math.round(n*10)/10 });
+  if(isNaN(n) || n<=0 || n>(S.unit==='lb'?900:400)){ toast(t('bwEnter')); return; }
+  S.weights.unshift({ id:uid(), date:new Date().toISOString(), kg:Math.round(u2kg(n)*10)/10 });
   save(); render();
 }
 function delWeight(id){
@@ -1538,7 +1701,9 @@ function delWeight(id){
   save(); render();
 }
 
-/* ---- plate calculator ---- */
+/* ---- plate calculator (works entirely in the display unit) ---- */
+function plateBars(){ return S.unit==='lb' ? [45,35,25] : [20,15,10]; }
+function plateSet(){ return S.unit==='lb' ? [45,35,25,10,5,2.5] : [25,20,15,10,5,2.5,1.25]; }
 function openPlates(xi){
   let w = NaN;
   if(xi!=null && S.active && S.active.exercises[xi]){
@@ -1546,17 +1711,18 @@ function openPlates(xi){
     for(let i=0;i<ex.sets.length;i++){
       const s = ex.sets[i];
       if(!s.done){
-        w = parseNum(s.w);
-        if(isNaN(w)){ const g = ghostFor(ex,i); if(g) w = g.weight; }
+        w = parseNum(s.w); /* already in display unit */
+        if(isNaN(w)){ const g = ghostFor(ex,i); if(g) w = kg2u(g.weight); }
         break;
       }
     }
   }
-  V.plateBar = V.plateBar || 20;
+  const bars = plateBars();
+  if(bars.indexOf(V.plateBar) < 0) V.plateBar = bars[0]; /* reset when unit changed */
   openModal(`<h3>${t('plates')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div class="card">
       <input class="nameinput" id="pl-w" type="text" inputmode="decimal" value="${!isNaN(w)?fmtW(w):''}"
-        placeholder="kg" style="font-size:24px;font-weight:800;text-align:center;min-height:56px"
+        placeholder="${unitL()}" style="font-size:24px;font-weight:800;text-align:center;min-height:56px"
         oninput="renderPlates()">
       <div class="setline" style="margin-top:10px">
         <span class="lb">${t('platesBar')}</span>
@@ -1570,8 +1736,8 @@ function openPlates(xi){
 function renderPlatesSeg(){
   const el = $('#pl-bars');
   if(!el) return;
-  el.innerHTML = [20,15,10].map(b=>
-    `<button class="${V.plateBar===b?'on':''}" onclick="V.plateBar=${b};renderPlatesSeg();renderPlates()">${b} kg</button>`).join('');
+  el.innerHTML = plateBars().map(b=>
+    `<button class="${V.plateBar===b?'on':''}" onclick="V.plateBar=${b};renderPlatesSeg();renderPlates()">${b} ${unitL()}</button>`).join('');
 }
 function renderPlates(){
   const out = $('#pl-out');
@@ -1579,17 +1745,16 @@ function renderPlates(){
   const w = parseNum($('#pl-w').value);
   if(isNaN(w) || w<=0){ out.innerHTML = `<div class="empty" style="padding:12px">—</div>`; return; }
   const side = (w - V.plateBar)/2;
-  if(side <= 0){ out.innerHTML = `<div class="empty" style="padding:12px">${t('platesEmpty')} (${V.plateBar} kg)</div>`; return; }
-  const plates = [25,20,15,10,5,2.5,1.25];
+  if(side <= 0){ out.innerHTML = `<div class="empty" style="padding:12px">${t('platesEmpty')} (${V.plateBar} ${unitL()})</div>`; return; }
   const used = [];
   let rem = side;
-  for(const p of plates){ while(rem >= p - 1e-9){ used.push(p); rem -= p; } }
+  for(const p of plateSet()){ while(rem >= p - 1e-9){ used.push(p); rem -= p; } }
   rem = Math.round(rem*100)/100;
-  let html = `<div style="font-size:13px;color:var(--dim);font-weight:600;margin-bottom:8px">${t('platesSide')} — ${fmtW(side)} kg:</div>`;
+  let html = `<div style="font-size:13px;color:var(--dim);font-weight:600;margin-bottom:8px">${t('platesSide')} — ${fmtW(side)} ${unitL()}:</div>`;
   html += used.length
     ? `<div style="font-size:24px;font-weight:800;color:var(--accent-soft)">${used.map(fmtW).join(' + ')}</div>`
     : `<div style="font-size:16px;font-weight:700">${t('platesEmpty')}</div>`;
-  if(rem > 0) html += `<div style="margin-top:8px;font-size:13px;color:var(--orange);font-weight:600">${t('platesRem',{n:fmtW(rem)})}</div>`;
+  if(rem > 0) html += `<div style="margin-top:8px;font-size:13px;color:var(--orange);font-weight:600">${t('platesRem',{n:fmtW(rem)}).replace('kg',unitL())}</div>`;
   out.innerHTML = html;
 }
 
@@ -1608,8 +1773,15 @@ function htmlSettings(){
     <div class="setline">
       <span class="lb">${t('setLang')}</span>
       <div class="seg">
-        <button class="${S.lang==='lt'?'on':''}" onclick="S.lang='lt'; save(); render()">LT</button>
-        <button class="${S.lang==='en'?'on':''}" onclick="S.lang='en'; save(); render()">EN</button>
+        <button class="${S.lang==='en'?'on':''}" onclick="S.lang='en'; save(); render()">🇬🇧 EN</button>
+        <button class="${S.lang==='lt'?'on':''}" onclick="S.lang='lt'; save(); render()">🇱🇹 LT</button>
+      </div>
+    </div>
+    <div class="setline">
+      <span class="lb">${t('setUnit')}</span>
+      <div class="seg">
+        <button class="${(S.unit||'kg')==='kg'?'on':''}" onclick="setUnit('kg')">kg</button>
+        <button class="${S.unit==='lb'?'on':''}" onclick="setUnit('lb')">lb</button>
       </div>
     </div>
   </div>
@@ -1637,6 +1809,7 @@ function htmlSettings(){
   <div style="text-align:center;color:var(--ghost);font-size:12px;margin-top:24px">Daveedus v${APP_VER}</div>`;
 }
 function setTheme(m){ S.theme=m; save(); applyTheme(); render(); }
+function setUnit(u){ S.unit=u; save(); render(); }
 function snapListHtml(){
   const keys = Object.keys(localStorage).filter(k=>k.startsWith(SNAP_PREFIX)).sort().reverse();
   if(!keys.length) return `<div style="color:var(--dim);font-size:14px;padding:4px 0">${t('protNoSnaps')}</div>`;
@@ -1816,6 +1989,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   }
   if(S.active) V.screen = 'workout';
   render();
+  stepperInit();
   setInterval(tick, 500);
   /* auto-update: check for a new version on every open/foreground; when the
      new service worker takes over, reload once so fresh code is used */
