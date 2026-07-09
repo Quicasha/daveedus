@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.6.4'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.6.5'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -464,6 +464,7 @@ function renderTopbar(){
     const el = fmtTime((Date.now()-new Date(S.active.startedAt).getTime())/1000);
     h = `<button class="iconbtn" onclick="go('home')">‹</button>
          <div class="elapsed"><small>${t('woElapsed')} · ${esc(S.active.name)}</small><span id="elapsed-time">${el}</span></div>
+         <button class="iconbtn danger" onclick="cancelWorkout()" aria-label="${t('woCancel')}">✕</button>
          <button class="finishbtn" onclick="finishWorkout()">${t('woFinish')}</button>`;
   }else if(V.screen==='tpledit'){
     const d = S.templates.find(x=>x.id===V.editTpl);
@@ -755,9 +756,6 @@ function htmlWorkout(){
       </div>
     </div>${ssConn}`;
   }).join('');
-  h += `<button class="btn ghostbtn" onclick="addWorkoutEx()">${t('woAddEx')}</button>`;
-  h += `<button class="btn primary" onclick="finishWorkout()">${t('woFinish')} ✓</button>`;
-  h += `<button class="btn danger" onclick="cancelWorkout()">${t('woCancel')}</button>`;
   V.lastDone = null; /* pop animation plays once */
   return h;
 }
