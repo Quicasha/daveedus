@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.6.2'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.6.3'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -70,7 +70,7 @@ const I18N = {
     platesRem:'{n} kg pusėj netelpa iš standartinių svarelių', platesEmpty:'Tuščias grifas',
     superset:'Superset',
     codeBad:'Neteisingas kodas', copy:'Kopijuoti', copied:'Nukopijuota ✓',
-    daySets:'setai', dayReps:'kart.', repsRangeTog:'nuo–iki',
+    daySets:'setai', dayReps:'kart.', daySec:'sek.', repsRangeTog:'nuo–iki',
     exSearch:'Ieškoti pratimo...', exAll:'Visi', exCreate:'+ Sukurti savo pratimą',
     exCreateTitle:'Naujas pratimas', exCreateName:'Pavadinimas', exCreateGroup:'Raumenų grupė',
     exCreateSave:'Išsaugoti', exNameReq:'Įvesk pavadinimą',
@@ -154,7 +154,7 @@ const I18N = {
     platesRem:"{n} kg per side doesn't fit standard plates", platesEmpty:'Empty bar',
     superset:'Superset',
     codeBad:'Invalid code', copy:'Copy', copied:'Copied ✓',
-    daySets:'sets', dayReps:'reps', repsRangeTog:'range',
+    daySets:'sets', dayReps:'reps', daySec:'sec', repsRangeTog:'range',
     exSearch:'Search exercises...', exAll:'All', exCreate:'+ Create your own exercise',
     exCreateTitle:'New exercise', exCreateName:'Name', exCreateGroup:'Muscle group',
     exCreateSave:'Save', exNameReq:'Enter a name',
@@ -349,12 +349,13 @@ function fmtW(w){
   if(w==null || isNaN(w)) return '';
   return String(Math.round(w*100)/100);
 }
-/* normalize a template rep target to a clean "N" or "N-M" string (1..50) */
-function normReps(v){
+/* normalize a template target to a clean "N" or "N-M" string (1..max, default 50 for reps) */
+function normReps(v, max){
+  max = max || 50;
   if(v==null) return '10';
   const m = String(v).replace(/[^\d-]/g,'').match(/^(\d+)(?:\s*-\s*(\d+))?/);
   if(!m) return '10';
-  const clamp = n => Math.max(1, Math.min(50, parseInt(n,10)||10));
+  const clamp = n => Math.max(1, Math.min(max, parseInt(n,10)||10));
   let lo = clamp(m[1]);
   if(m[2]!=null && m[2]!==''){
     let hi = clamp(m[2]);
@@ -722,7 +723,7 @@ function htmlWorkout(){
     return `<div class="card">
       <div class="exhead">
         <div class="exname" onclick="openExDetailByKey('${esc(ex.k)}')">${esc(ex.name)}</div>
-        <div class="extarget">${ex.targetSets}×${ex.targetReps}</div>
+        <div class="extarget">${ex.targetSets}×${ex.targetReps}${tm?'s':''}</div>
         ${bw?'':`<button class="minibtn" onclick="openPlates(${xi})">⚖</button>`}
         ${notLast?`<button class="minibtn ${ex.ss?'acc':''}" onclick="toggleWoSS(${xi})">🔗</button>`:''}
         <button class="minibtn del" onclick="removeWorkoutEx(${xi})">✕</button>
@@ -1142,6 +1143,7 @@ function htmlTplEdit(){
     <div class="card">`;
   h += d.ex.map((e,i)=>{
     const info = exInfo(e.k);
+    const tm = isTimeEx(e.k);
     const p = repsParse(e.r);
     const rnum = (which,val) => `<div class="numfield">
       <button onclick="stepReps('${d.id}',${i},'${which}',-1)">−</button><span class="val">${val}</span>
@@ -1171,7 +1173,7 @@ function htmlTplEdit(){
         </div>
       </div>
       <div class="ctlrow repsrow">
-        <span class="clbl">${t('dayReps')}</span>
+        <span class="clbl">${tm?t('daySec'):t('dayReps')}</span>
         ${repsCtl}
         <button class="rangetog ${p.range?'acc':''}" onclick="toggleRepsRange('${d.id}',${i})">${t('repsRangeTog')}</button>
       </div>
@@ -1227,10 +1229,14 @@ function repsParse(r){
   const n = parseInt(r,10)||10;
   return { range:false, lo:n, hi:n };
 }
-function stepReps(id,i,which,delta){
+/* target constraints differ by exercise type: reps 1..50 step 1, time 5..600s step 5 */
+function repsCfg(k){ return isTimeEx(k) ? {step:5,min:5,max:600,add:15,def:30} : {step:1,min:1,max:50,add:2,def:10}; }
+function stepReps(id,i,which,dir){
   const d = S.templates.find(x=>x.id===id);
   if(!d || !d.ex[i]) return;
-  const cl = n => Math.max(1, Math.min(50, n));
+  const c = repsCfg(d.ex[i].k);
+  const cl = n => Math.max(c.min, Math.min(c.max, n));
+  const delta = dir*c.step;
   const p = repsParse(d.ex[i].r);
   if(!p.range){
     d.ex[i].r = String(cl(p.lo+delta));
@@ -1243,19 +1249,20 @@ function stepReps(id,i,which,delta){
   }
   save(); render();
 }
-/* toggle a rep target between a single value and a "from–to" range */
+/* toggle a target between a single value and a "from–to" range */
 function toggleRepsRange(id,i){
   const d = S.templates.find(x=>x.id===id);
   if(!d || !d.ex[i]) return;
+  const c = repsCfg(d.ex[i].k);
   const p = repsParse(d.ex[i].r);
-  d.ex[i].r = p.range ? String(p.lo) : p.lo+'-'+Math.min(50,p.lo+2);
+  d.ex[i].r = p.range ? String(p.lo) : p.lo+'-'+Math.min(c.max,p.lo+c.add);
   save(); render();
 }
 function addTplEx(id){
   openPicker(info=>{
     const d = S.templates.find(x=>x.id===id);
     if(!d) return;
-    d.ex.push({ id:uid(), k:info.id, s:3, r:10 });
+    d.ex.push({ id:uid(), k:info.id, s:3, r:repsCfg(info.id).def });
     save(); closeModal(); render();
   });
 }
@@ -1335,20 +1342,25 @@ function openCustomExForm(){
       <div style="color:var(--dim);font-size:13px;margin:12px 0 6px">${t('exCreateGroup')}</div>
       <select class="nameinput" id="cx-group" style="width:100%">${groups}</select>
       <div style="color:var(--dim);font-size:13px;margin:12px 0 6px">${t('exCreateMode')}</div>
-      <select class="nameinput" id="cx-mode" style="width:100%">
-        <option value="r">${t('modeReps')}</option>
-        <option value="t">${t('modeTime')}</option>
-      </select>
+      <div class="segmented" id="cx-mode">
+        <button type="button" class="seg on" data-v="r" onclick="pickSeg(this)">${t('modeReps')}</button>
+        <button type="button" class="seg" data-v="t" onclick="pickSeg(this)">${t('modeTime')}</button>
+      </div>
     </div>
     <button class="btn primary" onclick="saveCustomEx()">${t('exCreateSave')}</button>`);
   setTimeout(()=>{ const i=$('#cx-name'); if(i) i.focus(); }, 50);
+}
+function pickSeg(btn){
+  const seg = btn.parentElement;
+  seg.querySelectorAll('.seg').forEach(b=>b.classList.toggle('on', b===btn));
 }
 function saveCustomEx(){
   const name = ($('#cx-name').value||'').trim();
   const g = $('#cx-group').value;
   if(!name){ toast(t('exNameReq')); return; }
   const info = { id:'custom-'+uid(), n:name, g, e:'other' };
-  if($('#cx-mode') && $('#cx-mode').value==='t') info.m = 't';
+  const modeSel = $('#cx-mode .seg.on');
+  if(modeSel && modeSel.dataset.v==='t') info.m = 't';
   S.customEx.push(info);
   save();
   if(V.pickerCb){ V.pickerCb(info); }
@@ -2041,7 +2053,7 @@ function importTplPayload(d, folderId){
         k = info.id;
       } else continue;
     }
-    tpl.ex.push({ id:uid(), k, s:Math.max(1,Math.min(12,e.s|0||3)), r:normReps(e.r), ss:!!e.ss });
+    tpl.ex.push({ id:uid(), k, s:Math.max(1,Math.min(12,e.s|0||3)), r:normReps(e.r, isTimeEx(k)?600:50), ss:!!e.ss });
   }
   S.templates.push(tpl);
   return tpl;

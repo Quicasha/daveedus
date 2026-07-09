@@ -256,6 +256,12 @@ h2.sec{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(
 .nameinput{width:100%; background:var(--input); border:none;
   border-radius:10px; min-height:46px; font-size:16px; font-weight:600; padding:0 12px; -webkit-appearance:none;}
 .nameinput:focus{outline:none; box-shadow:0 0 0 2px var(--accent);}
+/* segmented button group (e.g. reps / time type picker) */
+.segmented{display:flex; gap:6px; background:var(--input); border-radius:10px; padding:4px;}
+.segmented .seg{flex:1; min-height:42px; border:none; border-radius:8px; background:transparent;
+  color:var(--dim); font-size:14px; font-weight:700;}
+.segmented .seg.on{background:var(--accent); color:var(--on-accent);}
+.segmented .seg:active{opacity:.7;}
 .numfield{display:flex; align-items:center; background:var(--input); border:none; border-radius:10px; overflow:hidden;}
 .numfield:focus-within{box-shadow:0 0 0 2px var(--accent);}
 .numfield button{width:34px; min-height:42px; background:none; border:none; color:var(--accent-soft); font-size:19px; font-weight:700;}
