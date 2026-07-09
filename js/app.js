@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.7.1'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.7.2'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -24,7 +24,8 @@ const I18N = {
     woAddEx:'+ Pridėti pratimą', woDelEx:'Išimti pratimą „{n}“?',
     swapTitle:'Keisti pratimą', swapPlanned:'planas', swapAdd:'+ Pridėti alternatyvą',
     woAltBack:'Atgal į', altLabel:'alt.', altAdd:'Alternatyva',
-    woNextUp:'kitas', woOrderHint:'Atlikimo eilė',
+    woNextUp:'kitas', woOrderHint:'Atlikimo eilė', woPrevOrderHint:'Praeitą kartą buvo tokia eilė',
+    woNoteSess:'Užrašas (šiam kartui)…', woNotePerm:'Nuolatinis užrašas…', woNotePermToggle:'Nuolatinis užrašas',
     woEmptyVals:'Įvesk svorį ir kartojimus', woSaved:'Treniruotė išsaugota 💪',
     woFinishEmpty:'Nėra atliktų setų. Atšaukti treniruotę?',
     woFinishPart:'Ne visi setai atlikti. Baigti ir išsaugoti?',
@@ -114,7 +115,8 @@ const I18N = {
     woAddEx:'+ Add exercise', woDelEx:'Remove exercise “{n}”?',
     swapTitle:'Swap exercise', swapPlanned:'planned', swapAdd:'+ Add alternative',
     woAltBack:'Back to', altLabel:'alt.', altAdd:'Alternative',
-    woNextUp:'next', woOrderHint:'Order done',
+    woNextUp:'next', woOrderHint:'Order done', woPrevOrderHint:'Last time you did it in this order',
+    woNoteSess:'Note (this workout)…', woNotePerm:'Permanent note…', woNotePermToggle:'Permanent note',
     woEmptyVals:'Enter weight and reps', woSaved:'Workout saved 💪',
     woFinishEmpty:'No completed sets. Discard workout?',
     woFinishPart:'Not all sets completed. Finish and save?',
@@ -597,10 +599,11 @@ function htmlHome(){
 /* ======================= WORKOUT ======================= */
 function latestBw(){ return S.weights.length ? S.weights[0].kg : null; }
 function newSet(extra){ return Object.assign({ w:'', r:'', warm:false, drop:false, fail:false, done:false, cls:'' }, extra||{}); }
-function buildActiveEx(k, name, sets, reps, ss, tplId, alts){
+function buildActiveEx(k, name, sets, reps, ss, tplId, alts, pnote){
   const last = lastForExercise(k, name, tplId);
   const ex = { id:uid(), k, name, targetSets:sets, targetReps:reps, note:'', ss:!!ss, last,
     baseK:k, alts:(alts||[]).slice(), stash:{}, tplId:tplId||null,
+    pnote:pnote||'', notePerm:false, prevOrder:(last && last.order) ? last.order : 0,
     sets: Array.from({length:sets}, ()=>newSet()) };
   if(isBwEx(k)){
     /* body weight prefilled from the latest log (or last session), kept separate from the logged load */
@@ -628,6 +631,7 @@ function swapExercise(xi, toKey){
   ex.k = toKey;
   if(toKey!==ex.baseK && !ex.alts.includes(toKey)) ex.alts.push(toKey);
   if(S.active.rest && S.active.rest.key.split('-')[0]===String(xi)) S.active.rest = null;
+  S.active.curEx = ex.id;
   updateExDone(ex);
   save(); render();
 }
@@ -689,7 +693,7 @@ function lastForExercise(k, name, tplId){
     for(const h of S.history){
       if(h.arch || h.tplId!==tplId) continue;
       for(const e of h.exercises){
-        if(match(e)) return { date:h.date, sets:e.sets, note:e.note||'', bw:e.bw, sameTpl:true };
+        if(match(e)) return { date:h.date, sets:e.sets, note:e.note||'', bw:e.bw, order:e.order||0, sameTpl:true };
       }
     }
   }
@@ -697,7 +701,7 @@ function lastForExercise(k, name, tplId){
   for(const h of S.history){
     if(h.arch) continue;
     for(const e of h.exercises){
-      if(match(e)) return { date:h.date, sets:e.sets, note:e.note||'', bw:e.bw, sameTpl:false };
+      if(match(e)) return { date:h.date, sets:e.sets, note:e.note||'', bw:e.bw, order:e.order||0, sameTpl:false };
     }
   }
   return null;
@@ -710,7 +714,7 @@ function startWorkout(tplId){
   }
   S.active = {
     tplId: tpl.id, name: tpl.name, startedAt: new Date().toISOString(), rest:null,
-    exercises: tpl.ex.map(e => buildActiveEx(e.k, exName(e.k,e.n), e.s, e.r, e.ss, tpl.id, e.alts))
+    exercises: tpl.ex.map(e => buildActiveEx(e.k, exName(e.k,e.n), e.s, e.r, e.ss, tpl.id, e.alts, e.pnote))
   };
   save();
   go('workout');
@@ -751,11 +755,12 @@ function realPrev(ex, si){
 function htmlWorkout(){
   if(!S.active){ V.screen='home'; return htmlHome(); }
   let h = '<div style="height:8px"></div>';
-  /* completion order numbers + which exercise is "next up" */
+  /* this-session completion order numbers */
   const doneOrder = {};
   S.active.exercises.filter(e=>e.doneAt).sort((a,b)=>a.doneAt-b.doneAt).forEach((e,i)=>{ doneOrder[e.id]=i+1; });
-  const nextEx = S.active.exercises.find(e=>!exFullyDone(e));
-  const nextExId = nextEx ? nextEx.id : null;
+  /* outline the exercise being worked on: the one last logged (if unfinished), else the first unfinished */
+  const curEx = S.active.exercises.find(e=>e.id===S.active.curEx);
+  const activeId = (curEx && !exFullyDone(curEx)) ? curEx.id : (S.active.exercises.find(e=>!exFullyDone(e))||{}).id;
   h += S.active.exercises.map((ex,xi)=>{
     const tm = isTimeEx(ex.k), bw = isBwEx(ex.k);
     const firstNotDone = ex.sets.findIndex(s=>!s.done); /* -1 = all done */
@@ -806,8 +811,8 @@ function htmlWorkout(){
     const ssConn = (ex.ss && notLast) ? `<div class="ssline">🔗 ${t('superset')}</div>` : '';
     const isAlt = ex.k !== ex.baseK;
     const statusBadge = doneOrder[ex.id] ? `<span class="ordbadge" title="${t('woOrderHint')}">${doneOrder[ex.id]}</span>`
-      : (ex.id===nextExId ? `<span class="nextbadge">${t('woNextUp')}</span>` : '');
-    return `<div class="card${isAlt?' altcard':''}${doneOrder[ex.id]?' exdone':''}">
+      : (ex.prevOrder ? `<span class="ordbadge prev" title="${t('woPrevOrderHint')}">${ex.prevOrder}</span>` : '');
+    return `<div class="card${isAlt?' altcard':''}${doneOrder[ex.id]?' exdone':''}${ex.id===activeId?' excur':''}">
       <div class="exhead">
         <div class="exname" onclick="openExDetailByKey('${esc(ex.k)}')">${esc(ex.name)}</div>
         ${statusBadge}
@@ -818,8 +823,14 @@ function htmlWorkout(){
         <button class="minibtn del" onclick="removeWorkoutEx(${xi})">✕</button>
       </div>
       ${isAlt?`<div class="altbar" onclick="swapExercise(${xi},'${esc(ex.baseK)}')">${ACT_ICONS.swap}<span>${t('woAltBack')} ${esc(exName(ex.baseK))}</span></div>`:''}
+      ${(ex.pnote && !ex.notePerm) ? `<div class="pnote">${ACT_ICONS.pin} ${esc(ex.pnote)}</div>` : ''}
       ${ex.last && ex.last.note ? `<div class="lastnote">💬 ${esc(ex.last.note)}</div>` : ''}
-      <input class="exnote" placeholder="${t('woNote')}" value="${esc(ex.note)}" oninput="onNoteInput(${xi},this.value)">
+      <div class="noterow">
+        <input class="exnote${ex.notePerm?' perm':''}" placeholder="${ex.notePerm?t('woNotePerm'):t('woNoteSess')}"
+          value="${esc(ex.notePerm?(ex.pnote||''):ex.note)}"
+          oninput="${ex.notePerm?`setPnote(${xi},this.value)`:`onNoteInput(${xi},this.value)`}">
+        <button class="noteperm${ex.notePerm?' on':''}" onclick="toggleNoteMode(${xi})" aria-label="${t('woNotePermToggle')}">${ACT_ICONS.pin}</button>
+      </div>
       ${bwField}${hdr}${rows}
       <div class="setctl">
         <button onclick="addSet(${xi})">${t('woAddSet')}</button>
@@ -842,6 +853,15 @@ function dismissRest(){
 }
 function onSetInput(xi,si,f,v){ S.active.exercises[xi].sets[si][f]=v; save(); }
 function onNoteInput(xi,v){ S.active.exercises[xi].note=v; save(); }
+/* toggle the note field between "this workout only" and a permanent note kept on the template */
+function toggleNoteMode(xi){ const ex=S.active.exercises[xi]; ex.notePerm=!ex.notePerm; save(); render(); }
+function setPnote(xi,v){
+  const ex = S.active.exercises[xi];
+  ex.pnote = v;
+  const tpl = S.templates.find(t=>t.id===S.active.tplId);
+  if(tpl){ const te = tpl.ex.find(e=>e.k===ex.baseK); if(te) te.pnote = v; }
+  save();
+}
 /* tap the set number to cycle its type: number -> W (warmup) -> F (failure) -> number */
 function toggleWarm(xi,si){
   const s = S.active.exercises[xi].sets[si];
@@ -910,6 +930,7 @@ function toggleSet(xi,si){
   else s.cls='loss';
   S.active.rest = { at:Date.now(), key:xi+'-'+si };
   V.lastDone = xi+'-'+si;
+  S.active.curEx = ex.id;   /* this is the exercise being worked on now (outline follows it) */
   updateExDone(ex);
   save(); render();
   /* focus the next set's weight field only when it must be typed (no ghost to one-tap) */
@@ -965,6 +986,9 @@ function finishWorkout(){
   if(!S.active) return;
   /* each exercise slot may hold several performed variants (planned + alternatives);
      every variant with logged sets becomes its own history entry, tracked separately */
+  /* rank of each exercise slot by the order it was completed (for "last order" next time) */
+  const orderMap = {};
+  S.active.exercises.filter(e=>e.doneAt).sort((a,b)=>a.doneAt-b.doneAt).forEach((e,i)=>{ orderMap[e.id]=i+1; });
   const exercises = [];
   let total = 0;
   S.active.exercises.forEach(ex=>{
@@ -975,6 +999,7 @@ function finishWorkout(){
       const done = v.sets.filter(s=>s.done).map(s=>({ weight:u2kg(parseNum(s.w)), reps:parseNum(s.r), warm:!!s.warm, drop:!!s.drop, fail:!!s.fail }));
       if(!done.length) return;
       const o = { k:v.k, name:v.name, targetSets:ex.targetSets, targetReps:ex.targetReps, note:v.note||'', ss:!!ex.ss, sets:done };
+      if(orderMap[ex.id]) o.order = orderMap[ex.id];
       if(isBwEx(v.k) && v.bw!=null) o.bw = v.bw;
       exercises.push(o);
     });
@@ -1221,7 +1246,7 @@ function shareFolder(id){
   if(!f) return;
   const tpls = S.templates.filter(x=>x.folderId===id);
   const payload = { t:'folder', name:f.name,
-    tpls: tpls.map(d=>({ name:d.name, ex:d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]) })) })) };
+    tpls: tpls.map(d=>({ name:d.name, ex:d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]), pnote:e.pnote||'' })) })) };
   const code = encodeShare(payload);
   openModal(`<h3>${t('folderShare')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div style="color:var(--dim);font-size:14px;margin:0 4px 10px">${t('folderShareHint')}</div>
@@ -1330,7 +1355,7 @@ function dupTpl(id){
   const d = S.templates.find(x=>x.id===id);
   if(!d) return;
   const copy = { id:uid(), name:(d.name+' '+t('tplDupSuffix')).slice(0,60), folderId:d.folderId,
-    ex: d.ex.map(e=>({ id:uid(), k:e.k, s:e.s, r:e.r, ss:!!e.ss, alts:(e.alts||[]).slice() })) };
+    ex: d.ex.map(e=>({ id:uid(), k:e.k, s:e.s, r:e.r, ss:!!e.ss, alts:(e.alts||[]).slice(), pnote:e.pnote||'' })) };
   S.templates.splice(S.templates.indexOf(d)+1, 0, copy);
   save();
   openTpl(copy.id);
@@ -2167,7 +2192,7 @@ function shareTpl(id){
   const d = S.templates.find(x=>x.id===id);
   if(!d) return;
   const payload = { t:'tpl', name:d.name,
-    ex: d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]) })) };
+    ex: d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]), pnote:e.pnote||'' })) };
   const code = encodeShare(payload);
   openModal(`<h3>${t('tplShare')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div style="color:var(--dim);font-size:14px;margin:0 4px 10px">${t('tplShareHint')}</div>
@@ -2212,7 +2237,7 @@ function importTplPayload(d, folderId){
       } else continue;
     }
     const alts = Array.isArray(e.alts) ? e.alts.filter(a=>exInfo(a) && a!==k) : [];
-    tpl.ex.push({ id:uid(), k, s:Math.max(1,Math.min(12,e.s|0||3)), r:normReps(e.r, isTimeEx(k)?600:50), ss:!!e.ss, alts });
+    tpl.ex.push({ id:uid(), k, s:Math.max(1,Math.min(12,e.s|0||3)), r:normReps(e.r, isTimeEx(k)?600:50), ss:!!e.ss, alts, pnote:String(e.pnote||'').slice(0,200) });
   }
   S.templates.push(tpl);
   return tpl;
