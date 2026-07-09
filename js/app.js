@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.6.3'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.6.4'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -61,6 +61,9 @@ const I18N = {
     histArch:'Archyvuoti', histUnarch:'Grąžinti', archTitle:'Archyvas',
     statsCal:'Kalendorius', statsWeeks:'Treniruotės per savaitę', statsVolW:'Apimtis per savaitę (kg)',
     statsMuscle:'Setai raumenų grupėms (per 7 d.)',
+    statsWorkoutsPer:'Treniruotės', statsVolumePer:'Apimtis',
+    pdW:'Savaitė', pdM:'Mėnuo', pdY:'Metai', pd_w:'per savaitę', pd_m:'per mėnesį', pd_y:'per metus',
+    histMore:'Rodyti daugiau', bwLogNew:'+ Įvesti svorį',
     metricW:'Svoris', metricVol:'Apimtis', metric1RM:'~1RM',
     calDows:'Pr An Tr Kt Pn Št Sk',
     exMine:'Mano', exMineEmpty:'Dar nieko nedarei — pasirink „Visi“ ir pradėk!',
@@ -145,6 +148,9 @@ const I18N = {
     histArch:'Archive', histUnarch:'Restore', archTitle:'Archive',
     statsCal:'Calendar', statsWeeks:'Workouts per week', statsVolW:'Volume per week (kg)',
     statsMuscle:'Sets per muscle group (last 7 d)',
+    statsWorkoutsPer:'Workouts', statsVolumePer:'Volume',
+    pdW:'Week', pdM:'Month', pdY:'Year', pd_w:'per week', pd_m:'per month', pd_y:'per year',
+    histMore:'Show more', bwLogNew:'+ Log weight',
     metricW:'Weight', metricVol:'Volume', metric1RM:'~1RM',
     calDows:'Mo Tu We Th Fr Sa Su',
     exMine:'Mine', exMineEmpty:'Nothing done yet — pick “All” and get started!',
@@ -257,7 +263,9 @@ function maybeSnapshot(){
     const today = new Date().toISOString().slice(0,10);
     if(localStorage.getItem('daveedus.lastSnap')===today) return;
     const prev = localStorage.getItem(LS_KEY);
-    if(prev) localStorage.setItem(SNAP_PREFIX+today, prev);
+    /* once state grows large, three full copies would dominate the localStorage
+       quota — skip on-device snapshots and rely on the IndexedDB mirror + backup codes */
+    if(prev && prev.length < 1500000) localStorage.setItem(SNAP_PREFIX+today, prev);
     localStorage.setItem('daveedus.lastSnap', today);
     const keys = Object.keys(localStorage).filter(k=>k.startsWith(SNAP_PREFIX)).sort();
     while(keys.length>3) localStorage.removeItem(keys.shift());
@@ -295,17 +303,26 @@ async function idbGet(){
 }
 let idbTimer = null;
 function save(){
+  const json = JSON.stringify(S);
   try{
     maybeSnapshot();
-    localStorage.setItem(LS_KEY, JSON.stringify(S));
-  }catch(e){ toast(t('saveError')); }
+    localStorage.setItem(LS_KEY, json);
+  }catch(e){
+    /* quota exceeded — snapshots are the largest extra; drop them so the main
+       state always persists, then retry once */
+    try{
+      Object.keys(localStorage).filter(k=>k.startsWith(SNAP_PREFIX)).forEach(k=>localStorage.removeItem(k));
+      localStorage.setItem(LS_KEY, json);
+    }catch(e2){ toast(t('saveError')); }
+  }
   clearTimeout(idbTimer);
-  idbTimer = setTimeout(()=>idbSet(JSON.stringify(S)), 800);
+  idbTimer = setTimeout(()=>idbSet(json), 800);
 }
 /* view state (not persisted) */
 const V = { screen:'home', editTpl:null, viewFolder:null, exDetail:null, expanded:null,
             pickerCb:null, pickerQ:'', pickerG:'all', exQ:'', exG:'mine',
-            exTplFilter:'', exFilterNames:[], exMetric:'w', calOff:0, showArch:false };
+            exTplFilter:'', exFilterNames:[], exMetric:'w', calOff:0, showArch:false,
+            statsPeriod:'w', histLimit:20 };
 
 /* exercise lookup: built-in DB + user's custom exercises */
 function exInfo(k){
@@ -415,6 +432,7 @@ mediaDark.addEventListener('change', ()=>{ if(S.theme==='auto') applyTheme(); })
 
 /* ======================= render core ======================= */
 function go(screen){
+  if(screen!==V.screen && screen==='history') V.histLimit = 20;
   V.screen = screen;
   render();
   /* entrance animation only on navigation, not on every re-render */
@@ -1594,27 +1612,44 @@ function barChartSVG(data){ /* data = [{l:label, v:number}] */
   });
   return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${out}</svg>`;
 }
-function statsWeekly(){
+/* bucketed workout count + volume for the selected period (week / month / year) */
+function statsBuckets(){
+  const p = V.statsPeriod||'w';
+  const loc = S.lang==='lt'?'lt-LT':'en-GB';
   const now = new Date();
-  const day = (now.getDay()+6)%7;
-  const mon = new Date(now); mon.setHours(0,0,0,0); mon.setDate(now.getDate()-day);
-  const wk = [], vol = [];
-  for(let i=7; i>=0; i--){
-    const s = new Date(mon); s.setDate(mon.getDate()-7*i);
-    const e = new Date(s); e.setDate(s.getDate()+7);
-    let cnt = 0, v = 0;
-    for(const h of S.history){
-      if(h.arch) continue;
-      const d = new Date(h.date);
-      if(d>=s && d<e){
-        cnt++;
-        v += h.exercises.reduce((a,ex)=>a+ex.sets.filter(x=>!x.warm).reduce((b,x)=>b+x.weight*x.reps,0),0);
+  const buckets = [];
+  const n = p==='y'?6:12;
+  for(let i=n-1; i>=0; i--){
+    let s, e, l;
+    if(p==='w'){
+      const day=(now.getDay()+6)%7;
+      s=new Date(now); s.setHours(0,0,0,0); s.setDate(now.getDate()-day-7*i);
+      e=new Date(s); e.setDate(s.getDate()+7);
+      l=s.getDate()+'.'+String(s.getMonth()+1).padStart(2,'0');
+    }else if(p==='m'){
+      s=new Date(now.getFullYear(), now.getMonth()-i, 1);
+      e=new Date(now.getFullYear(), now.getMonth()-i+1, 1);
+      l=s.toLocaleDateString(loc,{month:'short'});
+    }else{
+      s=new Date(now.getFullYear()-i, 0, 1);
+      e=new Date(now.getFullYear()-i+1, 0, 1);
+      l=String(s.getFullYear());
+    }
+    buckets.push({ s:s.getTime(), e:e.getTime(), l });
+  }
+  const wk = buckets.map(b=>({l:b.l, v:0})), vol = buckets.map(b=>({l:b.l, v:0}));
+  for(const h of S.history){
+    if(h.arch) continue;
+    const d = new Date(h.date).getTime();
+    for(let bi=0; bi<buckets.length; bi++){
+      if(d>=buckets[bi].s && d<buckets[bi].e){
+        wk[bi].v++;
+        vol[bi].v += h.exercises.reduce((a,ex)=>a+ex.sets.filter(x=>!x.warm).reduce((b,x)=>b+x.weight*x.reps,0),0);
+        break;
       }
     }
-    const l = s.getDate()+'.'+String(s.getMonth()+1).padStart(2,'0');
-    wk.push({l, v:cnt});
-    vol.push({l, v:Math.round(kg2u(v))});
   }
+  vol.forEach(o=>o.v=Math.round(kg2u(o.v)));
   return { wk, vol };
 }
 function muscleBalanceHtml(){
@@ -1669,26 +1704,29 @@ function calHtml(){
 
 /* ======================= HISTORY ======================= */
 function htmlHistory(){
+  const p = V.statsPeriod||'w';
   let h = '<div style="height:8px"></div>';
-  /* stats dashboard */
-  const sw = statsWeekly();
+  /* calendar */
   h += `<h2 class="sec" style="margin-top:8px">${t('statsCal')}</h2>
-    <div class="card">${calHtml()}</div>
-    <h2 class="sec">${t('statsWeeks')}</h2>
-    <div class="card">${barChartSVG(sw.wk)}</div>
-    <h2 class="sec">${t('statsVolW').replace('kg', unitL())}</h2>
-    <div class="card">${barChartSVG(sw.vol)}</div>
+    <div class="card">${calHtml()}</div>`;
+  /* period toggle for the trend charts */
+  h += `<div class="segmented" style="margin:16px 0 4px">
+      ${[['w','pdW'],['m','pdM'],['y','pdY']].map(([v,lb])=>
+        `<button type="button" class="seg ${p===v?'on':''}" onclick="V.statsPeriod='${v}'; render()">${t(lb)}</button>`).join('')}
+    </div>`;
+  const sb = statsBuckets();
+  h += `<h2 class="sec">${t('statsWorkoutsPer')} ${t('pd_'+p)}</h2>
+    <div class="card">${barChartSVG(sb.wk)}</div>
+    <h2 class="sec">${t('statsVolumePer')} ${t('pd_'+p)} (${unitL()})</h2>
+    <div class="card">${barChartSVG(sb.vol)}</div>
     <h2 class="sec">${t('statsMuscle')}</h2>
     <div class="card">${muscleBalanceHtml()}</div>`;
-  /* body weight tracking */
+  /* body weight — graph + recent entries; logging via the quick modal */
   h += `<h2 class="sec" style="margin-top:8px">${t('bw')}</h2>
     <div class="card">
-      <div style="display:flex;gap:8px;align-items:center">
-        <input class="nameinput" id="bw-input" type="text" inputmode="decimal"
-          placeholder="${S.weights.length?wu(S.weights[0].kg)+' '+unitL():unitL()}" style="flex:1">
-        <button class="btn small" style="background:var(--accent);color:var(--on-accent);min-height:46px;padding:0 20px" onclick="addWeight()">${t('bwLog')}</button>
-      </div>
-      ${S.weights.length>1?`<div style="margin-top:12px">${lineChartSVG(S.weights.slice(0,24).slice().reverse().map(x=>({d:x.date,w:kg2u(x.kg)})), unitL(), unitL())}</div>`:''}
+      <button class="btn ghostbtn" style="margin-bottom:12px" onclick="openBwModal()">${t('bwLogNew')}</button>
+      ${S.weights.length>1?`<div>${lineChartSVG(S.weights.slice(0,40).slice().reverse().map(x=>({d:x.date,w:kg2u(x.kg)})), unitL(), unitL())}</div>`
+        : `<div class="empty" style="padding:6px 0 12px">${t('chartNoData')}</div>`}
       ${S.weights.slice(0,5).map(x=>`<div style="display:flex;gap:8px;padding:6px 0;align-items:center;font-size:14px">
         <span style="color:var(--dim);flex:1">${fmtDate(x.date)}</span>
         <span style="font-weight:700">${wu(x.kg,true)}</span>
@@ -1698,11 +1736,15 @@ function htmlHistory(){
   if(!S.history.length) return h + `<div class="empty">${t('histEmpty')}</div>`;
   const act = S.history.filter(w=>!w.arch);
   const arch = S.history.filter(w=>w.arch);
-  h += act.map(histRowHtml).join('') || `<div class="empty">—</div>`;
+  const lim = V.histLimit||20;
+  h += act.slice(0,lim).map(histRowHtml).join('') || `<div class="empty">—</div>`;
+  if(act.length>lim){
+    h += `<button class="btn ghostbtn" onclick="V.histLimit=(V.histLimit||20)+30; render()">${t('histMore')} (${act.length-lim})</button>`;
+  }
   if(arch.length){
     h += `<h2 class="sec" style="cursor:pointer" onclick="V.showArch=!V.showArch; render()">
             ${V.showArch?'▾':'▸'} 📦 ${t('archTitle')} (${arch.length})</h2>`;
-    if(V.showArch) h += arch.map(histRowHtml).join('');
+    if(V.showArch) h += arch.slice(0,lim).map(histRowHtml).join('');
   }
   return h;
 }
@@ -1802,11 +1844,7 @@ function logWeight(n){
   S.weights.unshift({ id:uid(), date:new Date().toISOString(), kg:Math.round(u2kg(n)*10)/10 });
   return true;
 }
-function addWeight(){
-  const inp = $('#bw-input');
-  if(logWeight(parseNum(inp ? inp.value : ''))){ save(); render(); }
-}
-/* quick body-weight logging modal (opened from the home stat card):
+/* quick body-weight logging modal (opened from the home stat card or History):
    prefilled with the last logged weight, adjustable ±0.1 with the ▾/▴ buttons */
 function openBwModal(){
   const last = S.weights.length ? kg2u(S.weights[0].kg) : null;
@@ -2129,6 +2167,9 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   if(S.active) V.screen = 'workout';
   render();
   stepperInit();
+  /* subtle divider under the sticky header once the page is scrolled */
+  const onScroll = ()=>{ const tb=$('#topbar'); if(tb) tb.classList.toggle('scrolled', window.scrollY>4); };
+  window.addEventListener('scroll', onScroll, {passive:true});
   setInterval(tick, 500);
   /* auto-update: check for a new version on every open/foreground; when the
      new service worker takes over, reload once so fresh code is used */
