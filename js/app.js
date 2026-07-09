@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.7.2'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.7.3'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -75,6 +75,7 @@ const I18N = {
     bw:'Kūno svoris', bwLog:'Įrašyti', bwDel:'Ištrinti šį įrašą?',
     plates:'Svarelių kalkuliatorius', platesBar:'Grifas', platesSide:'Ant vienos pusės',
     platesRem:'{n} kg pusėj netelpa iš standartinių svarelių', platesEmpty:'Tuščias grifas',
+    platesAvail:'Kokie svareliai yra salėje',
     superset:'Superset',
     codeBad:'Neteisingas kodas', copy:'Kopijuoti', copied:'Nukopijuota ✓',
     daySets:'setai', dayReps:'kart.', daySec:'sek.', repsRangeTog:'nuo–iki',
@@ -166,6 +167,7 @@ const I18N = {
     bw:'Body weight', bwLog:'Log', bwDel:'Delete this entry?',
     plates:'Plate calculator', platesBar:'Bar', platesSide:'Per side',
     platesRem:"{n} kg per side doesn't fit standard plates", platesEmpty:'Empty bar',
+    platesAvail:'Plates available at the gym',
     superset:'Superset',
     codeBad:'Invalid code', copy:'Copy', copied:'Copied ✓',
     daySets:'sets', dayReps:'reps', daySec:'sec', repsRangeTog:'range',
@@ -226,11 +228,15 @@ function seedTemplates(fid){
       tex('overhead-triceps-ext',2,'10-15') ]}
   ];
 }
+/* plate calculator: full selectable options and the default "what my gym has" set (per unit) */
+const PLATE_OPTS = { kg:[25,20,15,10,5,2.5,1.25,0.5], lb:[45,35,25,15,10,5,2.5,1.25] };
+const PLATE_DEF  = { kg:[25,20,15,10,5,2.5,1.25],      lb:[45,35,25,10,5,2.5] };
 function defaultState(){
   const fid = uid();
   return { lang:'en', unit:'kg', theme:'auto', keepAwake:true, lastBackup:0, bakSnooze:0, mig13:true,
            folders:[{ id:fid, name:'Upper / Lower', open:true, pinned:true }],
-           customEx:[], templates:seedTemplates(fid), history:[], weights:[], active:null };
+           customEx:[], templates:seedTemplates(fid), history:[], weights:[], active:null,
+           plates:{ kg:PLATE_DEF.kg.slice(), lb:PLATE_DEF.lb.slice() } };
 }
 /* validate + migrate a raw state object; returns null if unusable */
 function hydrate(s){
@@ -248,6 +254,9 @@ function hydrate(s){
   s.mig13 = true;
   s.folders.forEach(f=>{ if(typeof f.pinned==='undefined') f.pinned = true; });
   if(!Array.isArray(s.weights)) s.weights = [];
+  if(!s.plates || !Array.isArray(s.plates.kg) || !Array.isArray(s.plates.lb)){
+    s.plates = { kg:PLATE_DEF.kg.slice(), lb:PLATE_DEF.lb.slice() };
+  }
   return Object.assign(defaultState(), s);
 }
 let LS_OK = false; /* did localStorage contain valid data at boot? */
@@ -2025,7 +2034,29 @@ function delWeight(id){
 
 /* ---- plate calculator (works entirely in the display unit) ---- */
 function plateBars(){ return S.unit==='lb' ? [45,35,25] : [20,15,10]; }
-function plateSet(){ return S.unit==='lb' ? [45,35,25,10,5,2.5] : [25,20,15,10,5,2.5,1.25]; }
+function platesUnit(){ return S.unit==='lb' ? 'lb' : 'kg'; }
+/* only the plates the user marked as available at their gym, biggest first */
+function plateSet(){
+  const u = platesUnit();
+  const en = (S.plates && Array.isArray(S.plates[u]) && S.plates[u].length) ? S.plates[u] : PLATE_DEF[u];
+  return en.slice().sort((a,b)=>b-a);
+}
+function togglePlate(p){
+  const u = platesUnit();
+  if(!S.plates) S.plates = { kg:PLATE_DEF.kg.slice(), lb:PLATE_DEF.lb.slice() };
+  const arr = S.plates[u];
+  const i = arr.indexOf(p);
+  if(i>=0) arr.splice(i,1); else arr.push(p);
+  save(); renderPlatesAvail(); renderPlates();
+}
+function renderPlatesAvail(){
+  const el = $('#pl-avail');
+  if(!el) return;
+  const u = platesUnit();
+  const en = (S.plates && S.plates[u]) ? S.plates[u] : PLATE_DEF[u];
+  el.innerHTML = PLATE_OPTS[u].slice().sort((a,b)=>b-a).map(p=>
+    `<button class="platechip ${en.indexOf(p)>=0?'on':''}" onclick="togglePlate(${p})">${fmtW(p)}</button>`).join('');
+}
 function openPlates(xi){
   let w = NaN;
   if(xi!=null && S.active && S.active.exercises[xi]){
@@ -2051,8 +2082,13 @@ function openPlates(xi){
         <div class="seg" id="pl-bars"></div>
       </div>
     </div>
-    <div class="card" id="pl-out"></div>`);
+    <div class="card" id="pl-out"></div>
+    <div class="card">
+      <div style="color:var(--dim);font-size:13px;font-weight:600;margin-bottom:8px">${t('platesAvail')}</div>
+      <div class="platechips" id="pl-avail"></div>
+    </div>`);
   renderPlatesSeg();
+  renderPlatesAvail();
   renderPlates();
 }
 function renderPlatesSeg(){
@@ -2200,7 +2236,7 @@ function shareTpl(id){
     <button class="btn primary" style="margin-top:12px" onclick="copyText(document.querySelector('.codebox').value)">⤴ ${t('copy')}</button>`);
 }
 function copyBackup(){
-  const payload = { t:'bak', s:{ lang:S.lang, theme:S.theme, keepAwake:S.keepAwake,
+  const payload = { t:'bak', s:{ lang:S.lang, theme:S.theme, keepAwake:S.keepAwake, plates:S.plates,
     folders:S.folders, customEx:S.customEx, templates:S.templates, history:S.history, weights:S.weights } };
   S.lastBackup = Date.now();
   save();
