@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.6.6'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.7.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -22,6 +22,8 @@ const I18N = {
     woSet:'Set', woPrev:'Anksčiau', woKg:'kg', woReps:'kart.', woNote:'Pastaba...',
     woAddSet:'+ Setas', woRemoveSet:'− Setas', woRemoveDone:'Setas jau atliktas',
     woAddEx:'+ Pridėti pratimą', woDelEx:'Išimti pratimą „{n}“?',
+    swapTitle:'Keisti pratimą', swapPlanned:'planas', swapAdd:'+ Pridėti alternatyvą',
+    woAltBack:'Atgal į', altLabel:'alt.', altAdd:'Alternatyva',
     woEmptyVals:'Įvesk svorį ir kartojimus', woSaved:'Treniruotė išsaugota 💪',
     woFinishEmpty:'Nėra atliktų setų. Atšaukti treniruotę?',
     woFinishPart:'Ne visi setai atlikti. Baigti ir išsaugoti?',
@@ -109,6 +111,8 @@ const I18N = {
     woSet:'Set', woPrev:'Previous', woKg:'kg', woReps:'reps', woNote:'Note...',
     woAddSet:'+ Set', woRemoveSet:'− Set', woRemoveDone:'Set already completed',
     woAddEx:'+ Add exercise', woDelEx:'Remove exercise “{n}”?',
+    swapTitle:'Swap exercise', swapPlanned:'planned', swapAdd:'+ Add alternative',
+    woAltBack:'Back to', altLabel:'alt.', altAdd:'Alternative',
     woEmptyVals:'Enter weight and reps', woSaved:'Workout saved 💪',
     woFinishEmpty:'No completed sets. Discard workout?',
     woFinishPart:'Not all sets completed. Finish and save?',
@@ -502,7 +506,9 @@ const ACT_ICONS = {
   pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.8V6a1 1 0 0 1 1-1 2 2 0 0 0 0-4h4a2 2 0 0 0 0 4 1 1 0 0 1 1 1v4.8l2 2.2H7l2-2.2Z"/></svg>',
   chevron:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
   play:'<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M7 4.5v15l12-7.5z"/></svg>',
-  edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>'
+  edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+  swap:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>',
+  plates:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></svg>'
 };
 function renderTabbar(){
   const tabs = [
@@ -589,15 +595,63 @@ function htmlHome(){
 /* ======================= WORKOUT ======================= */
 function latestBw(){ return S.weights.length ? S.weights[0].kg : null; }
 function newSet(extra){ return Object.assign({ w:'', r:'', warm:false, drop:false, fail:false, done:false, cls:'' }, extra||{}); }
-function buildActiveEx(k, name, sets, reps, ss, tplId){
+function buildActiveEx(k, name, sets, reps, ss, tplId, alts){
   const last = lastForExercise(k, name, tplId);
   const ex = { id:uid(), k, name, targetSets:sets, targetReps:reps, note:'', ss:!!ss, last,
+    baseK:k, alts:(alts||[]).slice(), stash:{}, tplId:tplId||null,
     sets: Array.from({length:sets}, ()=>newSet()) };
   if(isBwEx(k)){
     /* body weight prefilled from the latest log (or last session), kept separate from the logged load */
     ex.bw = latestBw() != null ? latestBw() : (last && last.bw != null ? last.bw : null);
   }
   return ex;
+}
+/* swap the exercise being performed (planned <-> alternative); each variant keeps
+   its own logged sets in ex.stash so progress is tracked separately per exercise */
+function swapExercise(xi, toKey){
+  const ex = S.active.exercises[xi];
+  if(!ex || toKey===ex.k) return;
+  ex.stash[ex.k] = { name:ex.name, note:ex.note, last:ex.last, sets:ex.sets, bw:ex.bw };
+  if(ex.stash[toKey]){
+    const v = ex.stash[toKey];
+    ex.name=v.name; ex.note=v.note; ex.last=v.last; ex.sets=v.sets; ex.bw=v.bw;
+    delete ex.stash[toKey];
+  }else{
+    ex.name = exName(toKey);
+    ex.note = '';
+    ex.last = lastForExercise(toKey, ex.name, ex.tplId);
+    ex.sets = Array.from({length:ex.targetSets}, ()=>newSet());
+    ex.bw = isBwEx(toKey) ? (latestBw()!=null?latestBw():(ex.last&&ex.last.bw!=null?ex.last.bw:null)) : undefined;
+  }
+  ex.k = toKey;
+  if(toKey!==ex.baseK && !ex.alts.includes(toKey)) ex.alts.push(toKey);
+  if(S.active.rest && S.active.rest.key.split('-')[0]===String(xi)) S.active.rest = null;
+  save(); render();
+}
+function openSwapMenu(xi){
+  const ex = S.active.exercises[xi];
+  if(!ex) return;
+  const keys = [ex.baseK].concat(ex.alts.filter(k=>k!==ex.baseK));
+  const items = keys.map(k=>{
+    const on = k===ex.k, isBase = k===ex.baseK;
+    return `<button class="swapitem ${on?'on':''}" onclick="swapExercise(${xi},'${esc(k)}');closeModal()">
+      <span class="sn">${esc(exName(k))}${isBase?` <span class="basetag">${t('swapPlanned')}</span>`:''}</span>
+      ${on?`<span class="chk">${ACT_ICONS.chevron}</span>`:''}</button>`;
+  }).join('');
+  openModal(`<h3>${t('swapTitle')}<button class="x" onclick="closeModal()">✕</button></h3>
+    <div class="swaplist">${items}</div>
+    <button class="btn ghostbtn" style="margin-top:10px" onclick="addAltExercise(${xi})">${t('swapAdd')}</button>`);
+}
+function addAltExercise(xi){
+  openPicker(info=>{
+    const ex = S.active.exercises[xi];
+    if(!ex){ closeModal(); return; }
+    /* remember this alternative on the template exercise too, so it stays an option */
+    const tpl = S.templates.find(t=>t.id===S.active.tplId);
+    if(tpl){ const te = tpl.ex.find(e=>e.k===ex.baseK); if(te){ if(!te.alts) te.alts=[]; if(info.id!==te.k && !te.alts.includes(info.id)) te.alts.push(info.id); } }
+    closeModal();
+    swapExercise(xi, info.id);
+  });
 }
 function onBwInput(xi,v){
   const ex = S.active.exercises[xi];
@@ -653,7 +707,7 @@ function startWorkout(tplId){
   }
   S.active = {
     tplId: tpl.id, name: tpl.name, startedAt: new Date().toISOString(), rest:null,
-    exercises: tpl.ex.map(e => buildActiveEx(e.k, exName(e.k,e.n), e.s, e.r, e.ss, tpl.id))
+    exercises: tpl.ex.map(e => buildActiveEx(e.k, exName(e.k,e.n), e.s, e.r, e.ss, tpl.id, e.alts))
   };
   save();
   go('workout');
@@ -739,14 +793,17 @@ function htmlWorkout(){
       <span class="bwu">${unitL()}</span><span class="bwhint">${t('woBwHint')}</span></div>` : '';
     const notLast = xi < S.active.exercises.length-1;
     const ssConn = (ex.ss && notLast) ? `<div class="ssline">🔗 ${t('superset')}</div>` : '';
-    return `<div class="card">
+    const isAlt = ex.k !== ex.baseK;
+    return `<div class="card${isAlt?' altcard':''}">
       <div class="exhead">
         <div class="exname" onclick="openExDetailByKey('${esc(ex.k)}')">${esc(ex.name)}</div>
         <div class="extarget">${ex.targetSets}×${ex.targetReps}${tm?'s':''}</div>
+        <button class="minibtn${isAlt?' acc':''}" onclick="openSwapMenu(${xi})" aria-label="swap">${ACT_ICONS.swap}</button>
         ${bw?'':`<button class="minibtn" onclick="openPlates(${xi})">⚖</button>`}
         ${notLast?`<button class="minibtn ${ex.ss?'acc':''}" onclick="toggleWoSS(${xi})">🔗</button>`:''}
         <button class="minibtn del" onclick="removeWorkoutEx(${xi})">✕</button>
       </div>
+      ${isAlt?`<div class="altbar" onclick="swapExercise(${xi},'${esc(ex.baseK)}')">${ACT_ICONS.swap}<span>${t('woAltBack')} ${esc(exName(ex.baseK))}</span></div>`:''}
       ${ex.last && ex.last.note ? `<div class="lastnote">💬 ${esc(ex.last.note)}</div>` : ''}
       <input class="exnote" placeholder="${t('woNote')}" value="${esc(ex.note)}" oninput="onNoteInput(${xi},this.value)">
       ${bwField}${hdr}${rows}
@@ -870,18 +927,27 @@ function removeWorkoutEx(xi){
 }
 function finishWorkout(){
   if(!S.active) return;
-  const exercises = S.active.exercises.map(ex=>{
-    const o = { k:ex.k, name:ex.name, targetSets:ex.targetSets, targetReps:ex.targetReps, note:ex.note||'', ss:!!ex.ss,
-      sets: ex.sets.filter(s=>s.done).map(s=>({ weight:u2kg(parseNum(s.w)), reps:parseNum(s.r), warm:!!s.warm, drop:!!s.drop, fail:!!s.fail })) };
-    if(isBwEx(ex.k) && ex.bw!=null) o.bw = ex.bw; /* body weight snapshot, stats only */
-    return o;
-  }).filter(e=>e.sets.length);
+  /* each exercise slot may hold several performed variants (planned + alternatives);
+     every variant with logged sets becomes its own history entry, tracked separately */
+  const exercises = [];
+  let total = 0;
+  S.active.exercises.forEach(ex=>{
+    const variants = [{ k:ex.k, name:ex.name, note:ex.note, sets:ex.sets, bw:ex.bw }];
+    for(const sk in ex.stash){ const v=ex.stash[sk]; variants.push({ k:sk, name:v.name, note:v.note, sets:v.sets, bw:v.bw }); }
+    variants.forEach(v=>{
+      total += v.sets.length;
+      const done = v.sets.filter(s=>s.done).map(s=>({ weight:u2kg(parseNum(s.w)), reps:parseNum(s.r), warm:!!s.warm, drop:!!s.drop, fail:!!s.fail }));
+      if(!done.length) return;
+      const o = { k:v.k, name:v.name, targetSets:ex.targetSets, targetReps:ex.targetReps, note:v.note||'', ss:!!ex.ss, sets:done };
+      if(isBwEx(v.k) && v.bw!=null) o.bw = v.bw;
+      exercises.push(o);
+    });
+  });
   if(!exercises.length){
     if(confirm(t('woFinishEmpty'))){ S.active=null; save(); go('home'); }
     return;
   }
-  const total = S.active.exercises.reduce((a,e)=>a+e.sets.length,0);
-  const done  = S.active.exercises.reduce((a,e)=>a+e.sets.filter(s=>s.done).length,0);
+  const done = exercises.reduce((a,e)=>a+e.sets.length,0);
   if(done < total && !confirm(t('woFinishPart'))) return;
   /* detect all-time PRs BEFORE this workout enters history */
   const prs = [];
@@ -1119,7 +1185,7 @@ function shareFolder(id){
   if(!f) return;
   const tpls = S.templates.filter(x=>x.folderId===id);
   const payload = { t:'folder', name:f.name,
-    tpls: tpls.map(d=>({ name:d.name, ex:d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0 })) })) };
+    tpls: tpls.map(d=>({ name:d.name, ex:d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]) })) })) };
   const code = encodeShare(payload);
   openModal(`<h3>${t('folderShare')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div style="color:var(--dim);font-size:14px;margin:0 4px 10px">${t('folderShareHint')}</div>
@@ -1193,6 +1259,11 @@ function htmlTplEdit(){
         ${repsCtl}
         <button class="rangetog ${p.range?'acc':''}" onclick="toggleRepsRange('${d.id}',${i})">${t('repsRangeTog')}</button>
       </div>
+      <div class="altsrow">
+        <span class="clbl">${t('altLabel')}</span>
+        ${(e.alts||[]).map((ak,ai)=>`<span class="altchip">${esc(exName(ak))}<button onclick="delTplAlt('${d.id}',${i},${ai})" aria-label="remove">${ACT_ICONS.x}</button></span>`).join('')}
+        <button class="altadd" onclick="addTplAlt('${d.id}',${i})">${ACT_ICONS.swap} ${t('altAdd')}</button>
+      </div>
       ${e.ss && canSS?`<div class="ssline">${ACT_ICONS.link} ${t('superset')}</div>`:''}
     </div>`;
   }).join('');
@@ -1204,11 +1275,26 @@ function htmlTplEdit(){
     <button class="btn" onclick="shareTpl('${d.id}')">⤴ ${t('tplShare')}</button>`;
   return h;
 }
+function addTplAlt(id,i){
+  openPicker(info=>{
+    const d = S.templates.find(x=>x.id===id);
+    if(!d || !d.ex[i]){ closeModal(); return; }
+    if(!d.ex[i].alts) d.ex[i].alts = [];
+    if(info.id!==d.ex[i].k && !d.ex[i].alts.includes(info.id)) d.ex[i].alts.push(info.id);
+    save(); closeModal(); render();
+  });
+}
+function delTplAlt(id,i,ai){
+  const d = S.templates.find(x=>x.id===id);
+  if(!d || !d.ex[i] || !d.ex[i].alts) return;
+  d.ex[i].alts.splice(ai,1);
+  save(); render();
+}
 function dupTpl(id){
   const d = S.templates.find(x=>x.id===id);
   if(!d) return;
   const copy = { id:uid(), name:(d.name+' '+t('tplDupSuffix')).slice(0,60), folderId:d.folderId,
-    ex: d.ex.map(e=>({ id:uid(), k:e.k, s:e.s, r:e.r, ss:!!e.ss })) };
+    ex: d.ex.map(e=>({ id:uid(), k:e.k, s:e.s, r:e.r, ss:!!e.ss, alts:(e.alts||[]).slice() })) };
   S.templates.splice(S.templates.indexOf(d)+1, 0, copy);
   save();
   openTpl(copy.id);
@@ -2045,7 +2131,7 @@ function shareTpl(id){
   const d = S.templates.find(x=>x.id===id);
   if(!d) return;
   const payload = { t:'tpl', name:d.name,
-    ex: d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0 })) };
+    ex: d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]) })) };
   const code = encodeShare(payload);
   openModal(`<h3>${t('tplShare')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div style="color:var(--dim);font-size:14px;margin:0 4px 10px">${t('tplShareHint')}</div>
@@ -2089,7 +2175,8 @@ function importTplPayload(d, folderId){
         k = info.id;
       } else continue;
     }
-    tpl.ex.push({ id:uid(), k, s:Math.max(1,Math.min(12,e.s|0||3)), r:normReps(e.r, isTimeEx(k)?600:50), ss:!!e.ss });
+    const alts = Array.isArray(e.alts) ? e.alts.filter(a=>exInfo(a) && a!==k) : [];
+    tpl.ex.push({ id:uid(), k, s:Math.max(1,Math.min(12,e.s|0||3)), r:normReps(e.r, isTimeEx(k)?600:50), ss:!!e.ss, alts });
   }
   S.templates.push(tpl);
   return tpl;

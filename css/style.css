@@ -278,6 +278,40 @@ h2.sec{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(
 .rangetog:active{opacity:.6;}
 .go svg{width:18px; height:18px;}
 .ssline svg{width:13px; height:13px;}
+.minibtn svg{width:16px; height:16px;}
+
+/* ===== exercise alternatives ===== */
+/* workout: swap planned <-> alternative; alternative card is subtly outlined */
+.altcard{box-shadow:inset 0 0 0 1.5px var(--accent-soft);}
+.altbar{display:flex; align-items:center; gap:7px; margin-top:10px; padding:7px 11px;
+  background:var(--accent-bg); color:var(--accent-soft); border-radius:9px;
+  font-size:12px; font-weight:700; cursor:pointer;}
+.altbar svg{width:15px; height:15px; flex:none;}
+.altbar:active{opacity:.6;}
+/* swap menu (modal) */
+.swaplist{display:flex; flex-direction:column; gap:6px; margin-top:4px;}
+.swapitem{display:flex; align-items:center; gap:8px; width:100%; text-align:left;
+  background:var(--input); border:none; border-radius:11px; min-height:52px; padding:0 14px;
+  color:var(--text); font-size:16px; font-weight:600; font-family:inherit; cursor:pointer;}
+.swapitem:active{opacity:.6;}
+.swapitem.on{box-shadow:0 0 0 2px var(--accent);}
+.swapitem .sn{flex:1; min-width:0;}
+.swapitem .basetag{font-size:10px; font-weight:800; letter-spacing:.5px; text-transform:uppercase;
+  color:var(--accent-soft); background:var(--accent-bg); padding:2px 7px; border-radius:6px; margin-left:6px;}
+.swapitem .chk{flex:none; display:flex; color:var(--accent-soft);}
+.swapitem .chk svg{width:18px; height:18px;}
+/* template editor: alternatives row */
+.altsrow{display:flex; gap:6px; align-items:center; margin-top:10px; flex-wrap:wrap;}
+.altsrow .clbl{width:34px; flex:none; color:var(--dim); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.3px;}
+.altchip{display:inline-flex; align-items:center; gap:3px; background:var(--input); color:var(--text);
+  border-radius:8px; padding:5px 5px 5px 10px; font-size:13px; font-weight:600;}
+.altchip button{width:22px; height:22px; flex:none; border:none; border-radius:6px; background:none; color:var(--dim);
+  display:flex; align-items:center; justify-content:center; padding:0;}
+.altchip button svg{width:12px; height:12px;}
+.altadd{display:inline-flex; align-items:center; gap:5px; background:var(--accent-bg); color:var(--accent-soft);
+  border:none; border-radius:8px; min-height:34px; padding:0 11px; font-size:12px; font-weight:700;}
+.altadd svg{width:14px; height:14px;}
+.altadd:active{opacity:.6;}
 
 /* ============ exercise browser ============ */
 .searchbox{display:flex; align-items:center; gap:10px; background:var(--card); border:none;
