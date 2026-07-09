@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.6.5'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.6.6'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -678,7 +678,7 @@ function ghostFor(ex, si){
   const prevWork = prev.filter(s=>!s.warm && !s.drop);
   if(!prevWork.length) return null;
   let wi = 0; for(let i=0;i<si;i++) if(!ex.sets[i].warm && !ex.sets[i].drop) wi++;
-  return prevWork[Math.min(wi, prevWork.length-1)] || null;
+  return prevWork[wi] || null;
 }
 /* comparison target = same working set of the previous session */
 function realPrev(ex, si){
@@ -689,7 +689,7 @@ function realPrev(ex, si){
   const prevWork = prev.filter(s=>!s.warm && !s.drop);
   if(!prevWork.length) return null;
   let wi = 0; for(let i=0;i<si;i++) if(!ex.sets[i].warm && !ex.sets[i].drop) wi++;
-  return prevWork[Math.min(wi, prevWork.length-1)] || null;
+  return prevWork[wi] || null;
 }
 function htmlWorkout(){
   if(!S.active){ V.screen='home'; return htmlHome(); }
