@@ -107,6 +107,12 @@ h2.sec{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(
 .extarget{color:var(--dim); font-size:12px; font-weight:700; flex:none; background:var(--input);
   border-radius:8px; padding:4px 9px; font-variant-numeric:tabular-nums;}
 .exhead .minibtn{width:34px; min-height:34px; font-size:13px; background:none; color:var(--ghost);}
+/* sequence number stamped on a finished exercise + "next up" hint on the current one */
+.ordbadge{flex:none; width:22px; height:22px; border-radius:50%; background:var(--green); color:#fff;
+  font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; font-variant-numeric:tabular-nums;}
+.nextbadge{flex:none; background:var(--accent-bg); color:var(--accent-soft); font-size:10px; font-weight:800;
+  letter-spacing:.5px; text-transform:uppercase; padding:3px 8px; border-radius:7px;}
+.exdone .exname{color:var(--dim);}
 .lastnote{background:var(--accent-bg); color:var(--accent-soft); border-radius:9px;
   padding:8px 12px; font-size:13px; margin-top:10px; font-style:italic;}
 .exnote{width:100%; background:var(--input); color:var(--text); border:none; border-radius:9px;
@@ -159,6 +165,9 @@ h2.sec{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(
   background:var(--input); color:var(--dim); font-size:16px; font-weight:800;}
 .checkbtn.done{background:var(--green); color:#fff;}
 .checkbtn.loss{background:var(--red); color:#fff;}
+/* the current set to complete — inviting; later sets wait their turn (dimmed) */
+.checkbtn.cur{background:var(--accent-bg); color:var(--accent-soft); box-shadow:inset 0 0 0 1.5px var(--accent-soft);}
+.setrow-wrap.locked{opacity:.42;}
 .checkbtn.pop{animation:check-pop .32s ease;}
 @keyframes check-pop{0%{transform:scale(1);}40%{transform:scale(1.18);}100%{transform:scale(1);}}
 .setctl{display:flex; gap:8px; margin-top:14px;}

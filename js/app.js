@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.7.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.7.1'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -24,6 +24,7 @@ const I18N = {
     woAddEx:'+ Pridėti pratimą', woDelEx:'Išimti pratimą „{n}“?',
     swapTitle:'Keisti pratimą', swapPlanned:'planas', swapAdd:'+ Pridėti alternatyvą',
     woAltBack:'Atgal į', altLabel:'alt.', altAdd:'Alternatyva',
+    woNextUp:'kitas', woOrderHint:'Atlikimo eilė',
     woEmptyVals:'Įvesk svorį ir kartojimus', woSaved:'Treniruotė išsaugota 💪',
     woFinishEmpty:'Nėra atliktų setų. Atšaukti treniruotę?',
     woFinishPart:'Ne visi setai atlikti. Baigti ir išsaugoti?',
@@ -113,6 +114,7 @@ const I18N = {
     woAddEx:'+ Add exercise', woDelEx:'Remove exercise “{n}”?',
     swapTitle:'Swap exercise', swapPlanned:'planned', swapAdd:'+ Add alternative',
     woAltBack:'Back to', altLabel:'alt.', altAdd:'Alternative',
+    woNextUp:'next', woOrderHint:'Order done',
     woEmptyVals:'Enter weight and reps', woSaved:'Workout saved 💪',
     woFinishEmpty:'No completed sets. Discard workout?',
     woFinishPart:'Not all sets completed. Finish and save?',
@@ -626,6 +628,7 @@ function swapExercise(xi, toKey){
   ex.k = toKey;
   if(toKey!==ex.baseK && !ex.alts.includes(toKey)) ex.alts.push(toKey);
   if(S.active.rest && S.active.rest.key.split('-')[0]===String(xi)) S.active.rest = null;
+  updateExDone(ex);
   save(); render();
 }
 function openSwapMenu(xi){
@@ -748,8 +751,14 @@ function realPrev(ex, si){
 function htmlWorkout(){
   if(!S.active){ V.screen='home'; return htmlHome(); }
   let h = '<div style="height:8px"></div>';
+  /* completion order numbers + which exercise is "next up" */
+  const doneOrder = {};
+  S.active.exercises.filter(e=>e.doneAt).sort((a,b)=>a.doneAt-b.doneAt).forEach((e,i)=>{ doneOrder[e.id]=i+1; });
+  const nextEx = S.active.exercises.find(e=>!exFullyDone(e));
+  const nextExId = nextEx ? nextEx.id : null;
   h += S.active.exercises.map((ex,xi)=>{
     const tm = isTimeEx(ex.k), bw = isBwEx(ex.k);
+    const firstNotDone = ex.sets.findIndex(s=>!s.done); /* -1 = all done */
     const wcol = bw ? t('woAddCol') : (tm ? unitL() : unitL());
     const hdr = `<div class="setgrid hdr"><div>${t('woSet')}</div><div>${t('woPrev')}</div>
       <div>${wcol}</div><div>${tm?t('woSec'):t('woReps')}</div><div>✓</div><div></div></div>`;
@@ -767,7 +776,9 @@ function htmlWorkout(){
         ? `<button class="dropbtn del" onclick="removeDrop(${xi},${si})">✕</button>`
         : `<button class="dropbtn" onclick="addDrop(${xi},${si})">D+</button>`;
       const wph = g ? wu(g.weight) : (bw ? '+' : unitL());
-      return `<div class="setrow-wrap ${s.done?'done':''} ${s.drop?'droprow':''}">
+      const isCur = si === firstNotDone;                          /* the set to do now */
+      const isLocked = firstNotDone!==-1 && !s.done && !isCur;    /* later sets: ✓ waits its turn */
+      return `<div class="setrow-wrap ${s.done?'done':''} ${s.drop?'droprow':''} ${isLocked?'locked':''}">
         <div class="setgrid">
           <button class="setnum ${s.warm?'warm':''} ${s.drop?'dropn':''} ${s.fail?'failn':''}" onclick="toggleWarm(${xi},${si})">${label}</button>
           <div class="prev">${prevTxt}</div>
@@ -775,7 +786,7 @@ function htmlWorkout(){
             ${s.done?'disabled':''} oninput="onSetInput(${xi},${si},'w',this.value)">
           <input type="text" inputmode="numeric" placeholder="${g?g.reps:(tm?'s':'×')}" value="${esc(s.r)}"
             ${s.done?'disabled':''} oninput="onSetInput(${xi},${si},'r',this.value)">
-          <button class="checkbtn ${chkCls}" onclick="toggleSet(${xi},${si})">✓</button>
+          <button class="checkbtn ${chkCls}${isCur?' cur':''}" onclick="toggleSet(${xi},${si})">✓</button>
           ${rowBtn}
         </div>
         ${restHere ? restBarHtml() : ''}
@@ -794,9 +805,12 @@ function htmlWorkout(){
     const notLast = xi < S.active.exercises.length-1;
     const ssConn = (ex.ss && notLast) ? `<div class="ssline">🔗 ${t('superset')}</div>` : '';
     const isAlt = ex.k !== ex.baseK;
-    return `<div class="card${isAlt?' altcard':''}">
+    const statusBadge = doneOrder[ex.id] ? `<span class="ordbadge" title="${t('woOrderHint')}">${doneOrder[ex.id]}</span>`
+      : (ex.id===nextExId ? `<span class="nextbadge">${t('woNextUp')}</span>` : '');
+    return `<div class="card${isAlt?' altcard':''}${doneOrder[ex.id]?' exdone':''}">
       <div class="exhead">
         <div class="exname" onclick="openExDetailByKey('${esc(ex.k)}')">${esc(ex.name)}</div>
+        ${statusBadge}
         <div class="extarget">${ex.targetSets}×${ex.targetReps}${tm?'s':''}</div>
         <button class="minibtn${isAlt?' acc':''}" onclick="openSwapMenu(${xi})" aria-label="swap">${ACT_ICONS.swap}</button>
         ${bw?'':`<button class="minibtn" onclick="openPlates(${xi})">⚖</button>`}
@@ -846,22 +860,39 @@ function shiftRestKey(xi, fromSi, delta){
   if(rs >= fromSi) r.key = xi+'-'+(rs+delta);
 }
 function addDrop(xi,si){
-  S.active.exercises[xi].sets.splice(si+1, 0, newSet({drop:true}));
+  const ex = S.active.exercises[xi];
+  ex.sets.splice(si+1, 0, newSet({drop:true}));
   shiftRestKey(xi, si+1, 1);
+  updateExDone(ex);
   save(); render();
 }
 function removeDrop(xi,si){
-  const s = S.active.exercises[xi].sets[si];
+  const ex = S.active.exercises[xi];
+  const s = ex.sets[si];
   if(!s || !s.drop) return;
   if(s.done){ toast(t('woRemoveDone')); return; }
-  S.active.exercises[xi].sets.splice(si,1);
+  ex.sets.splice(si,1);
   shiftRestKey(xi, si+1, -1);
+  updateExDone(ex);
   save(); render();
+}
+/* an exercise is "done" when every set is checked; doneAt records the order in
+   which exercises were completed (for the sequence numbers shown on the cards) */
+function exFullyDone(ex){ return ex.sets.length>0 && ex.sets.every(s=>s.done); }
+function updateExDone(ex){
+  if(exFullyDone(ex)){ if(!ex.doneAt) ex.doneAt = (S.active.seq = (S.active.seq||0)+1); }
+  else ex.doneAt = 0;
 }
 function toggleSet(xi,si){
   const ex = S.active.exercises[xi];
   const s = ex.sets[si];
-  if(s.done){ s.done=false; s.cls=''; save(); render(); return; }
+  if(s.done){
+    /* sets are completed in order — only the last completed set can be un-done */
+    if(ex.sets.slice(si+1).some(x=>x.done)) return;
+    s.done=false; s.cls=''; updateExDone(ex); save(); render(); return;
+  }
+  /* only the current set (first not-done) can be completed */
+  if(ex.sets.findIndex(x=>!x.done) !== si) return;
   const g = ghostFor(ex,si);                 /* g.weight is kg */
   const tm = isTimeEx(ex.k), bw = isBwEx(ex.k);
   let w = parseNum(s.w), r = parseNum(s.r);  /* w is in the display unit */
@@ -879,6 +910,7 @@ function toggleSet(xi,si){
   else s.cls='loss';
   S.active.rest = { at:Date.now(), key:xi+'-'+si };
   V.lastDone = xi+'-'+si;
+  updateExDone(ex);
   save(); render();
   /* focus the next set's weight field only when it must be typed (no ghost to one-tap) */
   for(let i=si+1; i<ex.sets.length; i++){
@@ -892,14 +924,18 @@ function toggleSet(xi,si){
   }
 }
 function addSet(xi){
-  S.active.exercises[xi].sets.push(newSet());
+  const ex = S.active.exercises[xi];
+  ex.sets.push(newSet());
+  updateExDone(ex);
   save(); render();
 }
 function removeSet(xi){
-  const sets = S.active.exercises[xi].sets;
+  const ex = S.active.exercises[xi];
+  const sets = ex.sets;
   if(sets.length<=1) return;
   if(sets[sets.length-1].done){ toast(t('woRemoveDone')); return; }
   sets.pop();
+  updateExDone(ex);
   save(); render();
 }
 function addWorkoutEx(){
