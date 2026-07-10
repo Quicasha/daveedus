@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.7.3'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.7.4'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -30,7 +30,7 @@ const I18N = {
     woFinishEmpty:'Nėra atliktų setų. Atšaukti treniruotę?',
     woFinishPart:'Ne visi setai atlikti. Baigti ir išsaugoti?',
     woFirst:'pirmas kartas', restLabel:'Poilsis',
-    tplNew:'+ Nauja treniruotė', tplImport:'⤓ Įvesti kodą', tplDefaultName:'Nauja treniruotė',
+    tplNew:'+ Nauja treniruotė', tplImport:'Įvesti kodą', tplDefaultName:'Nauja treniruotė',
     tplDel:'Ištrinti treniruotę „{n}“?', tplExCount:'{n} prat.',
     tplName:'Treniruotės pavadinimas', tplAddEx:'+ Pridėti pratimą', tplDelEx:'Išimti pratimą „{n}“?',
     tplShare:'Treniruotės kodas', tplShareHint:'Nusiųsk šį kodą draugui — jis įves jį ir gaus tavo treniruotę.',
@@ -122,7 +122,7 @@ const I18N = {
     woFinishEmpty:'No completed sets. Discard workout?',
     woFinishPart:'Not all sets completed. Finish and save?',
     woFirst:'first time', restLabel:'Rest',
-    tplNew:'+ New workout', tplImport:'⤓ Enter code', tplDefaultName:'New workout',
+    tplNew:'+ New workout', tplImport:'Enter code', tplDefaultName:'New workout',
     tplDel:'Delete workout “{n}”?', tplExCount:'{n} ex.',
     tplName:'Workout name', tplAddEx:'+ Add exercise', tplDelEx:'Remove exercise “{n}”?',
     tplShare:'Workout code', tplShareHint:'Send this code to a friend — they enter it and get your workout.',
@@ -481,7 +481,7 @@ function renderTopbar(){
     const el = fmtTime((Date.now()-new Date(S.active.startedAt).getTime())/1000);
     h = `<button class="iconbtn" onclick="go('home')">‹</button>
          <div class="elapsed"><small>${t('woElapsed')} · ${esc(S.active.name)}</small><span id="elapsed-time">${el}</span></div>
-         <button class="iconbtn danger" onclick="cancelWorkout()" aria-label="${t('woCancel')}">✕</button>
+         <button class="iconbtn danger" onclick="cancelWorkout()" aria-label="${t('woCancel')}">${ACT_ICONS.x}</button>
          <button class="finishbtn" onclick="finishWorkout()">${t('woFinish')}</button>`;
   }else if(V.screen==='tpledit'){
     const d = S.templates.find(x=>x.id===V.editTpl);
@@ -498,7 +498,7 @@ function renderTopbar(){
                      history:t('tabHistory'), settings:t('tabSettings') };
     h = `<h1>${titles[V.screen]||'Daveedus'}</h1>`;
     if(V.screen==='home' && S.active){
-      h += `<button class="finishbtn" onclick="go('workout')">▶ ${fmtTime((Date.now()-new Date(S.active.startedAt).getTime())/1000)}</button>`;
+      h += `<button class="finishbtn" onclick="go('workout')">${ACT_ICONS.play} ${fmtTime((Date.now()-new Date(S.active.startedAt).getTime())/1000)}</button>`;
     }
   }
   $('#topbar').innerHTML = h;
@@ -521,7 +521,14 @@ const ACT_ICONS = {
   play:'<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M7 4.5v15l12-7.5z"/></svg>',
   edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
   swap:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>',
-  plates:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></svg>'
+  plates:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></svg>',
+  share:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M7 8l5-5 5 5"/><path d="M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/></svg>',
+  dl:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5"/><path d="M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/></svg>',
+  copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>',
+  archive:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>',
+  restore:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3 8a9 9 0 1 1-1 5"/></svg>',
+  note:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+  scale:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.5"/><path d="M8.2 8.5h7.6L18 20a1 1 0 0 1-1 1.2H7A1 1 0 0 1 6 20z"/></svg>'
 };
 function renderTabbar(){
   const tabs = [
@@ -548,7 +555,7 @@ function htmlHome(){
   let h = `<div class="hero"><div class="date">${esc(dateStr)}</div></div>`;
   if(needBackupReminder()){
     h += `<div class="card" style="display:flex;align-items:center;gap:10px">
-      <span style="flex:1;font-size:13px;font-weight:600;color:var(--orange)">💾 ${t('bakRemind')}</span>
+      <span style="flex:1;font-size:13px;font-weight:600;color:var(--orange)">${t('bakRemind')}</span>
       <button class="btn small" style="background:var(--accent);color:var(--on-accent)" onclick="copyBackup();render()">${t('copy')}</button>
       <button class="minibtn" style="width:32px;min-height:32px;font-size:12px" onclick="S.bakSnooze=Date.now(); save(); render()">✕</button>
     </div>`;
@@ -565,7 +572,7 @@ function htmlHome(){
       <button class="tplbtn continue" onclick="go('workout')">
         <div class="tinfo"><div class="tname">${esc(S.active.name)}</div>
         <div class="tsub"><span id="home-elapsed">${fmtTime((Date.now()-new Date(S.active.startedAt).getTime())/1000)}</span> · ${n} ✓</div></div>
-        <div class="go">▶</div></button>`;
+        <div class="go">${ACT_ICONS.play}</div></button>`;
   }
   const tplBtn = (d, isNext) => {
     const last = S.history.find(x=>x.tplId===d.id);
@@ -573,7 +580,7 @@ function htmlHome(){
     return `<button class="tplbtn ${isNext?'next':''}" onclick="startWorkout('${d.id}')">
       <div class="tinfo"><div class="tname">${esc(d.name)}${isNext?` <span class="nextchip">${t('nextBadge')}</span>`:''}</div>
       <div class="tsub">${last?daysAgoStr(last.date):t('never')} · ${esc(names)}</div></div>
-      <div class="go">▶</div></button>`;
+      <div class="go">${ACT_ICONS.play}</div></button>`;
   };
   /* home shows only PINNED splits as a grid of split cards; fall back to all when none pinned */
   const pinned = S.folders.filter(f=>f.pinned);
@@ -808,7 +815,7 @@ function htmlWorkout(){
     }).join('');
     const bwPh = latestBw()!=null ? fmtW(kg2u(latestBw())) : '';
     const bwField = bw ? `<div class="bwline">
-      <span class="bwlbl" onclick="document.getElementById('bw-${xi}').focus()">⚖ ${t('woBwCol')}</span>
+      <span class="bwlbl" onclick="document.getElementById('bw-${xi}').focus()">${ACT_ICONS.scale} ${t('woBwCol')}</span>
       <div class="bwstepper">
         <button class="bwstep" onclick="stepBw(${xi},-0.1)" aria-label="-0.1">▾</button>
         <input type="text" inputmode="decimal" class="bwinput" id="bw-${xi}" placeholder="${bwPh}"
@@ -817,7 +824,7 @@ function htmlWorkout(){
       </div>
       <span class="bwu">${unitL()}</span><span class="bwhint">${t('woBwHint')}</span></div>` : '';
     const notLast = xi < S.active.exercises.length-1;
-    const ssConn = (ex.ss && notLast) ? `<div class="ssline">🔗 ${t('superset')}</div>` : '';
+    const ssConn = (ex.ss && notLast) ? `<div class="ssline">${ACT_ICONS.link} ${t('superset')}</div>` : '';
     const isAlt = ex.k !== ex.baseK;
     const statusBadge = doneOrder[ex.id] ? `<span class="ordbadge" title="${t('woOrderHint')}">${doneOrder[ex.id]}</span>`
       : (ex.prevOrder ? `<span class="ordbadge prev" title="${t('woPrevOrderHint')}">${ex.prevOrder}</span>` : '');
@@ -827,13 +834,13 @@ function htmlWorkout(){
         ${statusBadge}
         <div class="extarget">${ex.targetSets}×${ex.targetReps}${tm?'s':''}</div>
         <button class="minibtn${isAlt?' acc':''}" onclick="openSwapMenu(${xi})" aria-label="swap">${ACT_ICONS.swap}</button>
-        ${bw?'':`<button class="minibtn" onclick="openPlates(${xi})">⚖</button>`}
-        ${notLast?`<button class="minibtn ${ex.ss?'acc':''}" onclick="toggleWoSS(${xi})">🔗</button>`:''}
-        <button class="minibtn del" onclick="removeWorkoutEx(${xi})">✕</button>
+        ${bw?'':`<button class="minibtn" onclick="openPlates(${xi})">${ACT_ICONS.plates}</button>`}
+        ${notLast?`<button class="minibtn ${ex.ss?'acc':''}" onclick="toggleWoSS(${xi})">${ACT_ICONS.link}</button>`:''}
+        <button class="minibtn del" onclick="removeWorkoutEx(${xi})">${ACT_ICONS.x}</button>
       </div>
       ${isAlt?`<div class="altbar" onclick="swapExercise(${xi},'${esc(ex.baseK)}')">${ACT_ICONS.swap}<span>${t('woAltBack')} ${esc(exName(ex.baseK))}</span></div>`:''}
       ${(ex.pnote && !ex.notePerm) ? `<div class="pnote">${ACT_ICONS.pin} ${esc(ex.pnote)}</div>` : ''}
-      ${ex.last && ex.last.note ? `<div class="lastnote">💬 ${esc(ex.last.note)}</div>` : ''}
+      ${ex.last && ex.last.note ? `<div class="lastnote">${ACT_ICONS.note} <span>${esc(ex.last.note)}</span></div>` : ''}
       <div class="noterow">
         <input class="exnote${ex.notePerm?' perm':''}" placeholder="${ex.notePerm?t('woNotePerm'):t('woNoteSess')}"
           value="${esc(ex.notePerm?(ex.pnote||''):ex.note)}"
@@ -1201,7 +1208,7 @@ function htmlProgram(){
   }
   h += `<div style="height:8px"></div>
         <button class="btn ghostbtn" onclick="addFolder()">${t('folderNew')}</button>
-        <button class="btn" onclick="openImportModal('tpl')">${t('tplImport')}</button>`;
+        <button class="btn" onclick="openImportModal('tpl')">${ACT_ICONS.dl} ${t('tplImport')}</button>`;
   return h;
 }
 function openSplit(id){
@@ -1226,8 +1233,8 @@ function htmlSplitView(){
   h += tpls.map(tplCardHtml).join('') || `<div class="empty">—</div>`;
   h += `<button class="btn ghostbtn" onclick="addTplTo('${f.id}')">${t('tplNew')}</button>
         <button class="btn primary" onclick="go('program')">✓ ${t('saveDone')}</button>
-        <button class="btn" onclick="shareFolder('${f.id}')">⤴ ${t('folderShare')}</button>
-        <button class="btn danger" onclick="delFolder('${f.id}')">✕ ${t('deleteBtn')}</button>`;
+        <button class="btn" onclick="shareFolder('${f.id}')">${ACT_ICONS.share} ${t('folderShare')}</button>
+        <button class="btn danger" onclick="delFolder('${f.id}')">${ACT_ICONS.x} ${t('deleteBtn')}</button>`;
   return h;
 }
 function addFolder(){
@@ -1260,7 +1267,7 @@ function shareFolder(id){
   openModal(`<h3>${t('folderShare')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div style="color:var(--dim);font-size:14px;margin:0 4px 10px">${t('folderShareHint')}</div>
     <textarea class="codebox" readonly onclick="this.select()">${esc(code)}</textarea>
-    <button class="btn primary" style="margin-top:12px" onclick="copyText(document.querySelector('.codebox').value)">⤴ ${t('copy')}</button>`);
+    <button class="btn primary" style="margin-top:12px" onclick="copyText(document.querySelector('.codebox').value)">${ACT_ICONS.copy} ${t('copy')}</button>`);
 }
 function openTpl(id){ V.editTpl=id; go('tpledit'); }
 function closeTplEdit(){
@@ -1341,8 +1348,8 @@ function htmlTplEdit(){
   h += `</div>
     <button class="btn ghostbtn" onclick="addTplEx('${d.id}')">${t('tplAddEx')}</button>
     <button class="btn primary" onclick="closeTplEdit()">✓ ${t('saveDone')}</button>
-    <button class="btn" onclick="dupTpl('${d.id}')">⧉ ${t('tplDup')}</button>
-    <button class="btn" onclick="shareTpl('${d.id}')">⤴ ${t('tplShare')}</button>`;
+    <button class="btn" onclick="dupTpl('${d.id}')">${ACT_ICONS.copy} ${t('tplDup')}</button>
+    <button class="btn" onclick="shareTpl('${d.id}')">${ACT_ICONS.share} ${t('tplShare')}</button>`;
   return h;
 }
 function addTplAlt(id,i){
@@ -1897,7 +1904,7 @@ function htmlHistory(){
   }
   if(arch.length){
     h += `<h2 class="sec" style="cursor:pointer" onclick="V.showArch=!V.showArch; render()">
-            ${V.showArch?'▾':'▸'} 📦 ${t('archTitle')} (${arch.length})</h2>`;
+            ${V.showArch?'▾':'▸'} ${t('archTitle')} (${arch.length})</h2>`;
     if(V.showArch) h += arch.slice(0,lim).map(histRowHtml).join('');
   }
   return h;
@@ -1912,10 +1919,12 @@ function histRowHtml(w){
       `<div class="exl"><span class="n">${esc(e.name)}${e.note?` <em style="opacity:.8">— ${esc(e.note)}</em>`:''}</span>
        <span class="s">${e.sets.map(s=>fmtSet(s, e.k)).join('&nbsp; ')}</span></div>`).join('') +
       `<div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
-        <span style="color:var(--ghost);font-size:13px">${t('histVolume')}: ${Math.round(vol)} kg${w.dur?' · ⏱ '+fmtTime(w.dur):''}</span>
-        <button class="btn small" style="margin-left:auto;background:var(--input);color:var(--dim)" onclick="event.stopPropagation();toggleArch('${w.id}')">${w.arch?'↩ '+t('histUnarch'):'📦'}</button>
-        <button class="btn small" style="background:var(--accent-bg);color:var(--accent-soft)" onclick="event.stopPropagation();openHistEdit('${w.id}')">✎</button>
-        <button class="btn danger small" onclick="event.stopPropagation();delHist('${w.id}')">✕</button>
+        <span style="color:var(--ghost);font-size:13px">${t('histVolume')}: ${Math.round(kg2u(vol))} ${unitL()}${w.dur?' · '+fmtTime(w.dur):''}</span>
+        <div class="rowacts" style="margin-left:auto">
+          <button class="iconbtn2" onclick="event.stopPropagation();toggleArch('${w.id}')" aria-label="${w.arch?t('histUnarch'):t('histArch')}">${w.arch?ACT_ICONS.restore:ACT_ICONS.archive}</button>
+          <button class="iconbtn2" onclick="event.stopPropagation();openHistEdit('${w.id}')" aria-label="edit">${ACT_ICONS.edit}</button>
+          <button class="iconbtn2 danger" onclick="event.stopPropagation();delHist('${w.id}')" aria-label="delete">${ACT_ICONS.x}</button>
+        </div>
       </div></div>`;
   }
   return `<div class="card histrow" style="${w.arch?'opacity:.65':''}" onclick="V.expanded=V.expanded==='${w.id}'?null:'${w.id}'; render()">
@@ -2150,8 +2159,8 @@ function htmlSettings(){
     </div>
   </div>
   <h2 class="sec">${t('setBackup')}</h2>
-  <button class="btn" onclick="copyBackup()">⤴ ${t('setBackupCopy')}</button>
-  <button class="btn" onclick="openImportModal('bak')">⤓ ${t('setBackupLoad')}</button>
+  <button class="btn" onclick="copyBackup()">${ACT_ICONS.share} ${t('setBackupCopy')}</button>
+  <button class="btn" onclick="openImportModal('bak')">${ACT_ICONS.dl} ${t('setBackupLoad')}</button>
   <h2 class="sec">${t('protTitle')}</h2>
   <div class="card">
     <div class="setline">
@@ -2172,7 +2181,7 @@ function snapListHtml(){
   const keys = Object.keys(localStorage).filter(k=>k.startsWith(SNAP_PREFIX)).sort().reverse();
   if(!keys.length) return `<div style="color:var(--dim);font-size:14px;padding:4px 0">${t('protNoSnaps')}</div>`;
   return keys.map(k=>`<div class="setline">
-    <span class="lb" style="font-weight:600">📄 ${k.slice(SNAP_PREFIX.length)}</span>
+    <span class="lb" style="font-weight:600">${k.slice(SNAP_PREFIX.length)}</span>
     <button class="btn small" style="background:var(--accent-bg);color:var(--accent-soft)"
       onclick="restoreSnapshot('${k}')">${t('protRestore')}</button>
   </div>`).join('');
@@ -2233,7 +2242,7 @@ function shareTpl(id){
   openModal(`<h3>${t('tplShare')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div style="color:var(--dim);font-size:14px;margin:0 4px 10px">${t('tplShareHint')}</div>
     <textarea class="codebox" readonly onclick="this.select()">${esc(code)}</textarea>
-    <button class="btn primary" style="margin-top:12px" onclick="copyText(document.querySelector('.codebox').value)">⤴ ${t('copy')}</button>`);
+    <button class="btn primary" style="margin-top:12px" onclick="copyText(document.querySelector('.codebox').value)">${ACT_ICONS.copy} ${t('copy')}</button>`);
 }
 function copyBackup(){
   const payload = { t:'bak', s:{ lang:S.lang, theme:S.theme, keepAwake:S.keepAwake, plates:S.plates,
