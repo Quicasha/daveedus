@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.7.7'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.7.8'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -1653,7 +1653,7 @@ function chipLabel(g){ return g==='mine' ? t('exMine') : t('g_'+g); }
 function exStats(k, name, tplName){
   const nm = (name||'').trim().toLowerCase();
   const bwKind = isBwEx(k);
-  let best = 0, bestTime = 0, e1rm = 0, bestVol = 0, bestSet = null, sessions = 0, lastDate = null;
+  let best = 0, bestBw = null, bestAdd = null, bestTime = 0, e1rm = 0, bestVol = 0, bestSet = null, sessions = 0, lastDate = null;
   for(const h of S.history){
     if(h.arch || (tplName && h.name!==tplName)) continue;
     for(const e of h.exercises){
@@ -1665,18 +1665,22 @@ function exStats(k, name, tplName){
           const add = bwKind ? (e.bw||0) : 0; /* records use TOTAL load = body weight + added */
           for(const s of work){
             const ew = s.weight + add;
-            best = Math.max(best, ew);
+            if(ew > best){ best = ew; if(bwKind && e.bw!=null){ bestBw = e.bw; bestAdd = s.weight; } }
             bestTime = Math.max(bestTime, s.reps);
             const est = ew * (1 + s.reps/30); /* Epley */
             if(est > e1rm) e1rm = est;
             const v = ew * s.reps;
-            if(v > bestVol){ bestVol = v; bestSet = { weight:ew, reps:s.reps }; }
+            if(v > bestVol){ bestVol = v; bestSet = { weight:ew, reps:s.reps, bw:(bwKind && e.bw!=null)?e.bw:null, add:s.weight }; }
           }
         }
       }
     }
   }
-  return { best, bestTime, e1rm, bestSet, sessions, lastDate };
+  return { best, bestBw, bestAdd, bestTime, e1rm, bestSet, sessions, lastDate };
+}
+/* "80 + 28" / "80 − 20" breakdown (kg stored -> display unit) for bodyweight records */
+function bwSplit(bw, add){
+  return wu(bw) + (add>=0 ? ' + ' + wu(add) : ' − ' + wu(Math.abs(add)));
 }
 function htmlExercises(){
   let h = `<div style="height:8px"></div>
@@ -1740,8 +1744,10 @@ function htmlExDetail(){
       `</div>`;
   }
   const tm = isTimeEx(k);
+  /* bodyweight moves: the record is total load — show the "bw + added" split under it */
+  const bestSplit = (!tm && st.best && st.bestBw!=null) ? ` (${bwSplit(st.bestBw, st.bestAdd)})` : '';
   h += `<div class="statrow">
-    <div class="stat"><div class="v">${tm ? (st.bestTime?st.bestTime+' s':'—') : (st.best?wu(st.best,true):'—')}</div><div class="l">${tm?t('recTime'):t('exBest')}</div></div>
+    <div class="stat"><div class="v">${tm ? (st.bestTime?st.bestTime+' s':'—') : (st.best?wu(st.best,true):'—')}</div><div class="l">${tm?t('recTime'):t('exBest')}${bestSplit}</div></div>
     <div class="stat"><div class="v">${st.sessions}</div><div class="l">${t('exSessions')}</div></div>
     <div class="stat"><div class="v" style="font-size:16px;padding-top:6px">${st.lastDate?daysAgoStr(st.lastDate):'—'}</div><div class="l">${t('exLastDone')}</div></div>
   </div>`;
@@ -1753,7 +1759,7 @@ function htmlExDetail(){
         <span style="color:var(--dim);flex:1">${t('rec1RM')}</span>
         <span style="font-weight:800;font-size:16px">${wu(Math.round(st.e1rm*10)/10,true)}</span></div>
       <div style="display:flex;gap:8px;padding:4px 0;align-items:baseline;font-size:14px">
-        <span style="color:var(--dim);flex:1">${t('recBestSet')}</span>
+        <span style="color:var(--dim);flex:1">${t('recBestSet')}${st.bestSet.bw!=null?` <span style="font-weight:500">(${bwSplit(st.bestSet.bw, st.bestSet.add)})</span>`:''}</span>
         <span style="font-weight:800;font-size:16px">${wu(st.bestSet.weight,true)} × ${st.bestSet.reps}</span></div>
     </div>`;
   }
