@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.7.5'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.7.6'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -829,7 +829,7 @@ function htmlWorkout(){
     const ssConn = (ex.ss && notLast) ? `<div class="ssline">${ACT_ICONS.link} ${t('superset')}</div>` : '';
     const isAlt = ex.k !== ex.baseK;
     const statusBadge = doneOrder[ex.id] ? `<span class="ordbadge" title="${t('woOrderHint')}">${doneOrder[ex.id]}</span>`
-      : (ex.prevOrder ? `<span class="ordbadge prev" title="${t('woPrevOrderHint')}">${ex.prevOrder}</span>` : '');
+      : (ex.prevOrder ? `<span class="ordbadge last" title="${t('woPrevOrderHint')}">${ex.prevOrder}</span>` : '');
     return `<div class="card${isAlt?' altcard':''}${doneOrder[ex.id]?' exdone':''}${ex.id===activeId?' excur':''}">
       <div class="exhead">
         <div class="exname" onclick="openExDetailByKey('${esc(ex.k)}')">${esc(ex.name)}</div>
