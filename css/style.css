@@ -114,6 +114,9 @@ h2.sec{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(
 .exhead .minibtn{width:34px; min-height:34px; font-size:13px; background:none; color:var(--ghost);}
 .exhead .minibtn.acc{color:var(--accent-soft);}
 .exhead .minibtn.del{color:var(--red);}
+/* one-tap warmup ramp button — orange like the W set type */
+.exhead .minibtn.warm{color:var(--orange); font-weight:800; font-size:14px;}
+.exhead .minibtn.warm.on{background:rgba(255,159,10,.15);}
 /* order badge: green = this session's completion order; ghost = last session's order */
 .ordbadge{flex:none; width:22px; height:22px; border-radius:50%; background:var(--green); color:#fff;
   font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; font-variant-numeric:tabular-nums;}

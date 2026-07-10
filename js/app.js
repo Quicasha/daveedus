@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.7.4'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.7.5'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -25,6 +25,7 @@ const I18N = {
     swapTitle:'Keisti pratimą', swapPlanned:'planas', swapAdd:'+ Pridėti alternatyvą',
     woAltBack:'Atgal į', altLabel:'alt.', altAdd:'Alternatyva',
     woNextUp:'kitas', woOrderHint:'Atlikimo eilė', woPrevOrderHint:'Praeitą kartą buvo tokia eilė',
+    warmBtn:'Apšilimo setai', warmNeedW:'Pirma įvesk darbinį svorį', warmTooLight:'Svoris per lengvas apšilimo setams',
     woNoteSess:'Užrašas (šiam kartui)…', woNotePerm:'Nuolatinis užrašas…', woNotePermToggle:'Nuolatinis užrašas',
     woEmptyVals:'Įvesk svorį ir kartojimus', woSaved:'Treniruotė išsaugota 💪',
     woFinishEmpty:'Nėra atliktų setų. Atšaukti treniruotę?',
@@ -117,6 +118,7 @@ const I18N = {
     swapTitle:'Swap exercise', swapPlanned:'planned', swapAdd:'+ Add alternative',
     woAltBack:'Back to', altLabel:'alt.', altAdd:'Alternative',
     woNextUp:'next', woOrderHint:'Order done', woPrevOrderHint:'Last time you did it in this order',
+    warmBtn:'Warmup sets', warmNeedW:'Enter your working weight first', warmTooLight:'Weight too light for a warmup ramp',
     woNoteSess:'Note (this workout)…', woNotePerm:'Permanent note…', woNotePermToggle:'Permanent note',
     woEmptyVals:'Enter weight and reps', woSaved:'Workout saved 💪',
     woFinishEmpty:'No completed sets. Discard workout?',
@@ -833,6 +835,7 @@ function htmlWorkout(){
         <div class="exname" onclick="openExDetailByKey('${esc(ex.k)}')">${esc(ex.name)}</div>
         ${statusBadge}
         <div class="extarget">${ex.targetSets}×${ex.targetReps}${tm?'s':''}</div>
+        ${(tm||bw)?'':`<button class="minibtn warm${ex.sets.some(s=>s.warm&&!s.done)?' on':''}" onclick="autoWarmup(${xi})" aria-label="${t('warmBtn')}">W</button>`}
         <button class="minibtn${isAlt?' acc':''}" onclick="openSwapMenu(${xi})" aria-label="swap">${ACT_ICONS.swap}</button>
         ${bw?'':`<button class="minibtn" onclick="openPlates(${xi})">${ACT_ICONS.plates}</button>`}
         ${notLast?`<button class="minibtn ${ex.ss?'acc':''}" onclick="toggleWoSS(${xi})">${ACT_ICONS.link}</button>`:''}
@@ -885,6 +888,48 @@ function toggleWarm(xi,si){
   if(!s.warm && !s.fail){ s.warm = true; }
   else if(s.warm){ s.warm = false; s.fail = true; }
   else { s.fail = false; }
+  save(); render();
+}
+/* one-tap warmup ramp: empty bar x10 (barbell lifts), then ~40/60/80% of the
+   working weight at 6/4/2 reps — the standard strength ramp; low reps up high
+   so the warmup wakes you up without eating into the work sets. Warmup sets
+   are W-typed, so they stay out of records/volume/progress. Tapping W again
+   removes the not-yet-done warmups. */
+function autoWarmup(xi){
+  const ex = S.active.exercises[xi];
+  if(!ex || isTimeEx(ex.k) || isBwEx(ex.k)) return;
+  const undoneWarm = ex.sets.some(s=>s.warm && !s.done);
+  if(undoneWarm){
+    ex.sets = ex.sets.filter(s=>!(s.warm && !s.done));
+    if(S.active.rest && Number(S.active.rest.key.split('-')[0])===xi) S.active.rest = null;
+    updateExDone(ex); save(); render(); return;
+  }
+  /* target = the first working set's weight (typed, or the ghost from last time) */
+  let w = NaN;
+  for(let i=0;i<ex.sets.length;i++){
+    const s = ex.sets[i];
+    if(s.warm || s.drop) continue;
+    w = parseNum(s.w);
+    if(isNaN(w)){ const g = ghostFor(ex,i); if(g) w = kg2u(g.weight); }
+    break;
+  }
+  if(isNaN(w) || w<=0){ toast(t('warmNeedW')); return; }
+  const step = S.unit==='lb' ? 5 : 2.5;
+  const bar = plateBars()[0];
+  const barbell = (exInfo(ex.k)||{}).e==='barbell';
+  const ramp = [];
+  if(barbell && w > bar) ramp.push({ w:bar, r:10 });
+  [[0.4,6],[0.6,4],[0.8,2]].forEach(([p,r])=>{
+    let ww = Math.round(w*p/step)*step;
+    if(barbell) ww = Math.max(ww, bar);
+    if(ww<=0 || ww>=w) return;
+    if(ramp.length && ww<=ramp[ramp.length-1].w) return; /* keep the ramp strictly increasing */
+    ramp.push({ w:ww, r });
+  });
+  if(!ramp.length){ toast(t('warmTooLight')); return; }
+  ex.sets = ramp.map(x=>newSet({ warm:true, w:fmtW(x.w), r:String(x.r) })).concat(ex.sets);
+  shiftRestKey(xi, 0, ramp.length);
+  updateExDone(ex);
   save(); render();
 }
 function shiftRestKey(xi, fromSi, delta){
