@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.7.6'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.7.7'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -21,7 +21,7 @@ const I18N = {
     woSwitchConfirm:'Jau vyksta kita treniruotė. Ją atšaukti ir pradėti naują?',
     woSet:'Set', woPrev:'Anksčiau', woKg:'kg', woReps:'kart.', woNote:'Pastaba...',
     woAddSet:'+ Setas', woRemoveSet:'− Setas', woRemoveDone:'Setas jau atliktas',
-    woAddEx:'+ Pridėti pratimą', woDelEx:'Išimti pratimą „{n}“?',
+    woAddEx:'+ Pridėti pratimą', woDelEx:'Išimti pratimą „{n}“?', woDelExBtn:'Išimti pratimą',
     swapTitle:'Keisti pratimą', swapPlanned:'planas', swapAdd:'+ Pridėti alternatyvą',
     woAltBack:'Atgal į', altLabel:'alt.', altAdd:'Alternatyva',
     woNextUp:'kitas', woOrderHint:'Atlikimo eilė', woPrevOrderHint:'Praeitą kartą buvo tokia eilė',
@@ -114,7 +114,7 @@ const I18N = {
     woSwitchConfirm:'Another workout is in progress. Discard it and start a new one?',
     woSet:'Set', woPrev:'Previous', woKg:'kg', woReps:'reps', woNote:'Note...',
     woAddSet:'+ Set', woRemoveSet:'− Set', woRemoveDone:'Set already completed',
-    woAddEx:'+ Add exercise', woDelEx:'Remove exercise “{n}”?',
+    woAddEx:'+ Add exercise', woDelEx:'Remove exercise “{n}”?', woDelExBtn:'Remove exercise',
     swapTitle:'Swap exercise', swapPlanned:'planned', swapAdd:'+ Add alternative',
     woAltBack:'Back to', altLabel:'alt.', altAdd:'Alternative',
     woNextUp:'next', woOrderHint:'Order done', woPrevOrderHint:'Last time you did it in this order',
@@ -530,7 +530,8 @@ const ACT_ICONS = {
   archive:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>',
   restore:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3 8a9 9 0 1 1-1 5"/></svg>',
   note:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
-  scale:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.5"/><path d="M8.2 8.5h7.6L18 20a1 1 0 0 1-1 1.2H7A1 1 0 0 1 6 20z"/></svg>'
+  scale:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.5"/><path d="M8.2 8.5h7.6L18 20a1 1 0 0 1-1 1.2H7A1 1 0 0 1 6 20z"/></svg>',
+  more:'<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>'
 };
 function renderTabbar(){
   const tabs = [
@@ -678,6 +679,23 @@ function addAltExercise(xi){
     swapExercise(xi, info.id);
   });
 }
+/* per-exercise action menu — keeps the exercise header uncluttered */
+function openExMenu(xi){
+  const ex = S.active.exercises[xi];
+  if(!ex) return;
+  const notLast = xi < S.active.exercises.length-1;
+  const bw = isBwEx(ex.k);
+  const item = (cls, icon, label, action) =>
+    `<button class="swapitem ${cls}" onclick="closeModal();${action}">
+       <span class="mi">${icon}</span><span class="sn">${label}</span></button>`;
+  openModal(`<h3>${esc(ex.name)}<button class="x" onclick="closeModal()">✕</button></h3>
+    <div class="swaplist">
+      ${item(ex.k!==ex.baseK?'on':'', ACT_ICONS.swap, t('swapTitle'), `openSwapMenu(${xi})`)}
+      ${bw?'':item('', ACT_ICONS.plates, t('plates'), `openPlates(${xi})`)}
+      ${notLast?item(ex.ss?'on':'', ACT_ICONS.link, t('superset'), `toggleWoSS(${xi})`):''}
+      ${item('danger', ACT_ICONS.x, t('woDelExBtn'), `removeWorkoutEx(${xi})`)}
+    </div>`);
+}
 function onBwInput(xi,v){
   const ex = S.active.exercises[xi];
   const n = parseNum(v);
@@ -776,9 +794,13 @@ function htmlWorkout(){
   /* this-session completion order numbers */
   const doneOrder = {};
   S.active.exercises.filter(e=>e.doneAt).sort((a,b)=>a.doneAt-b.doneAt).forEach((e,i)=>{ doneOrder[e.id]=i+1; });
-  /* outline the exercise being worked on: the one last logged (if unfinished), else the first unfinished */
+  /* outline the exercise being worked on: the one last logged (if unfinished), else the first unfinished;
+     when it belongs to a superset, outline the whole linked group */
   const curEx = S.active.exercises.find(e=>e.id===S.active.curEx);
   const activeId = (curEx && !exFullyDone(curEx)) ? curEx.id : (S.active.exercises.find(e=>!exFullyDone(e))||{}).id;
+  const outlined = new Set(activeId ? [activeId] : []);
+  const actIdx = S.active.exercises.findIndex(e=>e.id===activeId);
+  if(actIdx>=0){ const [ga,gb] = ssGroup(actIdx); for(let j=ga;j<=gb;j++) outlined.add(S.active.exercises[j].id); }
   h += S.active.exercises.map((ex,xi)=>{
     const tm = isTimeEx(ex.k), bw = isBwEx(ex.k);
     const firstNotDone = ex.sets.findIndex(s=>!s.done); /* -1 = all done */
@@ -830,16 +852,13 @@ function htmlWorkout(){
     const isAlt = ex.k !== ex.baseK;
     const statusBadge = doneOrder[ex.id] ? `<span class="ordbadge" title="${t('woOrderHint')}">${doneOrder[ex.id]}</span>`
       : (ex.prevOrder ? `<span class="ordbadge last" title="${t('woPrevOrderHint')}">${ex.prevOrder}</span>` : '');
-    return `<div class="card${isAlt?' altcard':''}${doneOrder[ex.id]?' exdone':''}${ex.id===activeId?' excur':''}">
+    return `<div class="card${isAlt?' altcard':''}${doneOrder[ex.id]?' exdone':''}${outlined.has(ex.id)?' excur':''}">
       <div class="exhead">
         <div class="exname" onclick="openExDetailByKey('${esc(ex.k)}')">${esc(ex.name)}</div>
         ${statusBadge}
         <div class="extarget">${ex.targetSets}×${ex.targetReps}${tm?'s':''}</div>
         ${(tm||bw)?'':`<button class="minibtn warm${ex.sets.some(s=>s.warm&&!s.done)?' on':''}" onclick="autoWarmup(${xi})" aria-label="${t('warmBtn')}">W</button>`}
-        <button class="minibtn${isAlt?' acc':''}" onclick="openSwapMenu(${xi})" aria-label="swap">${ACT_ICONS.swap}</button>
-        ${bw?'':`<button class="minibtn" onclick="openPlates(${xi})">${ACT_ICONS.plates}</button>`}
-        ${notLast?`<button class="minibtn ${ex.ss?'acc':''}" onclick="toggleWoSS(${xi})">${ACT_ICONS.link}</button>`:''}
-        <button class="minibtn del" onclick="removeWorkoutEx(${xi})">${ACT_ICONS.x}</button>
+        <button class="minibtn${isAlt||ex.ss?' acc':''}" onclick="openExMenu(${xi})" aria-label="menu">${ACT_ICONS.more}</button>
       </div>
       ${isAlt?`<div class="altbar" onclick="swapExercise(${xi},'${esc(ex.baseK)}')">${ACT_ICONS.swap}<span>${t('woAltBack')} ${esc(exName(ex.baseK))}</span></div>`:''}
       ${(ex.pnote && !ex.notePerm) ? `<div class="pnote">${ACT_ICONS.pin} ${esc(ex.pnote)}</div>` : ''}
@@ -960,6 +979,15 @@ function removeDrop(xi,si){
 /* an exercise is "done" when every set is checked; doneAt records the order in
    which exercises were completed (for the sequence numbers shown on the cards) */
 function exFullyDone(ex){ return ex.sets.length>0 && ex.sets.every(s=>s.done); }
+/* superset group around exercise xi: [first,last] indices of the linked chain
+   (ex.ss links an exercise to the NEXT one); first===last means no superset */
+function ssGroup(xi){
+  const ex = S.active.exercises;
+  let a = xi, b = xi;
+  while(a>0 && ex[a-1].ss) a--;
+  while(b<ex.length-1 && ex[b].ss) b++;
+  return [a,b];
+}
 function updateExDone(ex){
   if(exFullyDone(ex)){ if(!ex.doneAt) ex.doneAt = (S.active.seq = (S.active.seq||0)+1); }
   else ex.doneAt = 0;
@@ -991,14 +1019,30 @@ function toggleSet(xi,si){
   else s.cls='loss';
   S.active.rest = { at:Date.now(), key:xi+'-'+si };
   V.lastDone = xi+'-'+si;
-  S.active.curEx = ex.id;   /* this is the exercise being worked on now (outline follows it) */
   updateExDone(ex);
+  /* superset: after each set, hand over to the next linked partner that still
+     has sets left (A -> B -> A ...), so the flow alternates without scrolling */
+  let jump = -1;
+  const [ga,gb] = ssGroup(xi);
+  if(gb > ga){
+    for(let step=1; step<=gb-ga; step++){
+      const j = ga + ((xi-ga+step) % (gb-ga+1));
+      if(!exFullyDone(S.active.exercises[j])){ jump = j; break; }
+    }
+  }
+  S.active.curEx = (jump>=0) ? S.active.exercises[jump].id : ex.id;
   save(); render();
+  if(jump>=0 && jump!==xi){
+    const card = document.querySelectorAll('#screen .card')[jump];
+    if(card) card.scrollIntoView({ behavior:'smooth', block:'center' });
+  }
   /* focus the next set's weight field only when it must be typed (no ghost to one-tap) */
-  for(let i=si+1; i<ex.sets.length; i++){
-    if(!ex.sets[i].done){
-      if(!ghostFor(ex,i)){
-        const el = document.getElementById('w-'+xi+'-'+i);
+  const fx = (jump>=0) ? jump : xi;
+  const fex = S.active.exercises[fx];
+  for(let i=0; i<fex.sets.length; i++){
+    if(!fex.sets[i].done){
+      if(!ghostFor(fex,i) && fx===xi){
+        const el = document.getElementById('w-'+fx+'-'+i);
         if(el) el.focus();
       }
       break;
@@ -1745,26 +1789,31 @@ function chartSVG(k, name, tplName, metric){
       if(e.k===k || (e.name && e.name.trim().toLowerCase()===nm)){
         const work = e.sets.filter(s=>!s.warm && !s.drop);
         if(!work.length) continue;
-        const add = bwKind ? (e.bw||0) : 0; /* charts use TOTAL load for bodyweight moves */
+        const add = bwKind ? (e.bw||0) : 0; /* volume/1RM use TOTAL load for bodyweight moves */
         let v;
         if(tm) v = Math.max(...work.map(s=>s.reps));
         else if(metric==='vol') v = Math.round(kg2u(work.reduce((a,s)=>a+(s.weight+add)*s.reps,0)));
         else if(metric==='1rm') v = Math.round(kg2u(Math.max(...work.map(s=>(s.weight+add)*(1+s.reps/30))))*10)/10;
-        else v = Math.round(kg2u(Math.max(...work.map(s=>s.weight+add)))*100)/100;
-        pts.push({ d:w.date, w:v });
+        /* weight metric on bodyweight moves plots ADDED load only (comparable across
+           body-weight changes); the body weight itself shows on point tap */
+        else v = Math.round(kg2u(Math.max(...work.map(s=>bwKind ? s.weight : s.weight+add)))*100)/100;
+        pts.push({ d:w.date, w:v, bw:(bwKind && e.bw!=null) ? e.bw : undefined });
       }
     }
   }
   const label = tm ? t('woSec')
     : metric==='vol' ? t('metricVol')+' ('+unitL()+')'
     : metric==='1rm' ? t('metric1RM')+' ('+unitL()+')'
+    : bwKind ? t('woAddCol')+' ('+unitL()+')'
     : t('chartTop').replace('kg', unitL());
   return lineChartSVG(pts, label, tm?'s':unitL());
 }
-/* tap on a chart point -> exact value with date */
+/* tap on a chart point -> exact value with date (+ body weight at the time, if known) */
 function chartTap(i){
   const d = window.__chartData && window.__chartData[i];
-  if(d) toast(fmtDate(d.d)+' · '+fmtW(d.w)+' '+(window.__chartUnit||''));
+  if(!d) return;
+  toast(fmtDate(d.d)+' · '+fmtW(d.w)+' '+(window.__chartUnit||'')
+        + (d.bw!=null ? ' · '+t('woBwCol')+' '+wu(d.bw,true) : ''));
 }
 /* generic line chart: pts = [{d:dateIso, w:number}] chronological */
 function lineChartSVG(pts, label, unit){
