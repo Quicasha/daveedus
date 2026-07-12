@@ -399,7 +399,9 @@ h2.sec{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(
 .histdetail{border-top:1px solid var(--line); margin-top:12px; padding-top:8px; font-size:14px;}
 .histdetail .exl{display:flex; gap:8px; padding:5px 0; align-items:baseline;}
 .histdetail .exl .n{color:var(--dim); flex:1; min-width:0;}
-.histdetail .exl .s{font-weight:600; text-align:right; flex:none; font-variant-numeric:tabular-nums;}
+.histdetail .exl .s{font-weight:600; text-align:right; flex:0 1 auto; min-width:0;
+  font-variant-numeric:tabular-nums; line-height:1.5;}
+.histdetail .exl .s .tok{white-space:nowrap;}
 #chartbox svg{width:100%; height:auto; display:block;}
 
 /* ============ settings ============ */

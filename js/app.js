@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.7.8'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.7.9'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -494,7 +494,7 @@ function renderTopbar(){
     h = `<button class="iconbtn" onclick="go('program')">‹</button><h1>${f?esc(f.name):''}</h1>
          <button class="finishbtn" onclick="go('program')">✓ ${t('saveDone')}</button>`;
   }else if(V.screen==='exdetail'){
-    h = `<button class="iconbtn" onclick="go('exercises')">‹</button><h1>${esc(exName(V.exDetail, V.exDetailName))}</h1>`;
+    h = `<button class="iconbtn" onclick="go((V.exDetailFrom==='workout'&&S.active)?'workout':'exercises')">‹</button><h1>${esc(exName(V.exDetail, V.exDetailName))}</h1>`;
   }else{
     const titles = { home:'Daveedus', program:t('tabProgram'), exercises:t('tabExercises'),
                      history:t('tabHistory'), settings:t('tabSettings') };
@@ -1721,6 +1721,8 @@ function openExDetailByKey(k){
   V.exMetric = 'w';
   const i = exInfo(k);
   V.exDetailName = i ? i.n : k;
+  /* back returns to wherever the detail was opened from (workout vs. browser) */
+  V.exDetailFrom = (V.screen==='workout' && S.active) ? 'workout' : 'exercises';
   closeModal();
   go('exdetail');
 }
@@ -1777,7 +1779,7 @@ function htmlExDetail(){
     for(const e of w.exercises){
       if(matches(e)){
         rows.push(`<div class="exl"><span class="n">${fmtDate(w.date)} <span style="opacity:.6">· ${esc(w.name)}</span></span>
-          <span class="s">${e.sets.map(s=>fmtSet(s, k)).join('&nbsp; ')}</span></div>`);
+          <span class="s">${e.sets.map(s=>`<span class="tok">${fmtSet(s, k)}</span>`).join(' ')}</span></div>`);
       }
     }
   }
@@ -1986,7 +1988,7 @@ function htmlHistory(){
   h += `<h2 class="sec" style="margin-top:8px">${t('bw')}</h2>
     <div class="card">
       <button class="btn ghostbtn" style="margin-bottom:12px" onclick="openBwModal()">${t('bwLogNew')}</button>
-      ${S.weights.length>1?`<div>${lineChartSVG(S.weights.slice(0,40).slice().reverse().map(x=>({d:x.date,w:kg2u(x.kg)})), unitL(), unitL())}</div>`
+      ${S.weights.length?`<div>${lineChartSVG(S.weights.slice(0,40).slice().reverse().map(x=>({d:x.date,w:kg2u(x.kg)})), unitL(), unitL())}</div>`
         : `<div class="empty" style="padding:6px 0 12px">${t('chartNoData')}</div>`}
       ${S.weights.slice(0,5).map(x=>`<div style="display:flex;gap:8px;padding:6px 0;align-items:center;font-size:14px">
         <span style="color:var(--dim);flex:1">${fmtDate(x.date)}</span>
@@ -2017,7 +2019,7 @@ function histRowHtml(w){
   if(open){
     detail = `<div class="histdetail">` + w.exercises.map(e=>
       `<div class="exl"><span class="n">${esc(e.name)}${e.note?` <em style="opacity:.8">— ${esc(e.note)}</em>`:''}</span>
-       <span class="s">${e.sets.map(s=>fmtSet(s, e.k)).join('&nbsp; ')}</span></div>`).join('') +
+       <span class="s">${e.sets.map(s=>`<span class="tok">${fmtSet(s, e.k)}</span>`).join(' ')}</span></div>`).join('') +
       `<div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
         <span style="color:var(--ghost);font-size:13px">${t('histVolume')}: ${Math.round(kg2u(vol))} ${unitL()}${w.dur?' · '+fmtTime(w.dur):''}</span>
         <div class="rowacts" style="margin-left:auto">
