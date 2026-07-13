@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.8.1'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.8.2'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -15,22 +15,22 @@ const I18N = {
     today:'šiandien', yesterday:'vakar', daysAgo:'prieš {n} d.', never:'dar nedaryta',
     statWeek:'šią savaitę', statTotal:'iš viso',
     homeContinue:'Tęsti treniruotę',
-    homeTemplates:'Mano programos', emptyWorkoutName:'Treniruotė',
+    homeTemplates:'Mano programos',
     woFinish:'BAIGTI', woElapsed:'TRUKMĖ',
     woCancel:'Atšaukti treniruotę', woCancelConfirm:'Atšaukti treniruotę? Įvesti duomenys nebus išsaugoti.',
     woSwitchConfirm:'Jau vyksta kita treniruotė. Ją atšaukti ir pradėti naują?',
-    woSet:'Set', woPrev:'Anksčiau', woKg:'kg', woReps:'kart.', woNote:'Pastaba...',
+    woSet:'Set', woPrev:'Anksčiau', woReps:'kart.',
     woAddSet:'+ Setas', woRemoveSet:'− Setas', woRemoveDone:'Setas jau atliktas',
-    woAddEx:'+ Pridėti pratimą', woDelEx:'Išimti pratimą „{n}“?', woDelExBtn:'Išimti pratimą',
+    woDelEx:'Išimti pratimą „{n}“?', woDelExBtn:'Išimti pratimą',
     swapTitle:'Keisti pratimą', swapPlanned:'planas', swapAdd:'+ Pridėti alternatyvą',
     woAltBack:'Atgal į', altLabel:'alt.', altAdd:'Alternatyva',
-    woNextUp:'kitas', woOrderHint:'Atlikimo eilė', woPrevOrderHint:'Praeitą kartą buvo tokia eilė',
+    woOrderHint:'Atlikimo eilė', woPrevOrderHint:'Praeitą kartą buvo tokia eilė',
     warmBtn:'Apšilimo setai', warmNeedW:'Pirma įvesk darbinį svorį', warmTooLight:'Svoris per lengvas apšilimo setams',
     woNoteSess:'Užrašas (šiam kartui)…', woNotePerm:'Nuolatinis užrašas…', woNotePermToggle:'Nuolatinis užrašas',
-    woEmptyVals:'Įvesk svorį ir kartojimus', woSaved:'Treniruotė išsaugota 💪',
+    woEmptyVals:'Įvesk svorį ir kartojimus',
     woFinishEmpty:'Nėra atliktų setų. Atšaukti treniruotę?',
     woFinishPart:'Ne visi setai atlikti. Baigti ir išsaugoti?',
-    woFirst:'pirmas kartas', restLabel:'Poilsis',
+    restLabel:'Poilsis',
     tplNew:'+ Nauja treniruotė', tplImport:'Įvesti kodą', tplDefaultName:'Nauja treniruotė',
     tplDel:'Ištrinti treniruotę „{n}“?', tplExCount:'{n} prat.',
     tplName:'Treniruotės pavadinimas', tplAddEx:'+ Pridėti pratimą', tplDelEx:'Išimti pratimą „{n}“?',
@@ -59,9 +59,8 @@ const I18N = {
     protHint:'Kasdien automatiškai išsaugoma kopija įrenginyje, o duomenys dubliuojami į antrą saugyklą — jei viena sugestų, atsistatys iš kitos. Retkarčiais nusikopijuok ir atsarginį kodą: jis vienintelis padės pametus telefoną.',
     updToast:'Atnaujinta į naujausią versiją ✓',
     setUnit:'Matavimo vienetai',
-    bwEnter:'Įvesk savo kūno svorį', bwEx:'Kūno svorio pratimas',
+    bwEnter:'Įvesk savo kūno svorį',
     woBwCol:'Kūno sv.', woAddCol:'Papild.', woBwHint:'Kūno svoris (tik statistikai)',
-    setFail:'iki nesėkmės', setWarm:'apšilimas',
     exCreateMode:'Tipas', modeReps:'Kartai', modeTime:'Laikas (sek.)',
     histArch:'Archyvuoti', histUnarch:'Grąžinti', archTitle:'Archyvas',
     statsMuscle:'Raumenų balansas',
@@ -86,7 +85,7 @@ const I18N = {
     superset:'Superset',
     codeBad:'Neteisingas kodas', copy:'Kopijuoti', copied:'Nukopijuota ✓',
     daySets:'setai', dayReps:'kart.', daySec:'sek.', repsRangeTog:'nuo–iki',
-    exSearch:'Ieškoti pratimo...', exAll:'Visi', exCreate:'+ Sukurti savo pratimą',
+    exSearch:'Ieškoti pratimo...', exCreate:'+ Sukurti savo pratimą',
     exCreateTitle:'Naujas pratimas', exCreateName:'Pavadinimas', exCreateGroup:'Raumenų grupė',
     exCreateSave:'Išsaugoti', exNameReq:'Įvesk pavadinimą',
     exBest:'Rekordas', exSessions:'Treniruotės', exLastDone:'Paskutinį kartą',
@@ -114,22 +113,22 @@ const I18N = {
     today:'today', yesterday:'yesterday', daysAgo:'{n} days ago', never:'not done yet',
     statWeek:'this week', statTotal:'total',
     homeContinue:'Continue workout',
-    homeTemplates:'My templates', emptyWorkoutName:'Workout',
+    homeTemplates:'My templates',
     woFinish:'FINISH', woElapsed:'DURATION',
     woCancel:'Cancel workout', woCancelConfirm:'Cancel workout? Entered data will not be saved.',
     woSwitchConfirm:'Another workout is in progress. Discard it and start a new one?',
-    woSet:'Set', woPrev:'Previous', woKg:'kg', woReps:'reps', woNote:'Note...',
+    woSet:'Set', woPrev:'Previous', woReps:'reps',
     woAddSet:'+ Set', woRemoveSet:'− Set', woRemoveDone:'Set already completed',
-    woAddEx:'+ Add exercise', woDelEx:'Remove exercise “{n}”?', woDelExBtn:'Remove exercise',
+    woDelEx:'Remove exercise “{n}”?', woDelExBtn:'Remove exercise',
     swapTitle:'Swap exercise', swapPlanned:'planned', swapAdd:'+ Add alternative',
     woAltBack:'Back to', altLabel:'alt.', altAdd:'Alternative',
-    woNextUp:'next', woOrderHint:'Order done', woPrevOrderHint:'Last time you did it in this order',
+    woOrderHint:'Order done', woPrevOrderHint:'Last time you did it in this order',
     warmBtn:'Warmup sets', warmNeedW:'Enter your working weight first', warmTooLight:'Weight too light for a warmup ramp',
     woNoteSess:'Note (this workout)…', woNotePerm:'Permanent note…', woNotePermToggle:'Permanent note',
-    woEmptyVals:'Enter weight and reps', woSaved:'Workout saved 💪',
+    woEmptyVals:'Enter weight and reps',
     woFinishEmpty:'No completed sets. Discard workout?',
     woFinishPart:'Not all sets completed. Finish and save?',
-    woFirst:'first time', restLabel:'Rest',
+    restLabel:'Rest',
     tplNew:'+ New workout', tplImport:'Enter code', tplDefaultName:'New workout',
     tplDel:'Delete workout “{n}”?', tplExCount:'{n} ex.',
     tplName:'Workout name', tplAddEx:'+ Add exercise', tplDelEx:'Remove exercise “{n}”?',
@@ -158,9 +157,8 @@ const I18N = {
     protHint:'A daily snapshot is kept on this device and data is mirrored to a second storage — if one breaks, the other restores it. Still copy a backup code occasionally: it is the only thing that survives losing the phone.',
     updToast:'Updated to the latest version ✓',
     setUnit:'Units',
-    bwEnter:'Enter your body weight', bwEx:'Bodyweight exercise',
+    bwEnter:'Enter your body weight',
     woBwCol:'BW', woAddCol:'Added', woBwHint:'Body weight (stats only)',
-    setFail:'to failure', setWarm:'warm-up',
     exCreateMode:'Type', modeReps:'Reps', modeTime:'Time (sec)',
     histArch:'Archive', histUnarch:'Restore', archTitle:'Archive',
     statsMuscle:'Muscle balance',
@@ -185,7 +183,7 @@ const I18N = {
     superset:'Superset',
     codeBad:'Invalid code', copy:'Copy', copied:'Copied ✓',
     daySets:'sets', dayReps:'reps', daySec:'sec', repsRangeTog:'range',
-    exSearch:'Search exercises...', exAll:'All', exCreate:'+ Create your own exercise',
+    exSearch:'Search exercises...', exCreate:'+ Create your own exercise',
     exCreateTitle:'New exercise', exCreateName:'Name', exCreateGroup:'Muscle group',
     exCreateSave:'Save', exNameReq:'Enter a name',
     exBest:'Best', exSessions:'Sessions', exLastDone:'Last done',
@@ -1082,12 +1080,6 @@ function removeSet(xi){
   sets.pop();
   updateExDone(ex);
   save(); render();
-}
-function addWorkoutEx(){
-  openPicker(info=>{
-    S.active.exercises.push(buildActiveEx(info.id, info.n, 3, 10, false, S.active.tplId));
-    save(); closeModal(); render();
-  });
 }
 function toggleWoSS(xi){
   if(xi >= S.active.exercises.length-1) return;
@@ -2212,16 +2204,18 @@ function prEvents(){
       if(!work.length) continue;
       const m = best[e.k] || (best[e.k]={});
       const had = seen[e.k]; seen[e.k] = 1;
-      const add = isBwEx(e.k) ? (e.bw||0) : 0; /* records use TOTAL load */
+      const bwKind = isBwEx(e.k);
+      const add = bwKind ? (e.bw||0) : 0; /* records use TOTAL load */
       const top = {};
       for(const s of work){
         const tot = s.weight + add;
-        if(!(s.reps in top) || tot>top[s.reps]) top[s.reps] = tot;
+        if(!(s.reps in top) || tot>top[s.reps].tot)
+          top[s.reps] = { tot, bw:(bwKind && e.bw!=null)?e.bw:null, add:s.weight };
       }
       for(const r in top){
-        if(had && (!(r in m) || top[r]>m[r]))
-          events.push({ k:e.k, name:e.name, w:top[r], r:+r, d:w.date });
-        if(!(r in m) || top[r]>m[r]) m[r] = top[r];
+        if(had && (!(r in m) || top[r].tot>m[r]))
+          events.push({ k:e.k, name:e.name, w:top[r].tot, bw:top[r].bw, add:top[r].add, r:+r, d:w.date });
+        if(!(r in m) || top[r].tot>m[r]) m[r] = top[r].tot;
       }
     }
   }
@@ -2235,7 +2229,7 @@ function prFeedHtml(){
     `<div class="prrow" onclick="openExDetailByKey('${ev.k}')">
       <span class="prbadge">${ev.r}RM</span>
       <div class="pri"><div class="prn">${esc(exName(ev.k, ev.name))}</div>
-        <div class="prd">${daysAgoStr(ev.d)}</div></div>
+        <div class="prd">${ev.bw!=null?`(${bwSplit(ev.bw, ev.add)}) · `:''}${daysAgoStr(ev.d)}</div></div>
       <span class="prv">${wu(ev.w,true)} × ${ev.r}</span>
     </div>`).join('') + `</div>`;
 }
@@ -2710,6 +2704,7 @@ function doImport(){
       d.s.templates.forEach(tp=>{ if(!tp.folderId) tp.folderId=fid; });
     }
     d.s.folders.forEach(f=>{ if(typeof f.pinned==='undefined') f.pinned=true; });
+    if(!Array.isArray(d.s.trackedLifts)) delete d.s.trackedLifts; /* keep the [] default */
     S = Object.assign(defaultState(), d.s, { active:null });
     save(); applyTheme(); closeModal();
     go('home');
