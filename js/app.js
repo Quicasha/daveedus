@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.9.1'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.9.2'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -75,7 +75,8 @@ const I18N = {
     trackDelta30:'per 30 d.',
     prTitle:'Nauji rekordai', prEmpty:'Rekordai atsiras po kelių treniruočių.',
     dlBtn:'Deload',
-    dlStartConfirm:'Pradėti deload ciklą? Kiekvienai treniruotei po vieną lengvą praėjimą (~65 % svoriai, setai nesiskaito į rekordus), skaitliukai prasidės iš naujo. Praėjus visas treniruotes deload baigsis pats — arba gali baigti anksčiau.',
+    dlStartConfirm:'Pradėti „{n}“ deload ciklą? Kiekvienai treniruotei po vieną lengvą praėjimą (~65 % svoriai, setai nesiskaito į rekordus), skaitliukai prasidės iš naujo. Praėjus visas treniruotes deload baigsis pats — arba gali baigti anksčiau.',
+    mainSet:'Pagrindinė programa: {n} ★', mainTitle:'Pagrindinė programa',
     dlEndConfirm:'Baigti deload anksčiau?',
     dlOn:'Deload pradėtas 🧘',
     dlDone:'Deload ciklas baigtas 💪',
@@ -182,7 +183,8 @@ const I18N = {
     trackDelta30:'in 30 d',
     prTitle:'Recent records', prEmpty:'Records will show up after a few workouts.',
     dlBtn:'Deload',
-    dlStartConfirm:'Start a deload cycle? One light pass per workout (~65% weights, sets do not count toward records), the counters restart. It ends by itself once every workout is done — or end it early anytime.',
+    dlStartConfirm:'Start a “{n}” deload cycle? One light pass per workout (~65% weights, sets do not count toward records), the counters restart. It ends by itself once every workout is done — or end it early anytime.',
+    mainSet:'Main program: {n} ★', mainTitle:'Main program',
     dlEndConfirm:'End the deload early?',
     dlOn:'Deload started 🧘',
     dlDone:'Deload cycle complete 💪',
@@ -266,7 +268,7 @@ function defaultState(){
   return { lang:'en', unit:'kg', theme:'auto', keepAwake:true, lastBackup:0, bakSnooze:0, mig13:true,
            folders:[{ id:fid, name:'Upper / Lower', open:true, pinned:true }],
            customEx:[], templates:seedTemplates(fid), history:[], weights:[], active:null,
-           trackedLifts:[], deloads:[],
+           trackedLifts:[], deloads:[], mainFolder:null,
            plates:{ kg:PLATE_DEF.kg.slice(), lb:PLATE_DEF.lb.slice() } };
 }
 /* validate + migrate a raw state object; returns null if unusable */
@@ -290,6 +292,7 @@ function hydrate(s){
   if(!Array.isArray(s.deloads)) s.deloads = [];
   s.deloads = s.deloads.filter(d=>d && typeof d.s==='number' && typeof d.e==='number');
   s.deloads.forEach(d=>{ if(!Array.isArray(d.tpls)) d.tpls=[]; if(!Array.isArray(d.done)) d.done=[]; });
+  if(typeof s.mainFolder!=='string') s.mainFolder = null;
   if(!s.plates || !Array.isArray(s.plates.kg) || !Array.isArray(s.plates.lb)){
     s.plates = { kg:PLATE_DEF.kg.slice(), lb:PLATE_DEF.lb.slice() };
   }
@@ -569,7 +572,8 @@ const ACT_ICONS = {
   restore:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3 8a9 9 0 1 1-1 5"/></svg>',
   note:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
   scale:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.5"/><path d="M8.2 8.5h7.6L18 20a1 1 0 0 1-1 1.2H7A1 1 0 0 1 6 20z"/></svg>',
-  more:'<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>'
+  more:'<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>',
+  star:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.7 5.6 6.1.8-4.5 4.3 1.1 6L12 16.8 6.6 19.7l1.1-6L3.2 9.4l6.1-.8z"/></svg>'
 };
 function renderTabbar(){
   const tabs = [
@@ -635,6 +639,9 @@ function htmlHome(){
   const showFolders = pinned.length ? pinned : S.folders;
   /* workout + full-cycle counters since the last deload — the "when to deload" gauge */
   const counts = tplCounts();
+  const mainId = mainFolderId();
+  /* the main-program star only matters when there is a choice */
+  const multi = showFolders.filter(f=>S.templates.some(x=>x.folderId===f.id)).length > 1;
   const cards = showFolders.map(f=>{
     const tpls = S.templates.filter(x=>x.folderId===f.id);
     if(!tpls.length) return '';
@@ -656,7 +663,8 @@ function htmlHome(){
     }).join('');
     return `<div class="splitcard">
       <div class="sphead" onclick="openSplit('${f.id}')"><span class="sphn">${esc(f.name)} ›</span>
-        ${cycles?`<span class="cyc" title="${t('dlCycles')}">${cycles}×</span>`:''}</div>${rows}</div>`;
+        ${cycles?`<span class="cyc" title="${t('dlCycles')}">${cycles}×</span>`:''}
+        ${multi?`<button class="mainbtn${f.id===mainId?' on':''}" onclick="event.stopPropagation();setMainFolder('${f.id}')" aria-label="${t('mainTitle')}">${ACT_ICONS.star}</button>`:''}</div>${rows}</div>`;
   }).filter(Boolean);
   if(cards.length){
     h += `<h2 class="sec" style="display:flex;align-items:center"><span style="flex:1">${t('homeTemplates')}</span>
@@ -699,6 +707,21 @@ function dlLastStart(){
   const d = S.deloads[S.deloads.length-1];
   return d ? d.s : 0;
 }
+/* MAIN program: the split deload (and future self-regulation features) anchors to.
+   User-picked among the pinned home cards; falls back to the first shown card. */
+function mainFolderId(){
+  const pinned = S.folders.filter(f=>f.pinned);
+  const pool = pinned.length ? pinned : S.folders;
+  if(S.mainFolder && pool.some(f=>f.id===S.mainFolder)) return S.mainFolder;
+  return pool.length ? pool[0].id : null;
+}
+function setMainFolder(id){
+  const f = S.folders.find(x=>x.id===id);
+  if(!f) return;
+  S.mainFolder = id;
+  save(); render();
+  toast(t('mainSet',{n:f.name}));
+}
 /* deload suggestion from a previous load (kg), rounded to the plate step;
    assisted (negative) loads are left alone — scaling them would make the set harder */
 function dlW(kg){
@@ -708,12 +731,12 @@ function dlW(kg){
 }
 function startDeload(){
   if(dlActive()) return;
-  /* scope = the split(s) shown on home: pinned programs (or all, when none pinned) */
-  const pinned = S.folders.filter(f=>f.pinned);
-  const scope = (pinned.length ? pinned : S.folders).map(f=>f.id);
-  const tpls = S.templates.filter(tp=>scope.includes(tp.folderId)).map(tp=>tp.id);
-  if(!tpls.length) return;
-  if(!confirm(t('dlStartConfirm'))) return;
+  /* scope = the MAIN program's workouts */
+  const fid = mainFolderId();
+  const f = S.folders.find(x=>x.id===fid);
+  const tpls = S.templates.filter(tp=>tp.folderId===fid).map(tp=>tp.id);
+  if(!f || !tpls.length) return;
+  if(!confirm(t('dlStartConfirm',{n:f.name}))) return;
   S.deloads.push({ s:Date.now(), e:0, tpls, done:[] });
   save(); render();
   toast(t('dlOn'));
@@ -2758,7 +2781,7 @@ function shareTpl(id){
 function copyBackup(){
   const payload = { t:'bak', s:{ lang:S.lang, theme:S.theme, keepAwake:S.keepAwake, plates:S.plates,
     folders:S.folders, customEx:S.customEx, templates:S.templates, history:S.history, weights:S.weights,
-    trackedLifts:S.trackedLifts, deloads:S.deloads } };
+    trackedLifts:S.trackedLifts, deloads:S.deloads, mainFolder:S.mainFolder } };
   S.lastBackup = Date.now();
   save();
   copyText(encodeShare(payload));
@@ -2825,6 +2848,7 @@ function doImport(){
     d.s.folders.forEach(f=>{ if(typeof f.pinned==='undefined') f.pinned=true; });
     if(!Array.isArray(d.s.trackedLifts)) delete d.s.trackedLifts; /* keep the [] default */
     if(!Array.isArray(d.s.deloads)) delete d.s.deloads;
+    if(typeof d.s.mainFolder!=='string') delete d.s.mainFolder;
     S = Object.assign(defaultState(), d.s, { active:null });
     save(); applyTheme(); closeModal();
     go('home');

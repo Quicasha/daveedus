@@ -157,6 +157,13 @@ h2.sec{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(
 .spcnt{flex:none; font-size:11px; font-weight:800; opacity:.5; font-variant-numeric:tabular-nums;}
 /* orange dot: this workout's deload pass is still due */
 .dldot{flex:none; width:7px; height:7px; border-radius:50%; background:var(--orange);}
+/* main-program star on split card headers */
+.mainbtn{flex:none; width:24px; height:24px; border:none; background:none; padding:0;
+  display:flex; align-items:center; justify-content:center; color:var(--ghost);}
+.mainbtn svg{width:15px; height:15px;}
+.mainbtn.on{color:var(--orange);}
+.mainbtn.on svg{fill:currentColor;}
+.mainbtn:active{opacity:.5;}
 /* deload: subtle section-header button, active banner, badges */
 .secbtn{border:none; background:var(--input); color:var(--dim); border-radius:8px;
   min-height:26px; padding:0 10px; font-size:11px; font-weight:800; letter-spacing:.5px; text-transform:uppercase;}
