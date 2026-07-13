@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.9.4'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.9.5'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -89,7 +89,7 @@ const I18N = {
     dlmSets:'Setai',
     dlmSetsAll:'Visi', dlmSetsHalf:'Perpus',
     dlmSetsHint:'„Perpus“ — pusė suplanuotų setų. Sportininkai deload metu apimtį dažniausiai mažina ~30–50 %.',
-    dlmLight:'Lengvi pratimai (< 20 kg) mažinami daugiausia iki ~80 % — izoliaciniams didelio sumažinimo nereikia.',
+    dlmLight:'Lengvi pratimai (< {n}) mažinami daugiausia iki ~80 % — izoliaciniams didelio sumažinimo nereikia.',
     dlmStart:'Pradėti deload',
     histMore:'Rodyti daugiau', bwLogNew:'+ Įvesti svorį',
     metricW:'Svoris', metricVol:'Apimtis', metric1RM:'~1RM',
@@ -97,7 +97,7 @@ const I18N = {
     saveDone:'Išsaugoti',
     bw:'Kūno svoris', bwLog:'Įrašyti', bwDel:'Ištrinti šį įrašą?',
     plates:'Svarelių kalkuliatorius', platesBar:'Grifas', platesSide:'Ant vienos pusės',
-    platesRem:'{n} kg pusėj netelpa iš standartinių svarelių', platesEmpty:'Tuščias grifas',
+    platesRem:'{n} {u} pusėj netelpa iš standartinių svarelių', platesEmpty:'Tuščias grifas',
     platesAvail:'Kokie svareliai yra salėje',
     superset:'Superset',
     codeBad:'Neteisingas kodas', copy:'Kopijuoti', copied:'Nukopijuota ✓',
@@ -107,7 +107,7 @@ const I18N = {
     exCreateSave:'Išsaugoti', exNameReq:'Įvesk pavadinimą',
     exBest:'Rekordas', exSessions:'Treniruotės', exLastDone:'Paskutinį kartą',
     exNoHistory:'Šio pratimo istorijos dar nėra',
-    chartTop:'geriausias setas (kg)', chartNoData:'Nėra duomenų',
+    chartTop:'geriausias setas ({u})', chartNoData:'Nėra duomenų',
     histEmpty:'Istorija tuščia — laikas treniruotis! Pasirink programą skiltyje „Treniruotė“.',
     histDel:'Ištrinti šią treniruotę iš istorijos?', histSets:'setai', histVolume:'apimtis',
     setTheme:'Tema', themeAuto:'Auto', themeDark:'Tamsi', themeLight:'Šviesi',
@@ -115,7 +115,7 @@ const I18N = {
     setBackup:'Atsarginė kopija', setBackupCopy:'Kopijuoti atsarginį kodą', setBackupLoad:'Įkelti atsarginį kodą',
     csvTitle:'CSV eksportas (analizei)',
     csvSets:'Treniruočių setai (CSV)', csvBw:'Kūno svoris (CSV)',
-    csvHint:'Viena eilutė = vienas setas. Svoriai kg, datos ISO, UTF-8 — tinka Excel / Google Sheets / Python.',
+    csvHint:'Viena eilutė = vienas setas. Svoriai {u}, datos ISO, UTF-8 — tinka Excel / Google Sheets / Python.',
     csvEmpty:'Dar nėra ką eksportuoti',
     bakHint:'Įklijuok atsarginį kodą — VISI dabartiniai duomenys bus pakeisti.',
     bakConfirm:'Atkurti duomenis iš kodo? Dabartiniai duomenys bus pakeisti.',
@@ -208,7 +208,7 @@ const I18N = {
     dlmSets:'Sets',
     dlmSetsAll:'All', dlmSetsHalf:'Half',
     dlmSetsHint:'“Half” plans half the sets. Athletes most often deload by cutting volume ~30–50%.',
-    dlmLight:'Light exercises (< 20 kg) are only trimmed to ~80% — isolation work needs little reduction.',
+    dlmLight:'Light exercises (< {n}) are only trimmed to ~80% — isolation work needs little reduction.',
     dlmStart:'Start deload',
     histMore:'Show more', bwLogNew:'+ Log weight',
     metricW:'Weight', metricVol:'Volume', metric1RM:'~1RM',
@@ -216,7 +216,7 @@ const I18N = {
     saveDone:'Save',
     bw:'Body weight', bwLog:'Log', bwDel:'Delete this entry?',
     plates:'Plate calculator', platesBar:'Bar', platesSide:'Per side',
-    platesRem:"{n} kg per side doesn't fit standard plates", platesEmpty:'Empty bar',
+    platesRem:"{n} {u} per side doesn't fit standard plates", platesEmpty:'Empty bar',
     platesAvail:'Plates available at the gym',
     superset:'Superset',
     codeBad:'Invalid code', copy:'Copy', copied:'Copied ✓',
@@ -226,7 +226,7 @@ const I18N = {
     exCreateSave:'Save', exNameReq:'Enter a name',
     exBest:'Best', exSessions:'Sessions', exLastDone:'Last done',
     exNoHistory:'No history for this exercise yet',
-    chartTop:'top set (kg)', chartNoData:'No data',
+    chartTop:'top set ({u})', chartNoData:'No data',
     histEmpty:'No history yet — time to train! Pick a template in the “Workout” tab.',
     histDel:'Delete this workout from history?', histSets:'sets', histVolume:'volume',
     setTheme:'Theme', themeAuto:'Auto', themeDark:'Dark', themeLight:'Light',
@@ -234,7 +234,7 @@ const I18N = {
     setBackup:'Backup', setBackupCopy:'Copy backup code', setBackupLoad:'Load backup code',
     csvTitle:'CSV export (for analysis)',
     csvSets:'Workout sets (CSV)', csvBw:'Body weight (CSV)',
-    csvHint:'One row = one set. Weights in kg, ISO dates, UTF-8 — ready for Excel / Google Sheets / Python.',
+    csvHint:'One row = one set. Weights in {u}, ISO dates, UTF-8 — ready for Excel / Google Sheets / Python.',
     csvEmpty:'Nothing to export yet',
     bakHint:'Paste a backup code — ALL current data will be replaced.',
     bakConfirm:'Restore data from code? Current data will be replaced.',
@@ -792,7 +792,7 @@ function renderDlm(){
       <button class="chip ${o.vol===0.5?'on':''}" onclick="V.dlm.vol=0.5; renderDlm()">${t('dlmSetsHalf')}</button>
     </div>
     <div style="color:var(--dim);font-size:12px;line-height:1.45;margin:0 4px 6px">${t('dlmSetsHint')}</div>
-    <div style="color:var(--ghost);font-size:12px;line-height:1.45;margin:12px 4px 0">⚖ ${t('dlmLight')}</div>`;
+    <div style="color:var(--ghost);font-size:12px;line-height:1.45;margin:12px 4px 0">${t('dlmLight',{n:S.unit==='lb'?'45 lb':'20 kg'})}</div>`;
 }
 function confirmDeload(){
   if(dlActive()){ closeModal(); return; }
@@ -2035,7 +2035,7 @@ function chartSVG(k, name, tplName, metric){
     : metric==='vol' ? t('metricVol')+' ('+unitL()+')'
     : metric==='1rm' ? t('metric1RM')+' ('+unitL()+')'
     : bwKind ? t('woAddCol')+' ('+unitL()+')'
-    : t('chartTop').replace('kg', unitL());
+    : t('chartTop',{u:unitL()});
   return lineChartSVG(pts, label, tm?'s':unitL());
 }
 /* tap on a chart point -> exact value with date (+ body weight at the time, if known) */
@@ -2724,7 +2724,7 @@ function renderPlates(){
   html += used.length
     ? `<div style="font-size:24px;font-weight:800;color:var(--accent-soft)">${used.map(fmtW).join(' + ')}</div>`
     : `<div style="font-size:16px;font-weight:700">${t('platesEmpty')}</div>`;
-  if(rem > 0) html += `<div style="margin-top:8px;font-size:13px;color:var(--orange);font-weight:600">${t('platesRem',{n:fmtW(rem)}).replace('kg',unitL())}</div>`;
+  if(rem > 0) html += `<div style="margin-top:8px;font-size:13px;color:var(--orange);font-weight:600">${t('platesRem',{n:fmtW(rem), u:unitL()})}</div>`;
   out.innerHTML = html;
 }
 
@@ -2743,8 +2743,8 @@ function htmlSettings(){
     <div class="setline">
       <span class="lb">${t('setLang')}</span>
       <div class="seg">
-        <button class="${S.lang==='en'?'on':''}" onclick="S.lang='en'; save(); render()">🇬🇧 EN</button>
-        <button class="${S.lang==='lt'?'on':''}" onclick="S.lang='lt'; save(); render()">🇱🇹 LT</button>
+        <button class="${S.lang==='en'?'on':''}" onclick="S.lang='en'; save(); render()">EN</button>
+        <button class="${S.lang==='lt'?'on':''}" onclick="S.lang='lt'; save(); render()">LT</button>
       </div>
     </div>
     <div class="setline">
@@ -2767,7 +2767,7 @@ function htmlSettings(){
   <h2 class="sec">${t('csvTitle')}</h2>
   <button class="btn" onclick="exportCSV('sets')">${ACT_ICONS.copy} ${t('csvSets')}</button>
   <button class="btn" onclick="exportCSV('bw')">${ACT_ICONS.scale} ${t('csvBw')}</button>
-  <div style="color:var(--dim);font-size:12px;line-height:1.45;margin:2px 6px 0">${t('csvHint')}</div>
+  <div style="color:var(--dim);font-size:12px;line-height:1.45;margin:2px 6px 0">${t('csvHint',{u:unitL()})}</div>
   <h2 class="sec">${t('protTitle')}</h2>
   <div class="card">
     <div class="setline">
@@ -2869,10 +2869,11 @@ function csvBuild(rows){
   return rows.map(r=>r.map(csvEsc).join(',')).join('\r\n');
 }
 function buildSetsCSV(){
+  const u = unitL(); /* export in the user's display unit; column names carry it */
   const rows = [['date','workout_name','deload','archived','duration_sec',
     'exercise','exercise_key','muscle_group','equipment','exercise_position','completion_order',
-    'set_number','set_type','is_time_exercise','weight_kg','reps_or_seconds',
-    'bodyweight_kg','total_kg','volume_kg','note']];
+    'set_number','set_type','is_time_exercise','weight_'+u,'reps_or_seconds',
+    'bodyweight_'+u,'total_'+u,'volume_'+u,'note']];
   for(let i=S.history.length-1; i>=0; i--){ /* oldest first — chronological for analysis */
     const w = S.history[i];
     w.exercises.forEach((e,ei)=>{
@@ -2883,16 +2884,17 @@ function buildSetsCSV(){
         const total = bw ? s.weight + (e.bw||0) : s.weight;
         rows.push([w.date, w.name, w.dl?1:0, w.arch?1:0, w.dur||'',
           e.name, e.k||'', info?info.g:'', info?info.e:'', ei+1, e.order||'',
-          si+1, type, tm?1:0, s.weight, s.reps,
-          (bw && e.bw!=null)?e.bw:'', total, tm?'':Math.round(total*s.reps*100)/100, e.note||'']);
+          si+1, type, tm?1:0, kg2u(s.weight), s.reps,
+          (bw && e.bw!=null)?kg2u(e.bw):'', kg2u(total),
+          tm?'':Math.round(kg2u(total)*s.reps*100)/100, e.note||'']);
       });
     });
   }
   return csvBuild(rows);
 }
 function buildBwCSV(){
-  const rows = [['date','weight_kg']];
-  for(let i=S.weights.length-1; i>=0; i--) rows.push([S.weights[i].date, S.weights[i].kg]);
+  const rows = [['date','weight_'+unitL()]];
+  for(let i=S.weights.length-1; i>=0; i--) rows.push([S.weights[i].date, kg2u(S.weights[i].kg)]);
   return csvBuild(rows);
 }
 /* iPhone PWA: prefer the share sheet (save to Files/AirDrop); fall back to a download link */
