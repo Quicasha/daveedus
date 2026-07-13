@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.7.9'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.8.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -64,13 +64,19 @@ const I18N = {
     setFail:'iki nesėkmės', setWarm:'apšilimas',
     exCreateMode:'Tipas', modeReps:'Kartai', modeTime:'Laikas (sek.)',
     histArch:'Archyvuoti', histUnarch:'Grąžinti', archTitle:'Archyvas',
-    statsCal:'Kalendorius', statsWeeks:'Treniruotės per savaitę', statsVolW:'Apimtis per savaitę (kg)',
-    statsMuscle:'Setai raumenų grupėms (per 7 d.)',
+    statsMuscle:'Raumenų balansas',
     statsWorkoutsPer:'Treniruotės', statsVolumePer:'Apimtis',
-    pdW:'Savaitė', pdM:'Mėnuo', pdY:'Metai', pd_w:'per savaitę', pd_m:'per mėnesį', pd_y:'per metus',
+    pdcW:'Sav', pdcM:'Mėn', pdcY:'Metai', pdAll:'Viskas',
+    pdFrom:'Nuo', pdTo:'Iki',
+    hs7w:'treniruotės · 7 d.', hs7v:'apimtis · 7 d.', hsGap:'vid. tarpas',
+    rhythmTitle:'Ritmas · 14 d.',
+    trackedTitle:'Sekami pratimai', trackAdd:'+ Sekti pratimą',
+    trackedEmpty:'Pasirink pratimus, kurių progresą nori matyti čia — pvz. spaudimą ir pritūpimus.',
+    trackedDup:'Šis pratimas jau sekamas',
+    trackDelta30:'per 30 d.',
+    prTitle:'Nauji rekordai', prEmpty:'Rekordai atsiras po kelių treniruočių.',
     histMore:'Rodyti daugiau', bwLogNew:'+ Įvesti svorį',
     metricW:'Svoris', metricVol:'Apimtis', metric1RM:'~1RM',
-    calDows:'Pr An Tr Kt Pn Št Sk',
     exMine:'Mano', exMineEmpty:'Dar nieko nedarei — pasirink „Visi“ ir pradėk!',
     saveDone:'Išsaugoti',
     bw:'Kūno svoris', bwLog:'Įrašyti', bwDel:'Ištrinti šį įrašą?',
@@ -157,13 +163,19 @@ const I18N = {
     setFail:'to failure', setWarm:'warm-up',
     exCreateMode:'Type', modeReps:'Reps', modeTime:'Time (sec)',
     histArch:'Archive', histUnarch:'Restore', archTitle:'Archive',
-    statsCal:'Calendar', statsWeeks:'Workouts per week', statsVolW:'Volume per week (kg)',
-    statsMuscle:'Sets per muscle group (last 7 d)',
+    statsMuscle:'Muscle balance',
     statsWorkoutsPer:'Workouts', statsVolumePer:'Volume',
-    pdW:'Week', pdM:'Month', pdY:'Year', pd_w:'per week', pd_m:'per month', pd_y:'per year',
+    pdcW:'Wk', pdcM:'Mo', pdcY:'Yr', pdAll:'All',
+    pdFrom:'From', pdTo:'To',
+    hs7w:'workouts · 7 d', hs7v:'volume · 7 d', hsGap:'avg gap',
+    rhythmTitle:'Rhythm · 14 d',
+    trackedTitle:'Tracked lifts', trackAdd:'+ Track a lift',
+    trackedEmpty:'Pick the lifts whose progress you want to see here — e.g. bench and squat.',
+    trackedDup:'This lift is already tracked',
+    trackDelta30:'in 30 d',
+    prTitle:'Recent records', prEmpty:'Records will show up after a few workouts.',
     histMore:'Show more', bwLogNew:'+ Log weight',
     metricW:'Weight', metricVol:'Volume', metric1RM:'~1RM',
-    calDows:'Mo Tu We Th Fr Sa Su',
     exMine:'Mine', exMineEmpty:'Nothing done yet — pick “All” and get started!',
     saveDone:'Save',
     bw:'Body weight', bwLog:'Log', bwDel:'Delete this entry?',
@@ -238,6 +250,7 @@ function defaultState(){
   return { lang:'en', unit:'kg', theme:'auto', keepAwake:true, lastBackup:0, bakSnooze:0, mig13:true,
            folders:[{ id:fid, name:'Upper / Lower', open:true, pinned:true }],
            customEx:[], templates:seedTemplates(fid), history:[], weights:[], active:null,
+           trackedLifts:[],
            plates:{ kg:PLATE_DEF.kg.slice(), lb:PLATE_DEF.lb.slice() } };
 }
 /* validate + migrate a raw state object; returns null if unusable */
@@ -256,6 +269,8 @@ function hydrate(s){
   s.mig13 = true;
   s.folders.forEach(f=>{ if(typeof f.pinned==='undefined') f.pinned = true; });
   if(!Array.isArray(s.weights)) s.weights = [];
+  if(!Array.isArray(s.trackedLifts)) s.trackedLifts = [];
+  s.trackedLifts = s.trackedLifts.filter(k=>typeof k==='string');
   if(!s.plates || !Array.isArray(s.plates.kg) || !Array.isArray(s.plates.lb)){
     s.plates = { kg:PLATE_DEF.kg.slice(), lb:PLATE_DEF.lb.slice() };
   }
@@ -340,8 +355,12 @@ function save(){
 /* view state (not persisted) */
 const V = { screen:'home', editTpl:null, viewFolder:null, exDetail:null, expanded:null,
             pickerCb:null, pickerQ:'', pickerG:'all', exQ:'', exG:'mine',
-            exTplFilter:'', exFilterNames:[], exMetric:'w', calOff:0, showArch:false,
-            statsPeriod:'w', histLimit:20 };
+            exTplFilter:'', exFilterNames:[], exMetric:'w', showArch:false,
+            histLimit:20,
+            /* per-chart period state: p = 'w'|'m'|'y'|'c' (charts), days|'all'|'c' (muscle/bw);
+               f/t = custom from–to as yyyy-mm-dd */
+            cp:{ wk:{p:'w',f:'',t:''}, vol:{p:'w',f:'',t:''},
+                 mus:{p:'7',f:'',t:''}, bw:{p:'90',f:'',t:''} } };
 
 /* exercise lookup: built-in DB + user's custom exercises */
 function exInfo(k){
@@ -494,7 +513,7 @@ function renderTopbar(){
     h = `<button class="iconbtn" onclick="go('program')">‹</button><h1>${f?esc(f.name):''}</h1>
          <button class="finishbtn" onclick="go('program')">✓ ${t('saveDone')}</button>`;
   }else if(V.screen==='exdetail'){
-    h = `<button class="iconbtn" onclick="go((V.exDetailFrom==='workout'&&S.active)?'workout':'exercises')">‹</button><h1>${esc(exName(V.exDetail, V.exDetailName))}</h1>`;
+    h = `<button class="iconbtn" onclick="go((V.exDetailFrom==='workout'&&S.active)?'workout':(V.exDetailFrom==='history'?'history':'exercises'))">‹</button><h1>${esc(exName(V.exDetail, V.exDetailName))}</h1>`;
   }else{
     const titles = { home:'Daveedus', program:t('tabProgram'), exercises:t('tabExercises'),
                      history:t('tabHistory'), settings:t('tabSettings') };
@@ -1721,8 +1740,9 @@ function openExDetailByKey(k){
   V.exMetric = 'w';
   const i = exInfo(k);
   V.exDetailName = i ? i.n : k;
-  /* back returns to wherever the detail was opened from (workout vs. browser) */
-  V.exDetailFrom = (V.screen==='workout' && S.active) ? 'workout' : 'exercises';
+  /* back returns to wherever the detail was opened from (workout / history / browser) */
+  V.exDetailFrom = (V.screen==='workout' && S.active) ? 'workout'
+                 : V.screen==='history' ? 'history' : 'exercises';
   closeModal();
   go('exdetail');
 }
@@ -1865,31 +1885,107 @@ function barChartSVG(data){ /* data = [{l:label, v:number}] */
   const W=360, H=150, padL=6, padR=6, padT=20, padB=20;
   const max = Math.max(1, ...data.map(d=>d.v));
   const bw = (W-padL-padR)/data.length;
+  const showVals = data.length<=16; /* value labels overlap once bars get thin */
   let out = '';
   data.forEach((d,i)=>{
     const bh = (H-padT-padB)*(d.v/max);
     const x = padL+i*bw, y = H-padB-bh;
-    out += `<rect x="${x+bw*0.16}" y="${d.v?y:H-padB-2}" width="${bw*0.68}" height="${Math.max(bh,2)}" rx="4" fill="${d.v?'var(--accent)':'var(--input)'}"/>`;
-    if(d.v) out += `<text x="${x+bw/2}" y="${y-5}" fill="var(--dim)" font-size="10" font-weight="700" text-anchor="middle">${d.v>=10000?Math.round(d.v/1000)+'k':d.v}</text>`;
-    out += `<text x="${x+bw/2}" y="${H-6}" fill="var(--ghost)" font-size="9" text-anchor="middle">${d.l}</text>`;
+    out += `<rect x="${x+bw*0.16}" y="${d.v?y:H-padB-2}" width="${bw*0.68}" height="${Math.max(bh,2)}" rx="${Math.min(4,bw*0.3)}" fill="${d.v?'var(--accent)':'var(--input)'}"/>`;
+    if(d.v && showVals) out += `<text x="${x+bw/2}" y="${y-5}" fill="var(--dim)" font-size="10" font-weight="700" text-anchor="middle">${d.v>=10000?Math.round(d.v/1000)+'k':d.v}</text>`;
+    if(d.l) out += `<text x="${x+bw/2}" y="${H-6}" fill="var(--ghost)" font-size="9" text-anchor="middle">${d.l}</text>`;
   });
   return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${out}</svg>`;
 }
-/* bucketed workout count + volume for the selected period (week / month / year) */
-function statsBuckets(){
-  const p = V.statsPeriod||'w';
+/* ---- per-chart period controls ---- */
+/* compact chips on a card header; opts = [[value,label],...]; withCustom adds ⋯ (from–to) */
+function pchipsHtml(cid, opts, withCustom){
+  const c = V.cp[cid];
+  let h = `<div class="pchips">` + opts.map(([v,lb])=>
+    `<button type="button" class="${c.p===v?'on':''}" onclick="setPd('${cid}','${v}')">${lb}</button>`).join('');
+  if(withCustom) h += `<button type="button" class="${c.p==='c'?'on':''}" onclick="setPd('${cid}','c')">⋯</button>`;
+  return h + `</div>`;
+}
+function setPd(cid, p){
+  const c = V.cp[cid];
+  c.p = p;
+  if(p==='c' && !c.f){ /* sensible starting range: last 30 days */
+    const d = new Date();
+    c.t = d.toISOString().slice(0,10);
+    d.setDate(d.getDate()-29);
+    c.f = d.toISOString().slice(0,10);
+  }
+  render();
+}
+function setPdD(cid, which, val){
+  if(val) V.cp[cid][which] = val;
+  render();
+}
+function rangeBarHtml(cid){
+  const c = V.cp[cid];
+  if(c.p!=='c') return '';
+  return `<div class="rangebar">
+    <label>${t('pdFrom')}<input type="date" value="${c.f}" max="${c.t||''}" onchange="setPdD('${cid}','f',this.value)"></label>
+    <label>${t('pdTo')}<input type="date" value="${c.t}" min="${c.f||''}" onchange="setPdD('${cid}','t',this.value)"></label>
+  </div>`;
+}
+/* custom from–to as [startDate, endDateExclusive]; null if incomplete/reversed */
+function customRange(c){
+  if(!c.f || !c.t) return null;
+  const s = new Date(c.f+'T00:00:00'), e = new Date(c.t+'T00:00:00');
+  e.setDate(e.getDate()+1);
+  return e>s ? [s,e] : null;
+}
+/* time buckets for a chart's period setting; bucket size auto-adapts on custom ranges */
+function bucketsFor(c){
   const loc = S.lang==='lt'?'lt-LT':'en-GB';
-  const now = new Date();
   const buckets = [];
-  const n = p==='y'?6:12;
+  if(c.p==='c'){
+    const r = customRange(c);
+    if(!r) return buckets;
+    const [s0,e0] = r;
+    const days = Math.round((e0-s0)/864e5);
+    if(days<=32){ /* daily bars */
+      const d = new Date(s0);
+      while(d<e0){
+        const nx = new Date(d); nx.setDate(nx.getDate()+1);
+        buckets.push({ s:d.getTime(), e:nx.getTime(), l:String(d.getDate()) });
+        d.setDate(d.getDate()+1);
+      }
+    }else if(days<=200){ /* weekly */
+      const d = new Date(s0);
+      while(d<e0){
+        const nx = new Date(d); nx.setDate(nx.getDate()+7);
+        buckets.push({ s:d.getTime(), e:Math.min(nx.getTime(),e0.getTime()),
+                       l:d.getDate()+'.'+String(d.getMonth()+1).padStart(2,'0') });
+        d.setDate(d.getDate()+7);
+      }
+    }else{ /* calendar months */
+      let y = s0.getFullYear(), m = s0.getMonth();
+      while(buckets.length<240){
+        const bs = new Date(y,m,1), be = new Date(y,m+1,1);
+        if(bs>=e0) break;
+        buckets.push({ s:Math.max(bs.getTime(),s0.getTime()), e:Math.min(be.getTime(),e0.getTime()),
+                       l:bs.toLocaleDateString(loc,{month:'short'}) });
+        m++; if(m>11){ m=0; y++; }
+      }
+    }
+    /* thin out labels so they stay readable with many bars */
+    if(buckets.length>14){
+      const step = Math.ceil(buckets.length/7);
+      buckets.forEach((b,i)=>{ if(i%step) b.l=''; });
+    }
+    return buckets;
+  }
+  const now = new Date();
+  const n = c.p==='y'?6:12;
   for(let i=n-1; i>=0; i--){
     let s, e, l;
-    if(p==='w'){
+    if(c.p==='w'){
       const day=(now.getDay()+6)%7;
       s=new Date(now); s.setHours(0,0,0,0); s.setDate(now.getDate()-day-7*i);
       e=new Date(s); e.setDate(s.getDate()+7);
       l=s.getDate()+'.'+String(s.getMonth()+1).padStart(2,'0');
-    }else if(p==='m'){
+    }else if(c.p==='m'){
       s=new Date(now.getFullYear(), now.getMonth()-i, 1);
       e=new Date(now.getFullYear(), now.getMonth()-i+1, 1);
       l=s.toLocaleDateString(loc,{month:'short'});
@@ -1900,6 +1996,10 @@ function statsBuckets(){
     }
     buckets.push({ s:s.getTime(), e:e.getTime(), l });
   }
+  return buckets;
+}
+/* one pass over history: workout count + volume per bucket */
+function aggBuckets(buckets){
   const wk = buckets.map(b=>({l:b.l, v:0})), vol = buckets.map(b=>({l:b.l, v:0}));
   for(const h of S.history){
     if(h.arch) continue;
@@ -1916,10 +2016,18 @@ function statsBuckets(){
   return { wk, vol };
 }
 function muscleBalanceHtml(){
-  const cutoff = Date.now() - 7*864e5;
+  const c = V.cp.mus;
+  let from, to = Infinity;
+  if(c.p==='c'){
+    const r = customRange(c);
+    if(!r) return `<div class="empty" style="padding:14px">${t('chartNoData')}</div>`;
+    from = r[0].getTime(); to = r[1].getTime();
+  }else from = Date.now() - (+c.p||7)*864e5;
   const counts = {};
   for(const h of S.history){
-    if(h.arch || new Date(h.date).getTime() < cutoff) continue;
+    if(h.arch) continue;
+    const ts = new Date(h.date).getTime();
+    if(ts<from || ts>=to) continue;
     for(const e of h.exercises){
       const info = exInfo(e.k);
       const g = info ? info.g : 'other';
@@ -1935,61 +2043,245 @@ function muscleBalanceHtml(){
     <span class="mb-val">${n}</span>
   </div>`).join('');
 }
-function calHtml(){
-  const base = new Date();
-  base.setDate(1);
-  base.setMonth(base.getMonth() + (V.calOff||0));
-  const y = base.getFullYear(), m = base.getMonth();
-  const startDow = (new Date(y,m,1).getDay()+6)%7; /* Monday = 0 */
-  const dim = new Date(y, m+1, 0).getDate();
-  const trained = new Set();
+
+/* ---- summary strip: rolling 7-day windows (the user does not train by calendar weeks) ---- */
+function histSummaryHtml(){
+  const now = Date.now(), D = 864e5;
+  let c7=0, v7=0, cP=0, vP=0;
+  const days = new Set();
   for(const h of S.history){
     if(h.arch) continue;
-    const d = new Date(h.date);
-    if(d.getFullYear()===y && d.getMonth()===m) trained.add(d.getDate());
+    const ts = new Date(h.date).getTime();
+    if(ts>=now-7*D){
+      c7++;
+      v7 += h.exercises.reduce((a,ex)=>a+ex.sets.filter(x=>!x.warm).reduce((b,x)=>b+x.weight*x.reps,0),0);
+    }else if(ts>=now-14*D){
+      cP++;
+      vP += h.exercises.reduce((a,ex)=>a+ex.sets.filter(x=>!x.warm).reduce((b,x)=>b+x.weight*x.reps,0),0);
+    }
+    const d = new Date(h.date); d.setHours(0,0,0,0);
+    days.add(d.getTime());
   }
-  const now = new Date();
-  const isThisMonth = now.getFullYear()===y && now.getMonth()===m;
-  const monthName = base.toLocaleDateString(S.lang==='lt'?'lt-LT':'en-GB', {month:'long', year:'numeric'});
-  let cells = t('calDows').split(' ').map(d=>`<div class="c dow">${d}</div>`).join('');
-  for(let i=0;i<startDow;i++) cells += `<div class="c"></div>`;
-  for(let d=1; d<=dim; d++){
-    const cls = (trained.has(d)?' on':'') + (isThisMonth && d===now.getDate()?' today':'');
-    cells += `<div class="c${cls}">${d}</div>`;
+  /* rhythm: average gap between the most recent training days */
+  const dl = [...days].sort((a,b)=>b-a).slice(0,7);
+  let gap = null;
+  if(dl.length>=2){
+    let sum = 0;
+    for(let i=0;i<dl.length-1;i++) sum += (dl[i]-dl[i+1])/D;
+    gap = Math.round(sum/(dl.length-1)*10)/10;
   }
-  return `<div class="calhead">
-      <button class="minibtn" onclick="V.calOff=Math.max((V.calOff||0)-1,-36); render()">‹</button>
-      <span>${esc(monthName)}</span>
-      <button class="minibtn" ${V.calOff>=0?'style="visibility:hidden"':''} onclick="V.calOff=Math.min((V.calOff||0)+1,0); render()">›</button>
-    </div>
-    <div class="cal">${cells}</div>`;
+  const fmtV = v => { v = Math.round(kg2u(v)); return v>=10000 ? Math.round(v/100)/10+'k' : String(v); };
+  const dltN = (a,b) => a===b ? '' :
+    `<span class="dlt ${a>b?'up':'down'}">${a>b?'▲':'▼'}${Math.abs(a-b)}</span>`;
+  const dltA = (a,b) => a===b ? '' :
+    `<span class="dlt ${a>b?'up':'down'}">${a>b?'▲':'▼'}</span>`;
+  return `<div class="statrow">
+    <div class="stat"><div class="v">${c7}${dltN(c7,cP)}</div><div class="l">${t('hs7w')}</div></div>
+    <div class="stat"><div class="v">${fmtV(v7)}${dltA(v7,vP)}</div><div class="l">${t('hs7v')} (${unitL()})</div></div>
+    <div class="stat"><div class="v">${gap!=null?fmtW(gap)+' d.':'—'}</div><div class="l">${t('hsGap')}</div></div>
+  </div>`;
+}
+
+/* ---- rhythm strip: the last 14 days as one row (replaces the month calendar) ---- */
+function rhythmHtml(){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const map = {};
+  for(const h of S.history){
+    if(h.arch) continue;
+    const d = new Date(h.date); d.setHours(0,0,0,0);
+    const ts = d.getTime();
+    if(!map[ts]) map[ts] = { id:h.id, ltr:(h.name||'').trim().charAt(0).toUpperCase()||'✓', n:1 };
+    else map[ts].n++;
+  }
+  let cells = '';
+  for(let i=13; i>=0; i--){
+    const d = new Date(today); d.setDate(d.getDate()-i);
+    const w = map[d.getTime()];
+    const td = i===0 ? ' today' : '';
+    cells += w
+      ? `<button class="rc on${td}" onclick="rhythmTap('${w.id}')">${esc(w.ltr)}${w.n>1?'⁺':''}</button>`
+      : `<span class="rc${td}"></span>`;
+  }
+  return `<div class="chead" style="margin-bottom:8px"><span class="ct">${t('rhythmTitle')}</span></div>
+    <div class="rhythm">${cells}</div>`;
+}
+function rhythmTap(id){
+  const idx = S.history.filter(w=>!w.arch).findIndex(w=>w.id===id);
+  if(idx>=(V.histLimit||20)) V.histLimit = idx+5; /* make sure it is on the page */
+  V.expanded = id;
+  render();
+  setTimeout(()=>{
+    const el = document.getElementById('hw-'+id);
+    if(el) el.scrollIntoView({ block:'center' });
+  }, 60);
+}
+
+/* ---- tracked lifts: user-picked exercises with sparkline + Δ vs ~30 d ago ---- */
+/* chronological top-set per session (added load for bodyweight moves, seconds for time moves) */
+function trackSeries(k){
+  const info = exInfo(k);
+  const nm = (info?info.n:k).trim().toLowerCase();
+  const tm = isTimeEx(k);
+  const pts = [];
+  for(let i=S.history.length-1; i>=0; i--){
+    const w = S.history[i];
+    if(w.arch) continue;
+    for(const e of w.exercises){
+      if(e.k===k || (e.name && e.name.trim().toLowerCase()===nm)){
+        const work = e.sets.filter(s=>!s.warm && !s.drop);
+        if(!work.length) continue;
+        pts.push({ ts:new Date(w.date).getTime(), v:Math.max(...work.map(s=>tm?s.reps:s.weight)) });
+      }
+    }
+  }
+  return pts;
+}
+function sparkSVG(vals){
+  if(vals.length<2) return '';
+  const W=120, H=36, p=4;
+  let min = Math.min(...vals), max = Math.max(...vals);
+  if(min===max){ min-=1; max+=1; }
+  const X = i => p + i*(W-2*p)/(vals.length-1);
+  const Y = v => p + (max-v)*(H-2*p)/(max-min);
+  const line = vals.map((v,i)=>`${Math.round(X(i)*10)/10},${Math.round(Y(v)*10)/10}`).join(' ');
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+    <polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${X(vals.length-1)}" cy="${Y(vals[vals.length-1])}" r="3" fill="var(--accent)"/></svg>`;
+}
+function trackedHtml(){
+  let h = `<h2 class="sec">${t('trackedTitle')}</h2>`;
+  if(!S.trackedLifts.length)
+    h += `<div class="empty" style="padding:16px 20px 6px">${t('trackedEmpty')}</div>`;
+  h += S.trackedLifts.map(k=>{
+    const info = exInfo(k);
+    const name = info ? info.n : k;
+    const tm = isTimeEx(k), bwKind = isBwEx(k);
+    const pts = trackSeries(k);
+    const last = pts.length ? pts[pts.length-1] : null;
+    /* Δ vs the session closest to 30 days back (falls back to the first ever) */
+    let delta = null;
+    if(pts.length>=2){
+      const cut = Date.now() - 30*864e5;
+      let ref = pts[0];
+      for(const p of pts){ if(p.ts<=cut) ref = p; else break; }
+      if(ref!==last) delta = last.v - ref.v;
+    }
+    const fmtVal = v => tm ? v+' s' : bwKind ? (v ? (v>0?'+':'')+wu(v,true) : 'BW') : wu(v,true);
+    const dHtml = (delta==null || delta===0) ? '' :
+      `<span class="tkdelta ${delta>0?'up':'down'}">${delta>0?'▲':'▼'} ${tm?Math.abs(delta)+' s':wu(Math.abs(delta),true)} · ${t('trackDelta30')}</span>`;
+    return `<div class="card trackcard" onclick="openExDetailByKey('${k}')">
+      <div class="tkhead"><span class="tkname">${esc(name)}</span>
+        <button class="iconbtn2" onclick="event.stopPropagation();trackRemove('${k}')" aria-label="stop tracking">${ACT_ICONS.x}</button></div>
+      <div class="tkrow">
+        <div class="tkleft"><div class="tkval">${last?fmtVal(last.v):'—'}</div>${dHtml}</div>
+        ${sparkSVG(pts.slice(-16).map(p=>p.v))}
+      </div>
+    </div>`;
+  }).join('');
+  h += `<button class="btn ghostbtn" onclick="trackAdd()">${t('trackAdd')}</button>`;
+  return h;
+}
+function trackAdd(){
+  openPicker(info=>{
+    if(S.trackedLifts.includes(info.id)){ toast(t('trackedDup')); return; }
+    S.trackedLifts.push(info.id);
+    save(); closeModal(); render();
+  });
+}
+function trackRemove(k){
+  S.trackedLifts = S.trackedLifts.filter(x=>x!==k);
+  save(); render();
+}
+
+/* ---- PR feed: rep-specific records ("the record at those reps") ---- */
+/* one pass oldest→newest; a PR = set beating the best earlier weight at that exact rep
+   count. The exercise's first-ever session only sets the baseline (no PR flood). */
+function prEvents(){
+  const best = {}, seen = {};
+  const events = [];
+  for(let i=S.history.length-1; i>=0; i--){
+    const w = S.history[i];
+    if(w.arch) continue;
+    for(const e of w.exercises){
+      if(!e.k || isTimeEx(e.k)) continue; /* seconds are not reps */
+      const work = e.sets.filter(s=>!s.warm && !s.drop && s.reps>0);
+      if(!work.length) continue;
+      const m = best[e.k] || (best[e.k]={});
+      const had = seen[e.k]; seen[e.k] = 1;
+      const add = isBwEx(e.k) ? (e.bw||0) : 0; /* records use TOTAL load */
+      const top = {};
+      for(const s of work){
+        const tot = s.weight + add;
+        if(!(s.reps in top) || tot>top[s.reps]) top[s.reps] = tot;
+      }
+      for(const r in top){
+        if(had && (!(r in m) || top[r]>m[r]))
+          events.push({ k:e.k, name:e.name, w:top[r], r:+r, d:w.date });
+        if(!(r in m) || top[r]>m[r]) m[r] = top[r];
+      }
+    }
+  }
+  return events.slice(-8).reverse();
+}
+function prFeedHtml(){
+  const evs = prEvents();
+  let h = `<h2 class="sec">🏆 ${t('prTitle')}</h2>`;
+  if(!evs.length) return h + `<div class="empty" style="padding:16px 20px">${t('prEmpty')}</div>`;
+  return h + `<div class="card" style="padding:5px 16px">` + evs.map(ev=>
+    `<div class="prrow" onclick="openExDetailByKey('${ev.k}')">
+      <span class="prbadge">${ev.r}RM</span>
+      <div class="pri"><div class="prn">${esc(exName(ev.k, ev.name))}</div>
+        <div class="prd">${daysAgoStr(ev.d)}</div></div>
+      <span class="prv">${wu(ev.w,true)} × ${ev.r}</span>
+    </div>`).join('') + `</div>`;
 }
 
 /* ======================= HISTORY ======================= */
 function htmlHistory(){
-  const p = V.statsPeriod||'w';
   let h = '<div style="height:8px"></div>';
-  /* calendar */
-  h += `<h2 class="sec" style="margin-top:8px">${t('statsCal')}</h2>
-    <div class="card">${calHtml()}</div>`;
-  /* period toggle for the trend charts */
-  h += `<div class="segmented" style="margin:16px 0 4px">
-      ${[['w','pdW'],['m','pdM'],['y','pdY']].map(([v,lb])=>
-        `<button type="button" class="seg ${p===v?'on':''}" onclick="V.statsPeriod='${v}'; render()">${t(lb)}</button>`).join('')}
-    </div>`;
-  const sb = statsBuckets();
-  h += `<h2 class="sec">${t('statsWorkoutsPer')} ${t('pd_'+p)}</h2>
-    <div class="card">${barChartSVG(sb.wk)}</div>
-    <h2 class="sec">${t('statsVolumePer')} ${t('pd_'+p)} (${unitL()})</h2>
-    <div class="card">${barChartSVG(sb.vol)}</div>
-    <h2 class="sec">${t('statsMuscle')}</h2>
-    <div class="card">${muscleBalanceHtml()}</div>`;
-  /* body weight — graph + recent entries; logging via the quick modal */
-  h += `<h2 class="sec" style="margin-top:8px">${t('bw')}</h2>
+  /* 1. rolling summary strip (slot reserved above for a future deload suggestion card) */
+  h += histSummaryHtml();
+  /* 2. rhythm strip — the self-regulated U/L/rest pattern at a glance */
+  h += `<div class="card" style="margin-top:10px">${rhythmHtml()}</div>`;
+  /* 3. tracked lifts */
+  h += trackedHtml();
+  /* 4. PR feed */
+  h += prFeedHtml();
+  /* 5. trend charts, each with its own compact period control */
+  const wk = aggBuckets(bucketsFor(V.cp.wk)).wk;
+  const vol = aggBuckets(bucketsFor(V.cp.vol)).vol;
+  const pd3 = [['w',t('pdcW')],['m',t('pdcM')],['y',t('pdcY')]];
+  h += `<div class="card" style="margin-top:24px">
+      <div class="chead"><span class="ct">${t('statsWorkoutsPer')}</span>${pchipsHtml('wk',pd3,true)}</div>
+      ${rangeBarHtml('wk')}${barChartSVG(wk)}
+    </div>
     <div class="card">
-      <button class="btn ghostbtn" style="margin-bottom:12px" onclick="openBwModal()">${t('bwLogNew')}</button>
-      ${S.weights.length?`<div>${lineChartSVG(S.weights.slice(0,40).slice().reverse().map(x=>({d:x.date,w:kg2u(x.kg)})), unitL(), unitL())}</div>`
+      <div class="chead"><span class="ct">${t('statsVolumePer')} (${unitL()})</span>${pchipsHtml('vol',pd3,true)}</div>
+      ${rangeBarHtml('vol')}${barChartSVG(vol)}
+    </div>
+    <div class="card">
+      <div class="chead"><span class="ct">${t('statsMuscle')}</span>${pchipsHtml('mus',[['7','7 d.'],['30','30 d.']],true)}</div>
+      ${rangeBarHtml('mus')}${muscleBalanceHtml()}
+    </div>`;
+  /* 6. body weight — graph + recent entries; logging via the quick modal */
+  const cbw = V.cp.bw;
+  let ws = S.weights;
+  if(cbw.p!=='all'){
+    const cut = Date.now() - (+cbw.p)*864e5;
+    ws = ws.filter(x=>new Date(x.date).getTime()>=cut);
+  }
+  /* chart caps at 24 points — downsample evenly so long ranges keep their shape */
+  let bwPts = ws.slice().reverse().map(x=>({d:x.date,w:kg2u(x.kg)}));
+  if(bwPts.length>24){
+    const out = [];
+    for(let i=0;i<24;i++) out.push(bwPts[Math.round(i*(bwPts.length-1)/23)]);
+    bwPts = out;
+  }
+  h += `<div class="card">
+      <div class="chead"><span class="ct">${t('bw')}</span>${pchipsHtml('bw',[['30','30 d.'],['90','90 d.'],['all',t('pdAll')]],false)}</div>
+      ${bwPts.length?`<div>${lineChartSVG(bwPts, unitL(), unitL())}</div>`
         : `<div class="empty" style="padding:6px 0 12px">${t('chartNoData')}</div>`}
+      <button class="btn ghostbtn" style="margin-top:10px" onclick="openBwModal()">${t('bwLogNew')}</button>
       ${S.weights.slice(0,5).map(x=>`<div style="display:flex;gap:8px;padding:6px 0;align-items:center;font-size:14px">
         <span style="color:var(--dim);flex:1">${fmtDate(x.date)}</span>
         <span style="font-weight:700">${wu(x.kg,true)}</span>
@@ -2029,7 +2321,7 @@ function histRowHtml(w){
         </div>
       </div></div>`;
   }
-  return `<div class="card histrow" style="${w.arch?'opacity:.65':''}" onclick="V.expanded=V.expanded==='${w.id}'?null:'${w.id}'; render()">
+  return `<div class="card histrow" id="hw-${w.id}" style="${w.arch?'opacity:.65':''}" onclick="V.expanded=V.expanded==='${w.id}'?null:'${w.id}'; render()">
     <div class="hd">
       <span class="dt">${fmtDate(w.date)}</span>
       <span class="dn">${esc(w.name)}</span>
@@ -2348,7 +2640,8 @@ function shareTpl(id){
 }
 function copyBackup(){
   const payload = { t:'bak', s:{ lang:S.lang, theme:S.theme, keepAwake:S.keepAwake, plates:S.plates,
-    folders:S.folders, customEx:S.customEx, templates:S.templates, history:S.history, weights:S.weights } };
+    folders:S.folders, customEx:S.customEx, templates:S.templates, history:S.history, weights:S.weights,
+    trackedLifts:S.trackedLifts } };
   S.lastBackup = Date.now();
   save();
   copyText(encodeShare(payload));
