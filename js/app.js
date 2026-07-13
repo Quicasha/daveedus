@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.9.3'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.9.4'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -113,6 +113,10 @@ const I18N = {
     setTheme:'Tema', themeAuto:'Auto', themeDark:'Tamsi', themeLight:'Šviesi',
     setLang:'Kalba', setAwake:'Neužmigdyti ekrano',
     setBackup:'Atsarginė kopija', setBackupCopy:'Kopijuoti atsarginį kodą', setBackupLoad:'Įkelti atsarginį kodą',
+    csvTitle:'CSV eksportas (analizei)',
+    csvSets:'Treniruočių setai (CSV)', csvBw:'Kūno svoris (CSV)',
+    csvHint:'Viena eilutė = vienas setas. Svoriai kg, datos ISO, UTF-8 — tinka Excel / Google Sheets / Python.',
+    csvEmpty:'Dar nėra ką eksportuoti',
     bakHint:'Įklijuok atsarginį kodą — VISI dabartiniai duomenys bus pakeisti.',
     bakConfirm:'Atkurti duomenis iš kodo? Dabartiniai duomenys bus pakeisti.',
     bakDone:'Duomenys atkurti ✓',
@@ -228,6 +232,10 @@ const I18N = {
     setTheme:'Theme', themeAuto:'Auto', themeDark:'Dark', themeLight:'Light',
     setLang:'Language', setAwake:'Keep screen awake',
     setBackup:'Backup', setBackupCopy:'Copy backup code', setBackupLoad:'Load backup code',
+    csvTitle:'CSV export (for analysis)',
+    csvSets:'Workout sets (CSV)', csvBw:'Body weight (CSV)',
+    csvHint:'One row = one set. Weights in kg, ISO dates, UTF-8 — ready for Excel / Google Sheets / Python.',
+    csvEmpty:'Nothing to export yet',
     bakHint:'Paste a backup code — ALL current data will be replaced.',
     bakConfirm:'Restore data from code? Current data will be replaced.',
     bakDone:'Data restored ✓',
@@ -2756,6 +2764,10 @@ function htmlSettings(){
   <h2 class="sec">${t('setBackup')}</h2>
   <button class="btn" onclick="copyBackup()">${ACT_ICONS.share} ${t('setBackupCopy')}</button>
   <button class="btn" onclick="openImportModal('bak')">${ACT_ICONS.dl} ${t('setBackupLoad')}</button>
+  <h2 class="sec">${t('csvTitle')}</h2>
+  <button class="btn" onclick="exportCSV('sets')">${ACT_ICONS.copy} ${t('csvSets')}</button>
+  <button class="btn" onclick="exportCSV('bw')">${ACT_ICONS.scale} ${t('csvBw')}</button>
+  <div style="color:var(--dim);font-size:12px;line-height:1.45;margin:2px 6px 0">${t('csvHint')}</div>
   <h2 class="sec">${t('protTitle')}</h2>
   <div class="card">
     <div class="setline">
@@ -2846,6 +2858,64 @@ function copyBackup(){
   S.lastBackup = Date.now();
   save();
   copyText(encodeShare(payload));
+}
+
+/* ---- CSV export (tidy data for analysis: one row = one set, kg, ISO dates) ---- */
+function csvEsc(v){
+  v = (v==null) ? '' : String(v);
+  return /[",\n\r]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v;
+}
+function csvBuild(rows){
+  return rows.map(r=>r.map(csvEsc).join(',')).join('\r\n');
+}
+function buildSetsCSV(){
+  const rows = [['date','workout_name','deload','archived','duration_sec',
+    'exercise','exercise_key','muscle_group','equipment','exercise_position','completion_order',
+    'set_number','set_type','is_time_exercise','weight_kg','reps_or_seconds',
+    'bodyweight_kg','total_kg','volume_kg','note']];
+  for(let i=S.history.length-1; i>=0; i--){ /* oldest first — chronological for analysis */
+    const w = S.history[i];
+    w.exercises.forEach((e,ei)=>{
+      const info = exInfo(e.k);
+      const tm = isTimeEx(e.k), bw = isBwEx(e.k);
+      e.sets.forEach((s,si)=>{
+        const type = s.warm ? 'warmup' : s.drop ? 'dropset' : s.fail ? 'failure' : 'work';
+        const total = bw ? s.weight + (e.bw||0) : s.weight;
+        rows.push([w.date, w.name, w.dl?1:0, w.arch?1:0, w.dur||'',
+          e.name, e.k||'', info?info.g:'', info?info.e:'', ei+1, e.order||'',
+          si+1, type, tm?1:0, s.weight, s.reps,
+          (bw && e.bw!=null)?e.bw:'', total, tm?'':Math.round(total*s.reps*100)/100, e.note||'']);
+      });
+    });
+  }
+  return csvBuild(rows);
+}
+function buildBwCSV(){
+  const rows = [['date','weight_kg']];
+  for(let i=S.weights.length-1; i>=0; i--) rows.push([S.weights[i].date, S.weights[i].kg]);
+  return csvBuild(rows);
+}
+/* iPhone PWA: prefer the share sheet (save to Files/AirDrop); fall back to a download link */
+async function exportCSV(kind){
+  const sets = kind==='sets';
+  if(sets ? !S.history.length : !S.weights.length){ toast(t('csvEmpty')); return; }
+  const name = 'daveedus-' + (sets?'sets':'bodyweight') + '-' + new Date().toISOString().slice(0,10) + '.csv';
+  const text = '﻿' + (sets ? buildSetsCSV() : buildBwCSV()); /* BOM so Excel reads UTF-8 */
+  const blob = new Blob([text], { type:'text/csv;charset=utf-8' });
+  try{
+    const file = new File([blob], name, { type:'text/csv' });
+    if(navigator.canShare && navigator.canShare({ files:[file] })){
+      await navigator.share({ files:[file] });
+      return;
+    }
+  }catch(e){ if(e && e.name==='AbortError') return; /* user closed the sheet */ }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
 }
 /* nag when there is real data but no recent backup (localStorage is fragile on iOS) */
 function needBackupReminder(){
