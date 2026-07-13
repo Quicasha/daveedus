@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.8.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.8.1'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -69,7 +69,7 @@ const I18N = {
     pdcW:'Sav', pdcM:'Mėn', pdcY:'Metai', pdAll:'Viskas',
     pdFrom:'Nuo', pdTo:'Iki',
     hs7w:'treniruotės · 7 d.', hs7v:'apimtis · 7 d.', hsGap:'vid. tarpas',
-    rhythmTitle:'Ritmas · 14 d.',
+    rhythmTitle:'Ritmas',
     trackedTitle:'Sekami pratimai', trackAdd:'+ Sekti pratimą',
     trackedEmpty:'Pasirink pratimus, kurių progresą nori matyti čia — pvz. spaudimą ir pritūpimus.',
     trackedDup:'Šis pratimas jau sekamas',
@@ -168,7 +168,7 @@ const I18N = {
     pdcW:'Wk', pdcM:'Mo', pdcY:'Yr', pdAll:'All',
     pdFrom:'From', pdTo:'To',
     hs7w:'workouts · 7 d', hs7v:'volume · 7 d', hsGap:'avg gap',
-    rhythmTitle:'Rhythm · 14 d',
+    rhythmTitle:'Rhythm',
     trackedTitle:'Tracked lifts', trackAdd:'+ Track a lift',
     trackedEmpty:'Pick the lifts whose progress you want to see here — e.g. bench and squat.',
     trackedDup:'This lift is already tracked',
@@ -360,7 +360,7 @@ const V = { screen:'home', editTpl:null, viewFolder:null, exDetail:null, expande
             /* per-chart period state: p = 'w'|'m'|'y'|'c' (charts), days|'all'|'c' (muscle/bw);
                f/t = custom from–to as yyyy-mm-dd */
             cp:{ wk:{p:'w',f:'',t:''}, vol:{p:'w',f:'',t:''},
-                 mus:{p:'7',f:'',t:''}, bw:{p:'90',f:'',t:''} } };
+                 mus:{p:'7',f:'',t:''}, bw:{p:'90',f:'',t:''}, rh:{p:'14'} } };
 
 /* exercise lookup: built-in DB + user's custom exercises */
 function exInfo(k){
@@ -2082,8 +2082,9 @@ function histSummaryHtml(){
   </div>`;
 }
 
-/* ---- rhythm strip: the last 14 days as one row (replaces the month calendar) ---- */
+/* ---- rhythm strip: the last 14/30/90 days (replaces the month calendar) ---- */
 function rhythmHtml(){
+  const n = +V.cp.rh.p || 14;
   const today = new Date(); today.setHours(0,0,0,0);
   const map = {};
   for(const h of S.history){
@@ -2094,7 +2095,7 @@ function rhythmHtml(){
     else map[ts].n++;
   }
   let cells = '';
-  for(let i=13; i>=0; i--){
+  for(let i=n-1; i>=0; i--){
     const d = new Date(today); d.setDate(d.getDate()-i);
     const w = map[d.getTime()];
     const td = i===0 ? ' today' : '';
@@ -2102,8 +2103,11 @@ function rhythmHtml(){
       ? `<button class="rc on${td}" onclick="rhythmTap('${w.id}')">${esc(w.ltr)}${w.n>1?'⁺':''}</button>`
       : `<span class="rc${td}"></span>`;
   }
-  return `<div class="chead" style="margin-bottom:8px"><span class="ct">${t('rhythmTitle')}</span></div>
-    <div class="rhythm">${cells}</div>`;
+  /* 14 d = one row; longer ranges wrap into 15-day rows (no weekday grid on purpose —
+     the user's rhythm is self-regulated, not weekly) */
+  return `<div class="chead" style="margin-bottom:8px"><span class="ct">${t('rhythmTitle')}</span>
+      ${pchipsHtml('rh',[['14','14 d.'],['30','30 d.'],['90','90 d.']],false)}</div>
+    <div class="rhythm${n>14?' multi':''}">${cells}</div>`;
 }
 function rhythmTap(id){
   const idx = S.history.filter(w=>!w.arch).findIndex(w=>w.id===id);
