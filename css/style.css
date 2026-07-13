@@ -155,6 +155,8 @@ h2.sec{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(
   font-size:10px; font-weight:800; padding:3px 6px; font-variant-numeric:tabular-nums;}
 /* per-workout counter on split rows */
 .spcnt{flex:none; font-size:11px; font-weight:800; opacity:.5; font-variant-numeric:tabular-nums;}
+/* orange dot: this workout's deload pass is still due */
+.dldot{flex:none; width:7px; height:7px; border-radius:50%; background:var(--orange);}
 /* deload: subtle section-header button, active banner, badges */
 .secbtn{border:none; background:var(--input); color:var(--dim); border-radius:8px;
   min-height:26px; padding:0 10px; font-size:11px; font-weight:800; letter-spacing:.5px; text-transform:uppercase;}

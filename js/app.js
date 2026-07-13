@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.9.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.9.1'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -75,11 +75,12 @@ const I18N = {
     trackDelta30:'per 30 d.',
     prTitle:'Nauji rekordai', prEmpty:'Rekordai atsiras po kelių treniruočių.',
     dlBtn:'Deload',
-    dlStartConfirm:'Pradėti deload savaitę? 7 dienas siūlomi svoriai bus ~65 %, setai nesiskaitys į rekordus, o treniruočių skaitliukai prasidės iš naujo.',
-    dlEndConfirm:'Baigti deload savaitę anksčiau?',
-    dlOn:'Deload savaitė pradėta 🧘',
-    dlActiveBanner:'DELOAD savaitė',
-    dlLeft:'liko {n} d.', dlSub:'rekordai nesiskaičiuoja',
+    dlStartConfirm:'Pradėti deload ciklą? Kiekvienai treniruotei po vieną lengvą praėjimą (~65 % svoriai, setai nesiskaito į rekordus), skaitliukai prasidės iš naujo. Praėjus visas treniruotes deload baigsis pats — arba gali baigti anksčiau.',
+    dlEndConfirm:'Baigti deload anksčiau?',
+    dlOn:'Deload pradėtas 🧘',
+    dlDone:'Deload ciklas baigtas 💪',
+    dlActiveBanner:'DELOAD',
+    dlLeft:'liko {n} trenir.', dlSub:'rekordai nesiskaičiuoja · tap = baigti',
     dlWoBar:'DELOAD — siūlomi svoriai ~65 %, setai nesiskaito į rekordus',
     dlBadge:'DELOAD', dlCycles:'Pilni ciklai nuo deload',
     histMore:'Rodyti daugiau', bwLogNew:'+ Įvesti svorį',
@@ -181,11 +182,12 @@ const I18N = {
     trackDelta30:'in 30 d',
     prTitle:'Recent records', prEmpty:'Records will show up after a few workouts.',
     dlBtn:'Deload',
-    dlStartConfirm:'Start a deload week? For 7 days suggested weights will be ~65%, sets will not count toward records, and the workout counters restart.',
-    dlEndConfirm:'End the deload week early?',
-    dlOn:'Deload week started 🧘',
-    dlActiveBanner:'DELOAD week',
-    dlLeft:'{n} d left', dlSub:'records paused',
+    dlStartConfirm:'Start a deload cycle? One light pass per workout (~65% weights, sets do not count toward records), the counters restart. It ends by itself once every workout is done — or end it early anytime.',
+    dlEndConfirm:'End the deload early?',
+    dlOn:'Deload started 🧘',
+    dlDone:'Deload cycle complete 💪',
+    dlActiveBanner:'DELOAD',
+    dlLeft:'{n} workouts left', dlSub:'records paused · tap to end',
     dlWoBar:'DELOAD — suggested weights ~65%, sets do not count toward records',
     dlBadge:'DELOAD', dlCycles:'Full cycles since deload',
     histMore:'Show more', bwLogNew:'+ Log weight',
@@ -287,6 +289,7 @@ function hydrate(s){
   s.trackedLifts = s.trackedLifts.filter(k=>typeof k==='string');
   if(!Array.isArray(s.deloads)) s.deloads = [];
   s.deloads = s.deloads.filter(d=>d && typeof d.s==='number' && typeof d.e==='number');
+  s.deloads.forEach(d=>{ if(!Array.isArray(d.tpls)) d.tpls=[]; if(!Array.isArray(d.done)) d.done=[]; });
   if(!s.plates || !Array.isArray(s.plates.kg) || !Array.isArray(s.plates.lb)){
     s.plates = { kg:PLATE_DEF.kg.slice(), lb:PLATE_DEF.lb.slice() };
   }
@@ -623,10 +626,9 @@ function htmlHome(){
   /* deload: active banner (tap = end early), otherwise a subtle button in the section header */
   const dl = dlActive();
   if(dl){
-    const left = Math.max(1, Math.ceil((dl.e-Date.now())/864e5));
     h += `<div class="dlcard" onclick="endDeload()">
       <span class="dlttl">${t('dlActiveBanner')}</span>
-      <span class="dlsub">${t('dlLeft',{n:left})} · ${t('dlSub')}</span></div>`;
+      <span class="dlsub">${t('dlLeft',{n:dlRemaining(dl).length})} · ${t('dlSub')}</span></div>`;
   }
   /* home shows only PINNED splits as a grid of split cards; fall back to all when none pinned */
   const pinned = S.folders.filter(f=>f.pinned);
@@ -644,10 +646,14 @@ function htmlHome(){
       if(idx>=0){ nextId = tpls[(idx+1)%tpls.length].id; break; }
     }
     const cycles = Math.min(...tpls.map(d=>counts[d.id]||0));
-    const rows = tpls.map(d=>`<button class="sprow ${d.id===nextId?'next':''}" onclick="startWorkout('${d.id}')">
+    const rows = tpls.map(d=>{
+      const dlDue = dl && dl.tpls.includes(d.id) && !dl.done.includes(d.id);
+      return `<button class="sprow ${d.id===nextId?'next':''}" onclick="startWorkout('${d.id}')">
       <span class="spn">${esc(d.name)}</span>
+      ${dlDue?`<span class="dldot" title="${t('dlBadge')}"></span>`:''}
       ${counts[d.id]?`<span class="spcnt">${counts[d.id]}</span>`:''}
-      ${d.id===nextId?`<span class="nextchip">${t('nextBadge')}</span>`:''}</button>`).join('');
+      ${d.id===nextId?`<span class="nextchip">${t('nextBadge')}</span>`:''}</button>`;
+    }).join('');
     return `<div class="splitcard">
       <div class="sphead" onclick="openSplit('${f.id}')"><span class="sphn">${esc(f.name)} ›</span>
         ${cycles?`<span class="cyc" title="${t('dlCycles')}">${cycles}×</span>`:''}</div>${rows}</div>`;
@@ -668,13 +674,26 @@ function htmlHome(){
 }
 
 /* ======================= DELOAD ======================= */
-/* manual deload week: suggested (ghost) loads ~65%, sets excluded from records/PRs/
-   progression, workouts tagged dl:1 in history, cycle counters restart. Auto-ends
-   after 7 days — active state is derived, no timers. */
+/* manual deload CYCLE: every workout of the pinned split(s) gets exactly one deload
+   pass (ghost loads ~65%, sets out of records/PRs, tagged dl:1). The deload ends
+   automatically once each workout was done once — or manually anytime. A workout
+   whose deload pass is already done counts as a normal session again. */
 const DL_FACTOR = 0.65;
 function dlActive(){
   const d = S.deloads[S.deloads.length-1];
-  return (d && Date.now()>=d.s && Date.now()<d.e) ? d : null;
+  if(!d || d.e) return null;
+  /* self-heal: if every still-existing workout has its pass, the cycle is complete */
+  if(d.tpls.length && !dlRemaining(d).length){ d.e = Date.now(); save(); return null; }
+  return d;
+}
+/* workouts still waiting for their deload pass (deleted templates don't block) */
+function dlRemaining(d){
+  return d.tpls.filter(id=>!d.done.includes(id) && S.templates.some(tp=>tp.id===id));
+}
+/* is THIS workout's deload pass still due? (drives ghost scaling + dl tagging) */
+function dlForTpl(tplId){
+  const d = dlActive();
+  return !!(d && tplId && d.tpls.includes(tplId) && !d.done.includes(tplId));
 }
 function dlLastStart(){
   const d = S.deloads[S.deloads.length-1];
@@ -689,8 +708,13 @@ function dlW(kg){
 }
 function startDeload(){
   if(dlActive()) return;
+  /* scope = the split(s) shown on home: pinned programs (or all, when none pinned) */
+  const pinned = S.folders.filter(f=>f.pinned);
+  const scope = (pinned.length ? pinned : S.folders).map(f=>f.id);
+  const tpls = S.templates.filter(tp=>scope.includes(tp.folderId)).map(tp=>tp.id);
+  if(!tpls.length) return;
   if(!confirm(t('dlStartConfirm'))) return;
-  S.deloads.push({ s:Date.now(), e:Date.now()+7*864e5 });
+  S.deloads.push({ s:Date.now(), e:0, tpls, done:[] });
   save(); render();
   toast(t('dlOn'));
 }
@@ -890,7 +914,7 @@ function realPrev(ex, si){
 }
 function htmlWorkout(){
   if(!S.active){ V.screen='home'; return htmlHome(); }
-  const dl = dlActive();
+  const dl = dlForTpl(S.active.tplId);
   let h = '<div style="height:8px"></div>';
   if(dl) h += `<div class="dlbar">${t('dlWoBar')}</div>`;
   /* this-session completion order numbers */
@@ -1031,7 +1055,7 @@ function autoWarmup(xi){
     const s = ex.sets[i];
     if(s.warm || s.drop) continue;
     w = parseNum(s.w);
-    if(isNaN(w)){ const g = ghostFor(ex,i); if(g) w = kg2u(dlActive() ? dlW(g.weight) : g.weight); }
+    if(isNaN(w)){ const g = ghostFor(ex,i); if(g) w = kg2u(dlForTpl(S.active.tplId) ? dlW(g.weight) : g.weight); }
     break;
   }
   if(isNaN(w) || w<=0){ toast(t('warmNeedW')); return; }
@@ -1106,7 +1130,7 @@ function toggleSet(xi,si){
   if(ex.sets.findIndex(x=>!x.done) !== si) return;
   const g = ghostFor(ex,si);                 /* g.weight is kg */
   const tm = isTimeEx(ex.k), bw = isBwEx(ex.k);
-  const dl = dlActive();
+  const dl = dlForTpl(S.active.tplId);
   let w = parseNum(s.w), r = parseNum(s.r);  /* w is in the display unit */
   if(isNaN(w) && g) w = kg2u(dl && !s.warm ? dlW(g.weight) : g.weight);
   if(isNaN(r) && g) r = g.reps;
@@ -1212,8 +1236,8 @@ function finishWorkout(){
   }
   const done = exercises.reduce((a,e)=>a+e.sets.length,0);
   if(done < total && !confirm(t('woFinishPart'))) return;
-  /* detect all-time PRs BEFORE this workout enters history (never on a deload) */
-  const isDl = !!dlActive();
+  /* detect all-time PRs BEFORE this workout enters history (never on a deload pass) */
+  const isDl = dlForTpl(S.active.tplId);
   const prs = [];
   if(!isDl) for(const e of exercises){
     const work = e.sets.filter(s=>!s.warm && !s.drop);
@@ -1233,7 +1257,12 @@ function finishWorkout(){
     id:uid(), tplId:S.active.tplId, name:S.active.name, date:new Date().toISOString(),
     dur, exercises
   };
-  if(isDl) entry.dl = 1; /* deload session: out of records/PRs/ghosts, badged in history */
+  if(isDl){
+    entry.dl = 1; /* deload session: out of records/PRs/ghosts, badged in history */
+    const d = dlActive();
+    if(d && !d.done.includes(entry.tplId)) d.done.push(entry.tplId);
+    if(d && !dlRemaining(d).length){ d.e = Date.now(); toast(t('dlDone')); }
+  }
   S.history.unshift(entry);
   S.active = null;
   save();
