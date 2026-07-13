@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.8.2'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.9.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -74,6 +74,14 @@ const I18N = {
     trackedDup:'Šis pratimas jau sekamas',
     trackDelta30:'per 30 d.',
     prTitle:'Nauji rekordai', prEmpty:'Rekordai atsiras po kelių treniruočių.',
+    dlBtn:'Deload',
+    dlStartConfirm:'Pradėti deload savaitę? 7 dienas siūlomi svoriai bus ~65 %, setai nesiskaitys į rekordus, o treniruočių skaitliukai prasidės iš naujo.',
+    dlEndConfirm:'Baigti deload savaitę anksčiau?',
+    dlOn:'Deload savaitė pradėta 🧘',
+    dlActiveBanner:'DELOAD savaitė',
+    dlLeft:'liko {n} d.', dlSub:'rekordai nesiskaičiuoja',
+    dlWoBar:'DELOAD — siūlomi svoriai ~65 %, setai nesiskaito į rekordus',
+    dlBadge:'DELOAD', dlCycles:'Pilni ciklai nuo deload',
     histMore:'Rodyti daugiau', bwLogNew:'+ Įvesti svorį',
     metricW:'Svoris', metricVol:'Apimtis', metric1RM:'~1RM',
     exMine:'Mano', exMineEmpty:'Dar nieko nedarei — pasirink „Visi“ ir pradėk!',
@@ -172,6 +180,14 @@ const I18N = {
     trackedDup:'This lift is already tracked',
     trackDelta30:'in 30 d',
     prTitle:'Recent records', prEmpty:'Records will show up after a few workouts.',
+    dlBtn:'Deload',
+    dlStartConfirm:'Start a deload week? For 7 days suggested weights will be ~65%, sets will not count toward records, and the workout counters restart.',
+    dlEndConfirm:'End the deload week early?',
+    dlOn:'Deload week started 🧘',
+    dlActiveBanner:'DELOAD week',
+    dlLeft:'{n} d left', dlSub:'records paused',
+    dlWoBar:'DELOAD — suggested weights ~65%, sets do not count toward records',
+    dlBadge:'DELOAD', dlCycles:'Full cycles since deload',
     histMore:'Show more', bwLogNew:'+ Log weight',
     metricW:'Weight', metricVol:'Volume', metric1RM:'~1RM',
     exMine:'Mine', exMineEmpty:'Nothing done yet — pick “All” and get started!',
@@ -248,7 +264,7 @@ function defaultState(){
   return { lang:'en', unit:'kg', theme:'auto', keepAwake:true, lastBackup:0, bakSnooze:0, mig13:true,
            folders:[{ id:fid, name:'Upper / Lower', open:true, pinned:true }],
            customEx:[], templates:seedTemplates(fid), history:[], weights:[], active:null,
-           trackedLifts:[],
+           trackedLifts:[], deloads:[],
            plates:{ kg:PLATE_DEF.kg.slice(), lb:PLATE_DEF.lb.slice() } };
 }
 /* validate + migrate a raw state object; returns null if unusable */
@@ -269,6 +285,8 @@ function hydrate(s){
   if(!Array.isArray(s.weights)) s.weights = [];
   if(!Array.isArray(s.trackedLifts)) s.trackedLifts = [];
   s.trackedLifts = s.trackedLifts.filter(k=>typeof k==='string');
+  if(!Array.isArray(s.deloads)) s.deloads = [];
+  s.deloads = s.deloads.filter(d=>d && typeof d.s==='number' && typeof d.e==='number');
   if(!s.plates || !Array.isArray(s.plates.kg) || !Array.isArray(s.plates.lb)){
     s.plates = { kg:PLATE_DEF.kg.slice(), lb:PLATE_DEF.lb.slice() };
   }
@@ -602,9 +620,19 @@ function htmlHome(){
       <div class="tsub">${last?daysAgoStr(last.date):t('never')} · ${esc(names)}</div></div>
       <div class="go">${ACT_ICONS.play}</div></button>`;
   };
+  /* deload: active banner (tap = end early), otherwise a subtle button in the section header */
+  const dl = dlActive();
+  if(dl){
+    const left = Math.max(1, Math.ceil((dl.e-Date.now())/864e5));
+    h += `<div class="dlcard" onclick="endDeload()">
+      <span class="dlttl">${t('dlActiveBanner')}</span>
+      <span class="dlsub">${t('dlLeft',{n:left})} · ${t('dlSub')}</span></div>`;
+  }
   /* home shows only PINNED splits as a grid of split cards; fall back to all when none pinned */
   const pinned = S.folders.filter(f=>f.pinned);
   const showFolders = pinned.length ? pinned : S.folders;
+  /* workout + full-cycle counters since the last deload — the "when to deload" gauge */
+  const counts = tplCounts();
   const cards = showFolders.map(f=>{
     const tpls = S.templates.filter(x=>x.folderId===f.id);
     if(!tpls.length) return '';
@@ -615,13 +643,20 @@ function htmlHome(){
       const idx = tpls.findIndex(x=>x.id===hw.tplId);
       if(idx>=0){ nextId = tpls[(idx+1)%tpls.length].id; break; }
     }
+    const cycles = Math.min(...tpls.map(d=>counts[d.id]||0));
     const rows = tpls.map(d=>`<button class="sprow ${d.id===nextId?'next':''}" onclick="startWorkout('${d.id}')">
       <span class="spn">${esc(d.name)}</span>
+      ${counts[d.id]?`<span class="spcnt">${counts[d.id]}</span>`:''}
       ${d.id===nextId?`<span class="nextchip">${t('nextBadge')}</span>`:''}</button>`).join('');
     return `<div class="splitcard">
-      <div class="sphead" onclick="openSplit('${f.id}')">${esc(f.name)} ›</div>${rows}</div>`;
+      <div class="sphead" onclick="openSplit('${f.id}')"><span class="sphn">${esc(f.name)} ›</span>
+        ${cycles?`<span class="cyc" title="${t('dlCycles')}">${cycles}×</span>`:''}</div>${rows}</div>`;
   }).filter(Boolean);
-  if(cards.length) h += `<h2 class="sec">${t('homeTemplates')}</h2><div class="splitgrid">${cards.join('')}</div>`;
+  if(cards.length){
+    h += `<h2 class="sec" style="display:flex;align-items:center"><span style="flex:1">${t('homeTemplates')}</span>
+      ${dl?'':`<button class="secbtn" onclick="startDeload()">${t('dlBtn')}</button>`}</h2>
+      <div class="splitgrid">${cards.join('')}</div>`;
+  }
   const loose = looseTemplates();
   if(loose.length && !pinned.length){
     h += `<h2 class="sec">${S.folders.length?t('folderNone'):t('homeTemplates')}</h2>` + loose.map(d=>tplBtn(d,false)).join('');
@@ -630,6 +665,53 @@ function htmlHome(){
     h += `<div class="empty">${t('homeNoProg')}</div>`;
   }
   return h;
+}
+
+/* ======================= DELOAD ======================= */
+/* manual deload week: suggested (ghost) loads ~65%, sets excluded from records/PRs/
+   progression, workouts tagged dl:1 in history, cycle counters restart. Auto-ends
+   after 7 days — active state is derived, no timers. */
+const DL_FACTOR = 0.65;
+function dlActive(){
+  const d = S.deloads[S.deloads.length-1];
+  return (d && Date.now()>=d.s && Date.now()<d.e) ? d : null;
+}
+function dlLastStart(){
+  const d = S.deloads[S.deloads.length-1];
+  return d ? d.s : 0;
+}
+/* deload suggestion from a previous load (kg), rounded to the plate step;
+   assisted (negative) loads are left alone — scaling them would make the set harder */
+function dlW(kg){
+  if(kg<=0) return kg;
+  const step = S.unit==='lb' ? 5/LB_PER_KG : 2.5;
+  return Math.max(step, Math.round(kg*DL_FACTOR/step)*step);
+}
+function startDeload(){
+  if(dlActive()) return;
+  if(!confirm(t('dlStartConfirm'))) return;
+  S.deloads.push({ s:Date.now(), e:Date.now()+7*864e5 });
+  save(); render();
+  toast(t('dlOn'));
+}
+function endDeload(){
+  const d = dlActive();
+  if(!d) return;
+  if(!confirm(t('dlEndConfirm'))) return;
+  d.e = Date.now();
+  save(); render();
+}
+/* workouts done per template since the last deload started (deload sets excluded) —
+   the "how many rounds before the next deload" counters on the home split cards */
+function tplCounts(){
+  const from = dlLastStart();
+  const counts = {};
+  for(const h of S.history){
+    if(h.arch || h.dl || !h.tplId) continue;
+    if(new Date(h.date).getTime() < from) continue;
+    counts[h.tplId] = (counts[h.tplId]||0) + 1;
+  }
+  return counts;
 }
 
 /* ======================= WORKOUT ======================= */
@@ -741,10 +823,11 @@ function lastForExercise(k, name, tplId){
   const nm = (name||'').trim().toLowerCase();
   const match = e => (e.k===k || (nm && e.name && e.name.trim().toLowerCase()===nm))
                      && e.sets && e.sets.length;
-  /* prefer the last session of the SAME workout — exercise order/fatigue context matters */
+  /* prefer the last session of the SAME workout — exercise order/fatigue context matters.
+     Deload sessions are skipped, so after a deload the ghosts return to real loads. */
   if(tplId){
     for(const h of S.history){
-      if(h.arch || h.tplId!==tplId) continue;
+      if(h.arch || h.dl || h.tplId!==tplId) continue;
       for(const e of h.exercises){
         if(match(e)) return { date:h.date, sets:e.sets, note:e.note||'', bw:e.bw, order:e.order||0, sameTpl:true };
       }
@@ -752,7 +835,7 @@ function lastForExercise(k, name, tplId){
   }
   /* fallback: any workout that had this exercise (marked as approximate in the UI) */
   for(const h of S.history){
-    if(h.arch) continue;
+    if(h.arch || h.dl) continue;
     for(const e of h.exercises){
       if(match(e)) return { date:h.date, sets:e.sets, note:e.note||'', bw:e.bw, order:e.order||0, sameTpl:false };
     }
@@ -807,7 +890,9 @@ function realPrev(ex, si){
 }
 function htmlWorkout(){
   if(!S.active){ V.screen='home'; return htmlHome(); }
+  const dl = dlActive();
   let h = '<div style="height:8px"></div>';
+  if(dl) h += `<div class="dlbar">${t('dlWoBar')}</div>`;
   /* this-session completion order numbers */
   const doneOrder = {};
   S.active.exercises.filter(e=>e.doneAt).sort((a,b)=>a.doneAt-b.doneAt).forEach((e,i)=>{ doneOrder[e.id]=i+1; });
@@ -837,7 +922,7 @@ function htmlWorkout(){
       const rowBtn = s.drop
         ? `<button class="dropbtn del" onclick="removeDrop(${xi},${si})">✕</button>`
         : `<button class="dropbtn" onclick="addDrop(${xi},${si})">D+</button>`;
-      const wph = g ? wu(g.weight) : (bw ? '+' : unitL());
+      const wph = g ? wu(dl && !s.warm ? dlW(g.weight) : g.weight) : (bw ? '+' : unitL());
       const isCur = si === firstNotDone;                          /* the set to do now */
       const isLocked = firstNotDone!==-1 && !s.done && !isCur;    /* later sets: ✓ waits its turn */
       return `<div class="setrow-wrap ${s.done?'done':''} ${s.drop?'droprow':''} ${isLocked?'locked':''}">
@@ -946,7 +1031,7 @@ function autoWarmup(xi){
     const s = ex.sets[i];
     if(s.warm || s.drop) continue;
     w = parseNum(s.w);
-    if(isNaN(w)){ const g = ghostFor(ex,i); if(g) w = kg2u(g.weight); }
+    if(isNaN(w)){ const g = ghostFor(ex,i); if(g) w = kg2u(dlActive() ? dlW(g.weight) : g.weight); }
     break;
   }
   if(isNaN(w) || w<=0){ toast(t('warmNeedW')); return; }
@@ -1021,8 +1106,9 @@ function toggleSet(xi,si){
   if(ex.sets.findIndex(x=>!x.done) !== si) return;
   const g = ghostFor(ex,si);                 /* g.weight is kg */
   const tm = isTimeEx(ex.k), bw = isBwEx(ex.k);
+  const dl = dlActive();
   let w = parseNum(s.w), r = parseNum(s.r);  /* w is in the display unit */
-  if(isNaN(w) && g) w = kg2u(g.weight);
+  if(isNaN(w) && g) w = kg2u(dl && !s.warm ? dlW(g.weight) : g.weight);
   if(isNaN(r) && g) r = g.reps;
   if(isNaN(w) && (tm || bw)) w = 0;          /* weight optional for time & bodyweight */
   if(isNaN(w) || isNaN(r) || Math.abs(w)>2000 || r<1 || r>5000){ toast(t('woEmptyVals')); return; }
@@ -1030,7 +1116,7 @@ function toggleSet(xi,si){
   const wkg = u2kg(w);
   s.w = fmtW(w); s.r = String(Math.round(r)); s.done = true;
   const real = realPrev(ex,si);              /* kg */
-  if(!real || s.warm || s.drop) s.cls = 'none';
+  if(!real || s.warm || s.drop || dl) s.cls = 'none'; /* no win/loss judgment on a deload */
   else if(wkg>real.weight || (wkg===real.weight && r>real.reps)) s.cls='win';
   else if(wkg===real.weight && r===real.reps) s.cls='even';
   else s.cls='loss';
@@ -1126,9 +1212,10 @@ function finishWorkout(){
   }
   const done = exercises.reduce((a,e)=>a+e.sets.length,0);
   if(done < total && !confirm(t('woFinishPart'))) return;
-  /* detect all-time PRs BEFORE this workout enters history */
+  /* detect all-time PRs BEFORE this workout enters history (never on a deload) */
+  const isDl = !!dlActive();
   const prs = [];
-  for(const e of exercises){
+  if(!isDl) for(const e of exercises){
     const work = e.sets.filter(s=>!s.warm && !s.drop);
     if(!work.length) continue;
     const prev = exStats(e.k, e.name);
@@ -1142,10 +1229,12 @@ function finishWorkout(){
   }
   const dur = Math.round((Date.now()-new Date(S.active.startedAt).getTime())/1000);
   const vol = exercises.reduce((a,e)=>a+e.sets.filter(s=>!s.warm).reduce((b,s)=>b+s.weight*s.reps,0),0);
-  S.history.unshift({
+  const entry = {
     id:uid(), tplId:S.active.tplId, name:S.active.name, date:new Date().toISOString(),
     dur, exercises
-  });
+  };
+  if(isDl) entry.dl = 1; /* deload session: out of records/PRs/ghosts, badged in history */
+  S.history.unshift(entry);
   S.active = null;
   save();
   go('home');
@@ -1666,7 +1755,7 @@ function exStats(k, name, tplName){
   const bwKind = isBwEx(k);
   let best = 0, bestBw = null, bestAdd = null, bestTime = 0, e1rm = 0, bestVol = 0, bestSet = null, sessions = 0, lastDate = null;
   for(const h of S.history){
-    if(h.arch || (tplName && h.name!==tplName)) continue;
+    if(h.arch || h.dl || (tplName && h.name!==tplName)) continue;
     for(const e of h.exercises){
       if(e.k===k || (nm && e.name && e.name.trim().toLowerCase()===nm)){
         const work = e.sets.filter(s=>!s.warm && !s.drop);
@@ -1790,7 +1879,7 @@ function htmlExDetail(){
     if(w.arch || (filter && w.name!==filter)) continue;
     for(const e of w.exercises){
       if(matches(e)){
-        rows.push(`<div class="exl"><span class="n">${fmtDate(w.date)} <span style="opacity:.6">· ${esc(w.name)}</span></span>
+        rows.push(`<div class="exl"><span class="n">${fmtDate(w.date)}${w.dl?` <span class="dlchip">${t('dlBadge')}</span>`:''} <span style="opacity:.6">· ${esc(w.name)}</span></span>
           <span class="s">${e.sets.map(s=>`<span class="tok">${fmtSet(s, k)}</span>`).join(' ')}</span></div>`);
       }
     }
@@ -1804,7 +1893,7 @@ function chartSVG(k, name, tplName, metric){
   const pts = [];
   for(let i=S.history.length-1; i>=0; i--){
     const w = S.history[i];
-    if(w.arch || (tplName && w.name!==tplName)) continue;
+    if(w.arch || w.dl || (tplName && w.name!==tplName)) continue;
     for(const e of w.exercises){
       if(e.k===k || (e.name && e.name.trim().toLowerCase()===nm)){
         const work = e.sets.filter(s=>!s.warm && !s.drop);
@@ -2083,7 +2172,7 @@ function rhythmHtml(){
     if(h.arch) continue;
     const d = new Date(h.date); d.setHours(0,0,0,0);
     const ts = d.getTime();
-    if(!map[ts]) map[ts] = { id:h.id, ltr:(h.name||'').trim().charAt(0).toUpperCase()||'✓', n:1 };
+    if(!map[ts]) map[ts] = { id:h.id, ltr:(h.name||'').trim().charAt(0).toUpperCase()||'✓', n:1, dl:!!h.dl };
     else map[ts].n++;
   }
   let cells = '';
@@ -2092,7 +2181,7 @@ function rhythmHtml(){
     const w = map[d.getTime()];
     const td = i===0 ? ' today' : '';
     cells += w
-      ? `<button class="rc on${td}" onclick="rhythmTap('${w.id}')">${esc(w.ltr)}${w.n>1?'⁺':''}</button>`
+      ? `<button class="rc on${w.dl?' dl':''}${td}" onclick="rhythmTap('${w.id}')">${esc(w.ltr)}${w.n>1?'⁺':''}</button>`
       : `<span class="rc${td}"></span>`;
   }
   /* 14 d = one row; longer ranges wrap into 15-day rows (no weekday grid on purpose —
@@ -2121,7 +2210,7 @@ function trackSeries(k){
   const pts = [];
   for(let i=S.history.length-1; i>=0; i--){
     const w = S.history[i];
-    if(w.arch) continue;
+    if(w.arch || w.dl) continue;
     for(const e of w.exercises){
       if(e.k===k || (e.name && e.name.trim().toLowerCase()===nm)){
         const work = e.sets.filter(s=>!s.warm && !s.drop);
@@ -2197,7 +2286,7 @@ function prEvents(){
   const events = [];
   for(let i=S.history.length-1; i>=0; i--){
     const w = S.history[i];
-    if(w.arch) continue;
+    if(w.arch || w.dl) continue;
     for(const e of w.exercises){
       if(!e.k || isTimeEx(e.k)) continue; /* seconds are not reps */
       const work = e.sets.filter(s=>!s.warm && !s.drop && s.reps>0);
@@ -2323,6 +2412,7 @@ function histRowHtml(w){
     <div class="hd">
       <span class="dt">${fmtDate(w.date)}</span>
       <span class="dn">${esc(w.name)}</span>
+      ${w.dl?`<span class="dlchip">${t('dlBadge')}</span>`:''}
       <span class="sm">${nsets} ${t('histSets')}${w.dur?' · '+fmtTime(w.dur):''}</span>
     </div>${detail}</div>`;
 }
@@ -2639,7 +2729,7 @@ function shareTpl(id){
 function copyBackup(){
   const payload = { t:'bak', s:{ lang:S.lang, theme:S.theme, keepAwake:S.keepAwake, plates:S.plates,
     folders:S.folders, customEx:S.customEx, templates:S.templates, history:S.history, weights:S.weights,
-    trackedLifts:S.trackedLifts } };
+    trackedLifts:S.trackedLifts, deloads:S.deloads } };
   S.lastBackup = Date.now();
   save();
   copyText(encodeShare(payload));
@@ -2705,6 +2795,7 @@ function doImport(){
     }
     d.s.folders.forEach(f=>{ if(typeof f.pinned==='undefined') f.pinned=true; });
     if(!Array.isArray(d.s.trackedLifts)) delete d.s.trackedLifts; /* keep the [] default */
+    if(!Array.isArray(d.s.deloads)) delete d.s.deloads;
     S = Object.assign(defaultState(), d.s, { active:null });
     save(); applyTheme(); closeModal();
     go('home');
