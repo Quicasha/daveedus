@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.9.2'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.9.3'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -75,15 +75,22 @@ const I18N = {
     trackDelta30:'per 30 d.',
     prTitle:'Nauji rekordai', prEmpty:'Rekordai atsiras po kelių treniruočių.',
     dlBtn:'Deload',
-    dlStartConfirm:'Pradėti „{n}“ deload ciklą? Kiekvienai treniruotei po vieną lengvą praėjimą (~65 % svoriai, setai nesiskaito į rekordus), skaitliukai prasidės iš naujo. Praėjus visas treniruotes deload baigsis pats — arba gali baigti anksčiau.',
     mainSet:'Pagrindinė programa: {n} ★', mainTitle:'Pagrindinė programa',
     dlEndConfirm:'Baigti deload anksčiau?',
     dlOn:'Deload pradėtas 🧘',
     dlDone:'Deload ciklas baigtas 💪',
     dlActiveBanner:'DELOAD',
     dlLeft:'liko {n} trenir.', dlSub:'rekordai nesiskaičiuoja · tap = baigti',
-    dlWoBar:'DELOAD — siūlomi svoriai ~65 %, setai nesiskaito į rekordus',
+    dlWoBar:'DELOAD — siūlomi svoriai ~{p} %', dlWoBarVol:'setai perpus',
     dlBadge:'DELOAD', dlCycles:'Pilni ciklai nuo deload',
+    dlmHow:'Kiekvienai treniruotei — vienas lengvas praėjimas. Setai nesiskaito į rekordus, skaitliukai prasideda iš naujo. Praėjus visas, deload baigsis pats — arba baik anksčiau bakstelėjęs oranžinę juostą pradžioje.',
+    dlmW:'Siūlomi svoriai',
+    dlmWHint:'Jėgai įprasta 50–60 %. 70 % — švelnesnis variantas. 90 % — beveik darbiniai svoriai: tada rinkis „Perpus“ ir stok toliau nuo nesėkmės.',
+    dlmSets:'Setai',
+    dlmSetsAll:'Visi', dlmSetsHalf:'Perpus',
+    dlmSetsHint:'„Perpus“ — pusė suplanuotų setų. Sportininkai deload metu apimtį dažniausiai mažina ~30–50 %.',
+    dlmLight:'Lengvi pratimai (< 20 kg) mažinami daugiausia iki ~80 % — izoliaciniams didelio sumažinimo nereikia.',
+    dlmStart:'Pradėti deload',
     histMore:'Rodyti daugiau', bwLogNew:'+ Įvesti svorį',
     metricW:'Svoris', metricVol:'Apimtis', metric1RM:'~1RM',
     exMine:'Mano', exMineEmpty:'Dar nieko nedarei — pasirink „Visi“ ir pradėk!',
@@ -183,15 +190,22 @@ const I18N = {
     trackDelta30:'in 30 d',
     prTitle:'Recent records', prEmpty:'Records will show up after a few workouts.',
     dlBtn:'Deload',
-    dlStartConfirm:'Start a “{n}” deload cycle? One light pass per workout (~65% weights, sets do not count toward records), the counters restart. It ends by itself once every workout is done — or end it early anytime.',
     mainSet:'Main program: {n} ★', mainTitle:'Main program',
     dlEndConfirm:'End the deload early?',
     dlOn:'Deload started 🧘',
     dlDone:'Deload cycle complete 💪',
     dlActiveBanner:'DELOAD',
     dlLeft:'{n} workouts left', dlSub:'records paused · tap to end',
-    dlWoBar:'DELOAD — suggested weights ~65%, sets do not count toward records',
+    dlWoBar:'DELOAD — suggested weights ~{p}%', dlWoBarVol:'half sets',
     dlBadge:'DELOAD', dlCycles:'Full cycles since deload',
+    dlmHow:'One light pass per workout. Sets do not count toward records and the counters restart. Once every workout is done the deload ends by itself — or end it early by tapping the orange banner on Home.',
+    dlmW:'Suggested weights',
+    dlmWHint:'50–60% is the strength classic. 70% is gentler. 90% keeps near-working weights: pick “Half” sets then and stay far from failure.',
+    dlmSets:'Sets',
+    dlmSetsAll:'All', dlmSetsHalf:'Half',
+    dlmSetsHint:'“Half” plans half the sets. Athletes most often deload by cutting volume ~30–50%.',
+    dlmLight:'Light exercises (< 20 kg) are only trimmed to ~80% — isolation work needs little reduction.',
+    dlmStart:'Start deload',
     histMore:'Show more', bwLogNew:'+ Log weight',
     metricW:'Weight', metricVol:'Volume', metric1RM:'~1RM',
     exMine:'Mine', exMineEmpty:'Nothing done yet — pick “All” and get started!',
@@ -291,7 +305,12 @@ function hydrate(s){
   s.trackedLifts = s.trackedLifts.filter(k=>typeof k==='string');
   if(!Array.isArray(s.deloads)) s.deloads = [];
   s.deloads = s.deloads.filter(d=>d && typeof d.s==='number' && typeof d.e==='number');
-  s.deloads.forEach(d=>{ if(!Array.isArray(d.tpls)) d.tpls=[]; if(!Array.isArray(d.done)) d.done=[]; });
+  s.deloads.forEach(d=>{
+    if(!Array.isArray(d.tpls)) d.tpls=[];
+    if(!Array.isArray(d.done)) d.done=[];
+    if(typeof d.pct!=='number' || d.pct<=0 || d.pct>1) d.pct = 0.6;
+    if(d.vol!==0.5 && d.vol!==1) d.vol = 1;
+  });
   if(typeof s.mainFolder!=='string') s.mainFolder = null;
   if(!s.plates || !Array.isArray(s.plates.kg) || !Array.isArray(s.plates.lb)){
     s.plates = { kg:PLATE_DEF.kg.slice(), lb:PLATE_DEF.lb.slice() };
@@ -682,11 +701,16 @@ function htmlHome(){
 }
 
 /* ======================= DELOAD ======================= */
-/* manual deload CYCLE: every workout of the pinned split(s) gets exactly one deload
-   pass (ghost loads ~65%, sets out of records/PRs, tagged dl:1). The deload ends
+/* manual deload CYCLE: every workout of the MAIN program gets exactly one deload
+   pass (reduced ghost loads, sets out of records/PRs, tagged dl:1). The deload ends
    automatically once each workout was done once — or manually anytime. A workout
-   whose deload pass is already done counts as a normal session again. */
-const DL_FACTOR = 0.65;
+   whose deload pass is already done counts as a normal session again.
+   Options (research-backed, see v1.9.3 notes): load 50/60/70/90 % of previous
+   working weights + optional half sets. Light exercises (<20 kg) are only trimmed
+   to ~80 % — surveyed athletes mostly keep isolation loads and cut volume instead. */
+const DL_FACTOR = 0.6;      /* default load % */
+const DL_LIGHT_KG = 20;     /* below this, cap the reduction at DL_LIGHT_FLOOR */
+const DL_LIGHT_FLOOR = 0.8;
 function dlActive(){
   const d = S.deloads[S.deloads.length-1];
   if(!d || d.e) return null;
@@ -726,19 +750,50 @@ function setMainFolder(id){
    assisted (negative) loads are left alone — scaling them would make the set harder */
 function dlW(kg){
   if(kg<=0) return kg;
+  const d = dlActive();
+  let p = (d && d.pct) || DL_FACTOR;
+  if(kg < DL_LIGHT_KG) p = Math.max(p, DL_LIGHT_FLOOR); /* light/isolation: gentle trim only */
   const step = S.unit==='lb' ? 5/LB_PER_KG : 2.5;
-  return Math.max(step, Math.round(kg*DL_FACTOR/step)*step);
+  return Math.max(step, Math.round(kg*p/step)*step);
 }
+/* deload options sheet: pick load % and set volume, with one-line explanations */
 function startDeload(){
   if(dlActive()) return;
-  /* scope = the MAIN program's workouts */
   const fid = mainFolderId();
   const f = S.folders.find(x=>x.id===fid);
+  if(!f || !S.templates.some(tp=>tp.folderId===fid)) return;
+  V.dlm = { pct:DL_FACTOR, vol:1 };
+  openModal(`<h3>${t('dlBtn')} · ${esc(f.name)}<button class="x" onclick="closeModal()">✕</button></h3>
+    <div style="color:var(--dim);font-size:13px;line-height:1.45;margin:0 4px 14px">${t('dlmHow')}</div>
+    <div id="dlm-body"></div>
+    <button class="btn primary" style="margin-top:14px" onclick="confirmDeload()">${t('dlmStart')}</button>`);
+  renderDlm();
+}
+function renderDlm(){
+  const el = $('#dlm-body');
+  if(!el) return;
+  const o = V.dlm;
+  const pctChip = p => `<button class="chip ${o.pct===p?'on':''}" onclick="V.dlm.pct=${p}; renderDlm()">${Math.round(p*100)} %</button>`;
+  el.innerHTML = `
+    <h2 class="sec" style="margin-top:0">${t('dlmW')}</h2>
+    <div class="chips" style="padding-bottom:4px">${[0.5,0.6,0.7,0.9].map(pctChip).join('')}</div>
+    <div style="color:var(--dim);font-size:12px;line-height:1.45;margin:0 4px 6px">${t('dlmWHint')}</div>
+    <h2 class="sec">${t('dlmSets')}</h2>
+    <div class="chips" style="padding-bottom:4px">
+      <button class="chip ${o.vol===1?'on':''}" onclick="V.dlm.vol=1; renderDlm()">${t('dlmSetsAll')}</button>
+      <button class="chip ${o.vol===0.5?'on':''}" onclick="V.dlm.vol=0.5; renderDlm()">${t('dlmSetsHalf')}</button>
+    </div>
+    <div style="color:var(--dim);font-size:12px;line-height:1.45;margin:0 4px 6px">${t('dlmSetsHint')}</div>
+    <div style="color:var(--ghost);font-size:12px;line-height:1.45;margin:12px 4px 0">⚖ ${t('dlmLight')}</div>`;
+}
+function confirmDeload(){
+  if(dlActive()){ closeModal(); return; }
+  const fid = mainFolderId();
   const tpls = S.templates.filter(tp=>tp.folderId===fid).map(tp=>tp.id);
-  if(!f || !tpls.length) return;
-  if(!confirm(t('dlStartConfirm',{n:f.name}))) return;
-  S.deloads.push({ s:Date.now(), e:0, tpls, done:[] });
-  save(); render();
+  if(!tpls.length){ closeModal(); return; }
+  const o = V.dlm || { pct:DL_FACTOR, vol:1 };
+  S.deloads.push({ s:Date.now(), e:0, tpls, done:[], pct:o.pct, vol:o.vol });
+  closeModal(); save(); render();
   toast(t('dlOn'));
 }
 function endDeload(){
@@ -895,9 +950,12 @@ function startWorkout(tplId){
   if(S.active){
     if(!confirm(t('woSwitchConfirm'))) return;
   }
+  /* on a deload pass with "half sets" picked, plan half the sets (min 1 per exercise) */
+  const dlv = dlForTpl(tpl.id) ? ((dlActive()||{}).vol || 1) : 1;
+  const dls = n => Math.max(1, Math.ceil(n*dlv));
   S.active = {
     tplId: tpl.id, name: tpl.name, startedAt: new Date().toISOString(), rest:null,
-    exercises: tpl.ex.map(e => buildActiveEx(e.k, exName(e.k,e.n), e.s, e.r, e.ss, tpl.id, e.alts, e.pnote))
+    exercises: tpl.ex.map(e => buildActiveEx(e.k, exName(e.k,e.n), dls(e.s), e.r, e.ss, tpl.id, e.alts, e.pnote))
   };
   save();
   go('workout');
@@ -939,7 +997,10 @@ function htmlWorkout(){
   if(!S.active){ V.screen='home'; return htmlHome(); }
   const dl = dlForTpl(S.active.tplId);
   let h = '<div style="height:8px"></div>';
-  if(dl) h += `<div class="dlbar">${t('dlWoBar')}</div>`;
+  if(dl){
+    const d = dlActive();
+    h += `<div class="dlbar">${t('dlWoBar',{p:Math.round(((d&&d.pct)||DL_FACTOR)*100)})}${(d&&d.vol<1)?' · '+t('dlWoBarVol'):''}</div>`;
+  }
   /* this-session completion order numbers */
   const doneOrder = {};
   S.active.exercises.filter(e=>e.doneAt).sort((a,b)=>a.doneAt-b.doneAt).forEach((e,i)=>{ doneOrder[e.id]=i+1; });
