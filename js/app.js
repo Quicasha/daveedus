@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.9.6'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.10.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -513,7 +513,7 @@ function applyTheme(){
   const mode = S.theme==='auto' ? (mediaDark.matches?'dark':'light') : S.theme;
   document.documentElement.dataset.theme = mode;
   const meta = $('#themecolor');
-  if(meta) meta.content = mode==='dark' ? '#0b0f14' : '#f4f6f9';
+  if(meta) meta.content = mode==='dark' ? '#07090c' : '#f2f4f8';
 }
 mediaDark.addEventListener('change', ()=>{ if(S.theme==='auto') applyTheme(); });
 

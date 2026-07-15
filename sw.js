@@ -1,8 +1,9 @@
 /* Daveedus service worker — offline-first app shell */
-const CACHE = 'daveedus-v1.9.6';
+const CACHE = 'daveedus-v1.10.0';
 const ASSETS = [
   './', './index.html', './css/style.css', './js/app.js', './js/exercises.js',
   './manifest.webmanifest',
+  './fonts/archivo-latin.woff2', './fonts/archivo-latin-ext.woff2',
   './icons/favicon.png', './icons/pwa-icon.png', './icons/splash-icon.png',
   './icons/apple-touch-icon.png'
 ];
