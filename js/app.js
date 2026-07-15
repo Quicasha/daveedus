@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.10.4'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.10.5'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -1440,18 +1440,24 @@ function stepperInit(){
     }, 120);
   });
 }
-/* follow the keyboard every frame while visible — visualViewport events lag behind
-   the iOS keyboard animation and made the bar jump; rAF + transform tracks smoothly */
+/* follow the keyboard every frame while visible. iOS composites page panning on
+   another thread, so any JS-positioned element visibly trails during scroll and
+   the keyboard animation — instead of chasing it, the bar hides while the viewport
+   is moving and snaps back the moment it settles (what Safari's own bars do). */
 let stepRAF = 0;
 function startStepLoop(){
   if(stepRAF) return;
+  let lastOff = -1, stable = 0;
   const loop = ()=>{
     const bar = $('#stepper');
-    if(!bar || !bar.classList.contains('show')){ stepRAF = 0; return; }
+    if(!bar || !bar.classList.contains('show')){ if(bar) bar.classList.remove('moving'); stepRAF = 0; return; }
     if(window.visualViewport){
       const vv = window.visualViewport;
-      const off = window.innerHeight - (vv.height + vv.offsetTop);
+      const off = Math.max(0, window.innerHeight - (vv.height + vv.offsetTop));
       bar.style.transform = off > 40 ? 'translateY('+(-off)+'px)' : '';
+      stable = Math.abs(off - lastOff) < 1 ? stable + 1 : 0;
+      lastOff = off;
+      bar.classList.toggle('moving', stable < 3);
     }
     stepRAF = requestAnimationFrame(loop);
   };
