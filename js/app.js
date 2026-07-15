@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.10.1'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.10.2'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -549,8 +549,14 @@ function renderTopbar(){
   let h = '';
   if(V.screen==='workout' && S.active){
     const el = fmtTime((Date.now()-new Date(S.active.startedAt).getTime())/1000);
+    /* while resting, the label line shows the count-up since the last set — always
+       glanceable, even when the rest bar is scrolled away */
+    const r = S.active.rest;
+    const label = r
+      ? `<span class="tbr"><span class="tbdot"></span>${t('restLabel')} <span id="tbrest-time">${fmtTime((Date.now()-r.at)/1000)}</span></span> · ${esc(S.active.name)}`
+      : `${t('woElapsed')} · ${esc(S.active.name)}`;
     h = `<button class="iconbtn" onclick="go('home')">‹</button>
-         <div class="elapsed"><small>${t('woElapsed')} · ${esc(S.active.name)}</small><span id="elapsed-time">${el}</span></div>
+         <div class="elapsed"><small>${label}</small><span id="elapsed-time">${el}</span></div>
          <button class="iconbtn danger" onclick="cancelWorkout()" aria-label="${t('woCancel')}">${ACT_ICONS.x}</button>
          <button class="finishbtn" onclick="finishWorkout()">${t('woFinish')}</button>`;
   }else if(V.screen==='tpledit'){
@@ -1474,6 +1480,8 @@ function tick(){
   if(r && V.screen==='workout'){
     const tm = $('#rest-time');
     if(tm) tm.textContent = t('restLabel')+' '+fmtTime((now - r.at)/1000);
+    const tb = $('#tbrest-time');
+    if(tb) tb.textContent = fmtTime((now - r.at)/1000);
   }
 }
 
