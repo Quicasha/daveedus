@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.10.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.10.1'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -556,11 +556,11 @@ function renderTopbar(){
   }else if(V.screen==='tpledit'){
     const d = S.templates.find(x=>x.id===V.editTpl);
     h = `<button class="iconbtn" onclick="closeTplEdit()">‹</button><h1>${d?esc(d.name):''}</h1>
-         <button class="finishbtn" onclick="closeTplEdit()">✓ ${t('saveDone')}</button>`;
+         <button class="finishbtn" onclick="closeTplEdit()">${ACT_ICONS.check} ${t('saveDone')}</button>`;
   }else if(V.screen==='splitview'){
     const f = S.folders.find(x=>x.id===V.viewFolder);
     h = `<button class="iconbtn" onclick="go('program')">‹</button><h1>${f?esc(f.name):''}</h1>
-         <button class="finishbtn" onclick="go('program')">✓ ${t('saveDone')}</button>`;
+         <button class="finishbtn" onclick="go('program')">${ACT_ICONS.check} ${t('saveDone')}</button>`;
   }else if(V.screen==='exdetail'){
     h = `<button class="iconbtn" onclick="go((V.exDetailFrom==='workout'&&S.active)?'workout':(V.exDetailFrom==='history'?'history':'exercises'))">‹</button><h1>${esc(exName(V.exDetail, V.exDetailName))}</h1>`;
   }else{
@@ -600,6 +600,7 @@ const ACT_ICONS = {
   note:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
   scale:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.5"/><path d="M8.2 8.5h7.6L18 20a1 1 0 0 1-1 1.2H7A1 1 0 0 1 6 20z"/></svg>',
   more:'<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5L19.5 7"/></svg>',
   star:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.7 5.6 6.1.8-4.5 4.3 1.1 6L12 16.8 6.6 19.7l1.1-6L3.2 9.4l6.1-.8z"/></svg>'
 };
 function renderTabbar(){
@@ -1024,7 +1025,7 @@ function htmlWorkout(){
     const firstNotDone = ex.sets.findIndex(s=>!s.done); /* -1 = all done */
     const wcol = bw ? t('woAddCol') : (tm ? unitL() : unitL());
     const hdr = `<div class="setgrid hdr"><div>${t('woSet')}</div><div>${t('woPrev')}</div>
-      <div>${wcol}</div><div>${tm?t('woSec'):t('woReps')}</div><div>✓</div><div></div></div>`;
+      <div>${wcol}</div><div>${tm?t('woSec'):t('woReps')}</div><div>${ACT_ICONS.check}</div><div></div></div>`;
     let workNum = 0;
     const approx = ex.last && !ex.last.sameTpl ? '~' : ''; /* values borrowed from another workout */
     const rows = ex.sets.map((s,si)=>{
@@ -1049,7 +1050,7 @@ function htmlWorkout(){
             ${s.done?'disabled':''} oninput="onSetInput(${xi},${si},'w',this.value)">
           <input type="text" inputmode="numeric" placeholder="${g?g.reps:(tm?'s':'×')}" value="${esc(s.r)}"
             ${s.done?'disabled':''} oninput="onSetInput(${xi},${si},'r',this.value)">
-          <button class="checkbtn ${chkCls}${isCur?' cur':''}" onclick="toggleSet(${xi},${si})">✓</button>
+          <button class="checkbtn ${chkCls}${isCur?' cur':''}" onclick="toggleSet(${xi},${si})">${ACT_ICONS.check}</button>
           ${rowBtn}
         </div>
         ${restHere ? restBarHtml() : ''}
@@ -1542,7 +1543,7 @@ function htmlSplitView(){
     </div>`;
   h += tpls.map(tplCardHtml).join('') || `<div class="empty">—</div>`;
   h += `<button class="btn ghostbtn" onclick="addTplTo('${f.id}')">${t('tplNew')}</button>
-        <button class="btn primary" onclick="go('program')">✓ ${t('saveDone')}</button>
+        <button class="btn primary" onclick="go('program')">${ACT_ICONS.check} ${t('saveDone')}</button>
         <button class="btn" onclick="shareFolder('${f.id}')">${ACT_ICONS.share} ${t('folderShare')}</button>
         <button class="btn danger" onclick="delFolder('${f.id}')">${ACT_ICONS.x} ${t('deleteBtn')}</button>`;
   return h;
@@ -1657,7 +1658,7 @@ function htmlTplEdit(){
   if(!d.ex.length) h += `<div class="empty">—</div>`;
   h += `</div>
     <button class="btn ghostbtn" onclick="addTplEx('${d.id}')">${t('tplAddEx')}</button>
-    <button class="btn primary" onclick="closeTplEdit()">✓ ${t('saveDone')}</button>
+    <button class="btn primary" onclick="closeTplEdit()">${ACT_ICONS.check} ${t('saveDone')}</button>
     <button class="btn" onclick="dupTpl('${d.id}')">${ACT_ICONS.copy} ${t('tplDup')}</button>
     <button class="btn" onclick="shareTpl('${d.id}')">${ACT_ICONS.share} ${t('tplShare')}</button>`;
   return h;
@@ -2622,7 +2623,7 @@ function openBwModal(){
       <span class="bwmu">${unitL()}</span>
       <button class="bwmstep" onclick="stepBwModal(0.1)" aria-label="+0.1">▴</button>
     </div>
-    <button class="btn primary" onclick="saveBwModal()">${t('bwLog')} ✓</button>`);
+    <button class="btn primary" onclick="saveBwModal()">${ACT_ICONS.check} ${t('bwLog')}</button>`);
   setTimeout(()=>{ const i=$('#bwm-input'); if(i) i.focus(); }, 60);
 }
 function stepBwModal(d){

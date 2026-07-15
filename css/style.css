@@ -113,7 +113,7 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 .tplbtn.continue, .tplbtn.next{border-color:transparent;}
 .tplbtn:active{opacity:.6;}
 .tplbtn .tinfo{flex:1; min-width:0;}
-.tplbtn .tname{font-size:17px; font-weight:700;}
+.tplbtn .tname{font-family:var(--display); font-size:17px; font-weight:700; letter-spacing:-.01em;}
 .tplbtn .tsub{color:var(--dim); font-size:13px; margin-top:3px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;}
 .tplbtn .go{flex:none; width:38px; height:38px; border-radius:50%; background:var(--accent-bg);
   color:var(--accent-soft); display:flex; align-items:center; justify-content:center;
@@ -127,8 +127,8 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 
 /* ============ workout ============ */
 .exhead{display:flex; align-items:center; gap:8px;}
-.exname{flex:1; font-size:17px; font-weight:700; color:var(--text); min-width:0;}
-.extarget{color:var(--dim); font-size:12px; font-weight:700; flex:none; background:var(--input);
+.exname{flex:1; font-family:var(--display); font-size:17px; font-weight:700; letter-spacing:-.01em; color:var(--text); min-width:0;}
+.extarget{color:var(--dim); font-family:var(--display); font-size:12px; font-weight:700; flex:none; background:var(--input);
   border-radius:8px; padding:4px 9px; font-variant-numeric:tabular-nums;}
 .exhead .minibtn{width:34px; min-height:34px; font-size:13px; background:none; color:var(--ghost);}
 .exhead .minibtn.acc{color:var(--accent-soft);}
@@ -199,8 +199,8 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 .rc.on.dl{background:var(--orange);}
 .sprow{display:flex; align-items:center; gap:6px; width:100%; text-align:left;
   background:var(--input); border:none; border-radius:9px; min-height:42px;
-  padding:6px 10px; margin-top:6px; color:var(--text); font-size:14px; font-weight:700;
-  font-family:inherit; cursor:pointer;}
+  padding:6px 10px; margin-top:6px; color:var(--text); font-size:14px; font-weight:650;
+  font-family:var(--display); cursor:pointer;}
 .sprow:active{opacity:.6;}
 .sprow .spn{flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 .sprow.next{background:var(--accent); color:var(--on-accent);}
@@ -211,7 +211,7 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 .setgrid.hdr div:nth-child(2){text-align:left; padding-left:2px;}
 .setrow-wrap{border-radius:10px;}
 .setrow-wrap.done{background:var(--green-bg);}
-.setnum{min-height:42px; border:none; background:none; color:var(--dim); font-weight:700; font-size:15px; border-radius:8px;}
+.setnum{min-height:42px; border:none; background:none; color:var(--dim); font-family:var(--display); font-weight:700; font-size:15px; border-radius:8px;}
 .setnum.warm{color:var(--orange);}
 .setnum.dropn{color:var(--accent-soft);}
 .setnum.failn{color:var(--red);}
@@ -223,19 +223,23 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 .setrow-wrap.droprow{margin-left:20px;}
 .droprow .setgrid{margin-top:4px;}
 .droprow .setgrid input{min-height:34px; font-size:16px;}
-.droprow .checkbtn{min-height:34px; font-size:13px;}
+.droprow .checkbtn{min-height:34px;}
+.droprow .checkbtn svg{width:14px; height:14px;}
 .droprow .setnum{min-height:34px; font-size:13px;}
 .droprow .prev{font-size:11px;}
-.prev{color:var(--dim); font-size:13px; font-weight:600; padding-left:2px; white-space:nowrap;
+.prev{color:var(--dim); font-family:var(--display); font-size:13px; font-weight:550; padding-left:2px; white-space:nowrap;
   overflow:hidden; text-overflow:ellipsis; font-variant-numeric:tabular-nums;}
 .setgrid input{width:100%; background:var(--input); border:none;
-  border-radius:9px; min-height:42px; font-size:17px; font-weight:700; text-align:center;
+  border-radius:9px; min-height:42px; font-family:var(--display); font-size:17px; font-weight:650; text-align:center;
   font-variant-numeric:tabular-nums; -webkit-appearance:none; appearance:none;}
 .setgrid input::placeholder{color:var(--ghost); font-weight:500;}
 .setgrid input:focus{outline:none; box-shadow:0 0 0 2px var(--accent);}
 .setrow-wrap.done .setgrid input{background:transparent;}
 .checkbtn{width:100%; min-height:42px; border-radius:9px; border:none;
-  background:var(--input); color:var(--dim); font-size:16px; font-weight:800;}
+  background:var(--input); color:var(--dim); padding:0;
+  display:flex; align-items:center; justify-content:center;}
+.checkbtn svg{width:17px; height:17px;}
+.setgrid.hdr svg{width:12px; height:12px; opacity:.8; vertical-align:-2px;}
 .checkbtn.done{background:var(--green); color:#fff;}
 .checkbtn.loss{background:var(--red); color:#fff;}
 /* the current set to complete — inviting; later sets wait their turn (dimmed) */
@@ -255,7 +259,7 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 .restbar .pulse{width:8px; height:8px; border-radius:50%; background:var(--accent);
   animation:pulse-dot 1.2s ease-in-out infinite;}
 @keyframes pulse-dot{50%{opacity:.2; transform:scale(.7);}}
-.restbar .tm{font-weight:700; font-size:16px; font-variant-numeric:tabular-nums; color:var(--accent-soft);}
+.restbar .tm{font-family:var(--display); font-weight:700; font-size:16px; font-variant-numeric:tabular-nums; color:var(--accent-soft);}
 
 /* screen entrance (on tab/nav change only, see go()) */
 #screen.screen-in{animation:screen-in .28s ease;}
