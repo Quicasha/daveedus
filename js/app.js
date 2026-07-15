@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.10.2'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.10.3'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -1425,6 +1425,7 @@ function stepperInit(){
         b.textContent = (parseFloat(b.dataset.d)<0?'−':'+') + stepVal();
       });
       bar.classList.add('show');
+      updateStepTime();
       placeStepper();
     }
   });
@@ -1483,6 +1484,17 @@ function tick(){
     const tb = $('#tbrest-time');
     if(tb) tb.textContent = fmtTime((now - r.at)/1000);
   }
+  updateStepTime();
+}
+/* workout + rest time on the keyboard stepper bar — the topbar scrolls away
+   on iOS while the keyboard is open, this stays visible */
+function updateStepTime(){
+  const el = $('#step-time');
+  if(!el || !S.active) return;
+  const now = Date.now();
+  const r = S.active.rest;
+  el.innerHTML = fmtTime((now - new Date(S.active.startedAt).getTime())/1000)
+    + (r ? ` <span class="rst">· ${fmtTime((now - r.at)/1000)}</span>` : '');
 }
 
 /* ======================= PROGRAM (splits + templates) ======================= */
