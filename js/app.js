@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.9.5'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.9.6'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -46,10 +46,10 @@ const I18N = {
     histEditTitle:'Redaguoti treniruotę',
     tplDup:'Dubliuoti', tplDupSuffix:'(kopija)',
     woSec:'sek.',
-    sumTitle:'Treniruotė išsaugota 💪', sumDur:'Trukmė', sumVol:'Apimtis', sumSets:'Setai',
-    sumPRs:'Nauji rekordai', sumOk:'Super!',
+    sumTitle:'Treniruotė išsaugota', sumDur:'Trukmė', sumVol:'Apimtis', sumSets:'Setai',
+    sumPRs:'Nauji rekordai', sumOk:'Atlikta',
     recTitle:'Rekordai', rec1RM:'~1RM (apytikslis)', recBestSet:'Geriausias setas', recTime:'Ilgiausiai',
-    bakRemind:'Seniai nekopijavai atsarginio kodo!',
+    bakRemind:'Atsarginis kodas seniai nekopijuotas.',
     protTitle:'Duomenų apsauga', protPersist:'Nuolatinė saugykla',
     protOn:'✓ Įjungta', protOff:'Nesuteikta',
     protSnaps:'Automatinės kopijos įrenginyje',
@@ -75,10 +75,10 @@ const I18N = {
     trackDelta30:'per 30 d.',
     prTitle:'Nauji rekordai', prEmpty:'Rekordai atsiras po kelių treniruočių.',
     dlBtn:'Deload',
-    mainSet:'Pagrindinė programa: {n} ★', mainTitle:'Pagrindinė programa',
+    mainSet:'Pagrindinė programa: {n}', mainTitle:'Pagrindinė programa',
     dlEndConfirm:'Baigti deload anksčiau?',
-    dlOn:'Deload pradėtas 🧘',
-    dlDone:'Deload ciklas baigtas 💪',
+    dlOn:'Deload pradėtas',
+    dlDone:'Deload ciklas baigtas',
     dlActiveBanner:'DELOAD',
     dlLeft:'liko {n} trenir.', dlSub:'rekordai nesiskaičiuoja · tap = baigti',
     dlWoBar:'DELOAD — siūlomi svoriai ~{p} %', dlWoBarVol:'setai perpus',
@@ -93,7 +93,7 @@ const I18N = {
     dlmStart:'Pradėti deload',
     histMore:'Rodyti daugiau', bwLogNew:'+ Įvesti svorį',
     metricW:'Svoris', metricVol:'Apimtis', metric1RM:'~1RM',
-    exMine:'Mano', exMineEmpty:'Dar nieko nedarei — pasirink „Visi“ ir pradėk!',
+    exMine:'Mano', exMineEmpty:'Čia atsiras pratimai, kuriuos jau darei. Kol kas žiūrėk „Visi“.',
     saveDone:'Išsaugoti',
     bw:'Kūno svoris', bwLog:'Įrašyti', bwDel:'Ištrinti šį įrašą?',
     plates:'Svarelių kalkuliatorius', platesBar:'Grifas', platesSide:'Ant vienos pusės',
@@ -108,7 +108,7 @@ const I18N = {
     exBest:'Rekordas', exSessions:'Treniruotės', exLastDone:'Paskutinį kartą',
     exNoHistory:'Šio pratimo istorijos dar nėra',
     chartTop:'geriausias setas ({u})', chartNoData:'Nėra duomenų',
-    histEmpty:'Istorija tuščia — laikas treniruotis! Pasirink programą skiltyje „Treniruotė“.',
+    histEmpty:'Istorijos dar nėra. Pasirink treniruotę skiltyje „Treniruotė“.',
     histDel:'Ištrinti šią treniruotę iš istorijos?', histSets:'setai', histVolume:'apimtis',
     setTheme:'Tema', themeAuto:'Auto', themeDark:'Tamsi', themeLight:'Šviesi',
     setLang:'Kalba', setAwake:'Neužmigdyti ekrano',
@@ -122,7 +122,7 @@ const I18N = {
     bakDone:'Duomenys atkurti ✓',
     setDanger:'Pavojinga zona', setWipe:'Ištrinti visus duomenis',
     setWipeConfirm:'Tikrai ištrinti VISUS duomenis (programas ir istoriją)?',
-    saveError:'Nepavyko išsaugoti duomenų!',
+    saveError:'Nepavyko išsaugoti duomenų. Atlaisvink vietos arba nusikopijuok atsarginį kodą.',
     g_all:'Visi', g_chest:'Krūtinė', g_back:'Nugara', g_shoulders:'Pečiai', g_biceps:'Bicepsai',
     g_triceps:'Tricepsai', g_forearms:'Dilbiai', g_quads:'Keturgalviai', g_hamstrings:'Dvigalviai',
     g_glutes:'Sėdmenys', g_calves:'Blauzdos', g_core:'Pilvo presas', g_other:'Kita',
@@ -165,10 +165,10 @@ const I18N = {
     histEditTitle:'Edit workout',
     tplDup:'Duplicate', tplDupSuffix:'(copy)',
     woSec:'sec',
-    sumTitle:'Workout saved 💪', sumDur:'Duration', sumVol:'Volume', sumSets:'Sets',
-    sumPRs:'New records', sumOk:'Nice!',
+    sumTitle:'Workout saved', sumDur:'Duration', sumVol:'Volume', sumSets:'Sets',
+    sumPRs:'New records', sumOk:'Done',
     recTitle:'Records', rec1RM:'~1RM (estimated)', recBestSet:'Best set', recTime:'Longest',
-    bakRemind:"You haven't copied a backup code in a while!",
+    bakRemind:"Backup code hasn't been copied in a while.",
     protTitle:'Data protection', protPersist:'Persistent storage',
     protOn:'✓ On', protOff:'Not granted',
     protSnaps:'Automatic on-device snapshots',
@@ -194,10 +194,10 @@ const I18N = {
     trackDelta30:'in 30 d',
     prTitle:'Recent records', prEmpty:'Records will show up after a few workouts.',
     dlBtn:'Deload',
-    mainSet:'Main program: {n} ★', mainTitle:'Main program',
+    mainSet:'Main program: {n}', mainTitle:'Main program',
     dlEndConfirm:'End the deload early?',
-    dlOn:'Deload started 🧘',
-    dlDone:'Deload cycle complete 💪',
+    dlOn:'Deload started',
+    dlDone:'Deload cycle complete',
     dlActiveBanner:'DELOAD',
     dlLeft:'{n} workouts left', dlSub:'records paused · tap to end',
     dlWoBar:'DELOAD — suggested weights ~{p}%', dlWoBarVol:'half sets',
@@ -212,7 +212,7 @@ const I18N = {
     dlmStart:'Start deload',
     histMore:'Show more', bwLogNew:'+ Log weight',
     metricW:'Weight', metricVol:'Volume', metric1RM:'~1RM',
-    exMine:'Mine', exMineEmpty:'Nothing done yet — pick “All” and get started!',
+    exMine:'Mine', exMineEmpty:'Exercises you have done will appear here. Browse “All” for now.',
     saveDone:'Save',
     bw:'Body weight', bwLog:'Log', bwDel:'Delete this entry?',
     plates:'Plate calculator', platesBar:'Bar', platesSide:'Per side',
@@ -227,7 +227,7 @@ const I18N = {
     exBest:'Best', exSessions:'Sessions', exLastDone:'Last done',
     exNoHistory:'No history for this exercise yet',
     chartTop:'top set ({u})', chartNoData:'No data',
-    histEmpty:'No history yet — time to train! Pick a template in the “Workout” tab.',
+    histEmpty:'No history yet. Pick a workout in the Workout tab.',
     histDel:'Delete this workout from history?', histSets:'sets', histVolume:'volume',
     setTheme:'Theme', themeAuto:'Auto', themeDark:'Dark', themeLight:'Light',
     setLang:'Language', setAwake:'Keep screen awake',
@@ -241,7 +241,7 @@ const I18N = {
     bakDone:'Data restored ✓',
     setDanger:'Danger zone', setWipe:'Delete all data',
     setWipeConfirm:'Really delete ALL data (templates and history)?',
-    saveError:'Could not save data!',
+    saveError:'Could not save data. Free up space or copy a backup code.',
     g_all:'All', g_chest:'Chest', g_back:'Back', g_shoulders:'Shoulders', g_biceps:'Biceps',
     g_triceps:'Triceps', g_forearms:'Forearms', g_quads:'Quads', g_hamstrings:'Hamstrings',
     g_glutes:'Glutes', g_calves:'Calves', g_core:'Core', g_other:'Other',
@@ -1362,10 +1362,10 @@ function finishWorkout(){
   showSummary(dur, vol, done, prs);
 }
 function showSummary(dur, vol, setsDone, prs){
-  const prHtml = prs.length ? `<h2 class="sec" style="margin-top:14px">🏆 ${t('sumPRs')}</h2>` +
+  const prHtml = prs.length ? `<h2 class="sec" style="margin-top:14px">${t('sumPRs')}</h2>` +
     prs.map(p=>`<div class="card" style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px">
       <span style="flex:1;font-weight:700">${esc(p.name)}</span>
-      <span style="font-weight:800;color:var(--accent-soft);font-size:18px">${p.txt} 🎉</span></div>`).join('') : '';
+      <span style="font-weight:800;color:var(--accent-soft);font-size:18px">${p.txt}</span></div>`).join('') : '';
   openModal(`<h3>${t('sumTitle')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div class="statrow">
       <div class="stat"><div class="v">${fmtTime(dur)}</div><div class="l">${t('sumDur')}</div></div>
@@ -1978,7 +1978,7 @@ function htmlExDetail(){
   if(!st.sessions) return h + `<div class="empty">${t('exNoHistory')}</div>`;
   if(!tm && st.bestSet){
     h += `<div class="card">
-      <div style="font-size:12px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);margin-bottom:8px">🏆 ${t('recTitle')}</div>
+      <div style="font-size:12px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);margin-bottom:8px">${t('recTitle')}</div>
       <div style="display:flex;gap:8px;padding:4px 0;align-items:baseline;font-size:14px">
         <span style="color:var(--dim);flex:1">${t('rec1RM')}</span>
         <span style="font-weight:800;font-size:16px">${wu(Math.round(st.e1rm*10)/10,true)}</span></div>
@@ -2433,7 +2433,7 @@ function prEvents(){
 }
 function prFeedHtml(){
   const evs = prEvents();
-  let h = `<h2 class="sec">🏆 ${t('prTitle')}</h2>`;
+  let h = `<h2 class="sec">${t('prTitle')}</h2>`;
   if(!evs.length) return h + `<div class="empty" style="padding:16px 20px">${t('prEmpty')}</div>`;
   return h + `<div class="card" style="padding:5px 16px">` + evs.map(ev=>
     `<div class="prrow" onclick="openExDetailByKey('${ev.k}')">
