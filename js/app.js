@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.10.3'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.10.4'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -1054,7 +1054,7 @@ function htmlWorkout(){
           <div class="prev">${prevTxt}</div>
           <input type="text" inputmode="decimal" id="w-${xi}-${si}" placeholder="${wph}" value="${esc(s.w)}"
             ${s.done?'disabled':''} oninput="onSetInput(${xi},${si},'w',this.value)">
-          <input type="text" inputmode="numeric" placeholder="${g?g.reps:(tm?'s':'×')}" value="${esc(s.r)}"
+          <input type="text" inputmode="numeric" id="r-${xi}-${si}" placeholder="${g?g.reps:(tm?'s':'×')}" value="${esc(s.r)}"
             ${s.done?'disabled':''} oninput="onSetInput(${xi},${si},'r',this.value)">
           <button class="checkbtn ${chkCls}${isCur?' cur':''}" onclick="toggleSet(${xi},${si})">${ACT_ICONS.check}</button>
           ${rowBtn}
@@ -1419,45 +1419,63 @@ function stepperInit(){
     });
   });
   document.addEventListener('focusin', e=>{
-    if(V.screen==='workout' && e.target.id && e.target.id.startsWith('w-')){
+    if(V.screen==='workout' && e.target.id && /^[wr]-/.test(e.target.id)){
       stepEl = e.target;
+      const reps = e.target.id.startsWith('r-');
+      const step = reps ? 1 : stepVal();
       bar.querySelectorAll('button').forEach(b=>{
-        b.textContent = (parseFloat(b.dataset.d)<0?'−':'+') + stepVal();
+        b.textContent = (parseFloat(b.dataset.d)<0?'−':'+') + step;
       });
       bar.classList.add('show');
       updateStepTime();
-      placeStepper();
+      startStepLoop();
     }
   });
   document.addEventListener('focusout', ()=>{
     setTimeout(()=>{
       const a = document.activeElement;
-      if(!(a && a.id && a.id.startsWith('w-'))){
-        bar.classList.remove('show'); bar.style.bottom=''; stepEl=null;
+      if(!(a && a.id && /^[wr]-/.test(a.id))){
+        bar.classList.remove('show'); bar.style.transform=''; stepEl=null;
       }else stepEl = a;
     }, 120);
   });
-  if(window.visualViewport){
-    window.visualViewport.addEventListener('resize', placeStepper);
-    window.visualViewport.addEventListener('scroll', placeStepper);
-  }
 }
-function placeStepper(){
-  const bar = $('#stepper');
-  if(!bar || !bar.classList.contains('show')) return;
-  if(window.visualViewport){
-    /* keep the buttons above the on-screen keyboard */
-    const off = window.innerHeight - (window.visualViewport.height + window.visualViewport.offsetTop);
-    bar.style.bottom = off > 40 ? (off + 12) + 'px' : '';
-  }
+/* follow the keyboard every frame while visible — visualViewport events lag behind
+   the iOS keyboard animation and made the bar jump; rAF + transform tracks smoothly */
+let stepRAF = 0;
+function startStepLoop(){
+  if(stepRAF) return;
+  const loop = ()=>{
+    const bar = $('#stepper');
+    if(!bar || !bar.classList.contains('show')){ stepRAF = 0; return; }
+    if(window.visualViewport){
+      const vv = window.visualViewport;
+      const off = window.innerHeight - (vv.height + vv.offsetTop);
+      bar.style.transform = off > 40 ? 'translateY('+(-off)+'px)' : '';
+    }
+    stepRAF = requestAnimationFrame(loop);
+  };
+  stepRAF = requestAnimationFrame(loop);
 }
 function stepWeight(d){
   if(!stepEl || !S.active) return;
-  const m = stepEl.id.match(/^w-(\d+)-(\d+)$/);
+  const m = stepEl.id.match(/^([wr])-(\d+)-(\d+)$/);
   if(!m) return;
-  const xi = +m[1], si = +m[2];
+  const xi = +m[2], si = +m[3];
   const ex = S.active.exercises[xi];
   if(!ex || !ex.sets[si] || ex.sets[si].done) return;
+  if(m[1]==='r'){ /* reps field: step by ±1 */
+    let cur = parseNum(stepEl.value);
+    if(isNaN(cur)){
+      const g = ghostFor(ex, si);
+      cur = g ? g.reps : 0;
+    }
+    cur = Math.max(1, Math.round(cur + (d<0?-1:1)));
+    stepEl.value = String(cur);
+    ex.sets[si].r = String(cur);
+    save();
+    return;
+  }
   let cur = parseNum(stepEl.value);
   if(isNaN(cur)){
     const g = ghostFor(ex, si);
