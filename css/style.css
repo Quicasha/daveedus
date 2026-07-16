@@ -60,7 +60,7 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 #topbar.scrolled{border-bottom-color:var(--line);}
 #topbar h1{font-family:var(--display); font-size:28px; font-weight:800; letter-spacing:-.4px; margin:0; flex:1;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-#topbar .elapsed{flex:1; font-family:var(--display); font-size:24px; font-weight:700; font-variant-numeric:tabular-nums;}
+#topbar .elapsed{flex:1; min-width:0; font-family:var(--display); font-size:24px; font-weight:700; font-variant-numeric:tabular-nums;}
 #topbar .elapsed small{display:block; font-size:11px; font-weight:600; color:var(--dim);
   letter-spacing:.6px; text-transform:uppercase; margin-bottom:1px;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
@@ -68,13 +68,13 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 #topbar .tbr{color:var(--accent-soft); font-weight:800; font-variant-numeric:tabular-nums;}
 #topbar .tbdot{display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent);
   margin-right:5px; vertical-align:1px; animation:pulse-dot 1.2s ease-in-out infinite;}
-.iconbtn{background:none; border:none; color:var(--accent-soft);
+.iconbtn{background:none; border:none; color:var(--accent-soft); flex:none;
   min-width:42px; min-height:42px; font-size:30px; font-weight:400; line-height:1;
   display:flex; align-items:center; justify-content:center; padding:0 4px 4px 0;}
 .iconbtn:active{opacity:.5;}
 .iconbtn.danger{color:var(--red); padding:0;}
 .iconbtn svg{width:20px; height:20px;}
-.finishbtn{display:inline-flex; align-items:center; justify-content:center; gap:6px;
+.finishbtn{display:inline-flex; align-items:center; justify-content:center; gap:6px; flex:none;
   background:var(--accent-bg); border:none; color:var(--accent-soft); border-radius:10px;
   min-height:40px; padding:0 18px; font-size:14px; font-weight:800; letter-spacing:.8px;}
 .finishbtn svg{width:13px; height:13px;}
@@ -287,7 +287,9 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 #topbar .tbr.done .tbdot{background:var(--green); animation:none;}
 #stepper .steptime .rst.ok{color:var(--green);}
 /* per-exercise rest target row in the template editor */
-.numfield .val.off{color:var(--ghost);}
+.numfield input.restin{width:64px; background:none; border:none; text-align:center;
+  font-size:16px; font-weight:700; font-variant-numeric:tabular-nums; padding:0;}
+.numfield input.restin::placeholder{color:var(--ghost); font-weight:700;}
 .ctlrow .resthint{color:var(--ghost); font-size:12px; font-weight:600;}
 
 /* screen entrance (on tab/nav change only, see go()) */

@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.12.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.12.1'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -1748,7 +1748,7 @@ function htmlTplEdit(){
       <div class="ctlrow">
         <span class="clbl">${t('tplRest')}</span>
         <div class="numfield">
-          <button onclick="stepTplRest('${d.id}',${i},-1)">−</button><span class="val ${e.rt?'':'off'}">${e.rt?fmtTime(e.rt):'—'}</span>
+          <button onclick="stepTplRest('${d.id}',${i},-1)">−</button><input class="val restin" type="text" inputmode="decimal" value="${e.rt?fmtTime(e.rt):''}" placeholder="—" onfocus="this.select()" onchange="typeTplRest('${d.id}',${i},this.value)">
           <button onclick="stepTplRest('${d.id}',${i},1)">+</button>
         </div>
         ${e.rt?'':`<span class="resthint">${t('tplRestOff')}</span>`}
@@ -1833,6 +1833,29 @@ function stepTplRest(id,i,dir){
   }
   if(e.rt) S.restTarget = e.rt;
   save(); render();
+}
+/* typed rest: "1:30" = m:ss, "1.5" = minutes, plain numbers below 15 mean minutes
+   ("3" -> 3:00), 15 and up mean seconds ("90" -> 1:30); snapped to 15 s */
+function parseRestInput(v){
+  v = String(v).trim().replace(',','.');
+  if(!v) return 0;
+  let sec;
+  const m = v.match(/^(\d+):(\d{1,2})$/);
+  if(m) sec = (+m[1])*60 + (+m[2]);
+  else{
+    const n = parseFloat(v);
+    if(isNaN(n) || n<=0) return NaN;
+    sec = (n<15 || v.includes('.')) ? n*60 : n;
+  }
+  return Math.max(15, Math.min(1800, Math.round(sec/15)*15));
+}
+function typeTplRest(id,i,v){
+  const d = S.templates.find(x=>x.id===id);
+  if(!d || !d.ex[i]) return;
+  const sec = parseRestInput(v);
+  if(sec===0) delete d.ex[i].rt;               /* cleared the field -> no target */
+  else if(!isNaN(sec)){ d.ex[i].rt = sec; S.restTarget = sec; }
+  save(); render();                            /* invalid input just re-renders the old value */
 }
 /* reps target may be a single number or a range (e.g. "10-12") */
 function repsParse(r){
