@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.11.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.12.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -112,8 +112,9 @@ const I18N = {
     histDel:'Ištrinti šią treniruotę iš istorijos?', histSets:'setai', histVolume:'apimtis',
     setTheme:'Tema', themeAuto:'Auto', themeDark:'Tamsi', themeLight:'Šviesi',
     setLang:'Kalba', setAwake:'Neužmigdyti ekrano',
-    setRest:'Poilsio taikinys', setRestLen:'Trukmė', setRestSnd:'Garso signalas',
-    setRestHint:'Kai poilsis pasiekia taikinį, juosta sumirksi ir pyptelės. Treniruotės metu taikinį gali koreguoti ±15 s tiesiai juostoje. Jei telefonas begarsiu režimu — signalas tik vizualus.',
+    setRestSnd:'Poilsio garso signalas',
+    setRestHint:'Poilsio taikinys nustatomas treniruotės redagavime prie kiekvieno pratimo. Kai laikas sueina, juosta sumirksi ir pyptelės — telefonui esant begarsiu režimu signalas tik vizualus.',
+    tplRest:'Poilsis', tplRestOff:'laisvai',
     setBackup:'Atsarginė kopija', setBackupCopy:'Kopijuoti atsarginį kodą', setBackupLoad:'Įkelti atsarginį kodą',
     csvTitle:'CSV eksportas (analizei)',
     csvSets:'Treniruočių setai (CSV)', csvBw:'Kūno svoris (CSV)',
@@ -233,8 +234,9 @@ const I18N = {
     histDel:'Delete this workout from history?', histSets:'sets', histVolume:'volume',
     setTheme:'Theme', themeAuto:'Auto', themeDark:'Dark', themeLight:'Light',
     setLang:'Language', setAwake:'Keep screen awake',
-    setRest:'Rest target', setRestLen:'Duration', setRestSnd:'Sound signal',
-    setRestHint:'When rest reaches the target, the bar flashes and beeps. During a workout you can adjust the target ±15 s right on the bar. On silent mode the signal is visual only.',
+    setRestSnd:'Rest sound signal',
+    setRestHint:'Set a rest target per exercise when editing a workout. When time is up, the bar flashes and beeps — on silent mode the signal is visual only.',
+    tplRest:'Rest', tplRestOff:'free',
     setBackup:'Backup', setBackupCopy:'Copy backup code', setBackupLoad:'Load backup code',
     csvTitle:'CSV export (for analysis)',
     csvSets:'Workout sets (CSV)', csvBw:'Body weight (CSV)',
@@ -292,7 +294,7 @@ const PLATE_DEF  = { kg:[25,20,15,10,5,2.5,1.25],      lb:[45,35,25,10,5,2.5] };
 function defaultState(){
   const fid = uid();
   return { lang:'en', unit:'kg', theme:'auto', keepAwake:true, lastBackup:0, bakSnooze:0, mig13:true,
-           restTargetOn:false, restTarget:120, restSound:true,
+           restTarget:120, restSound:true, /* restTarget = last picked value in the editor */
            folders:[{ id:fid, name:'Upper / Lower', open:true, pinned:true }],
            customEx:[], templates:seedTemplates(fid), history:[], weights:[], active:null,
            trackedLifts:[], deloads:[], mainFolder:null,
@@ -325,7 +327,6 @@ function hydrate(s){
     if(d.vol!==0.5 && d.vol!==1) d.vol = 1;
   });
   if(typeof s.mainFolder!=='string') s.mainFolder = null;
-  if(typeof s.restTargetOn!=='boolean') s.restTargetOn = false;
   if(typeof s.restTarget!=='number' || !(s.restTarget>=15 && s.restTarget<=1800)) s.restTarget = 120;
   if(typeof s.restSound!=='boolean') s.restSound = true;
   if(!s.plates || !Array.isArray(s.plates.kg) || !Array.isArray(s.plates.lb)){
@@ -843,12 +844,13 @@ function tplCounts(){
 /* ======================= WORKOUT ======================= */
 function latestBw(){ return S.weights.length ? S.weights[0].kg : null; }
 function newSet(extra){ return Object.assign({ w:'', r:'', warm:false, drop:false, fail:false, done:false, cls:'' }, extra||{}); }
-function buildActiveEx(k, name, sets, reps, ss, tplId, alts, pnote){
+function buildActiveEx(k, name, sets, reps, ss, tplId, alts, pnote, rt){
   const last = lastForExercise(k, name, tplId);
   const ex = { id:uid(), k, name, targetSets:sets, targetReps:reps, note:'', ss:!!ss, last,
     baseK:k, alts:(alts||[]).slice(), stash:{}, tplId:tplId||null,
     pnote:pnote||'', notePerm:false, prevOrder:(last && last.order) ? last.order : 0,
     sets: Array.from({length:sets}, ()=>newSet()) };
+  if(typeof rt==='number' && rt>=15) ex.rt = Math.min(1800, Math.round(rt));
   if(isBwEx(k)){
     /* body weight prefilled from the latest log (or last session), kept separate from the logged load */
     ex.bw = latestBw() != null ? latestBw() : (last && last.bw != null ? last.bw : null);
@@ -979,7 +981,7 @@ function startWorkout(tplId){
   const dls = n => Math.max(1, Math.ceil(n*dlv));
   S.active = {
     tplId: tpl.id, name: tpl.name, startedAt: new Date().toISOString(), rest:null,
-    exercises: tpl.ex.map(e => buildActiveEx(e.k, exName(e.k,e.n), dls(e.s), e.r, e.ss, tpl.id, e.alts, e.pnote))
+    exercises: tpl.ex.map(e => buildActiveEx(e.k, exName(e.k,e.n), dls(e.s), e.r, e.ss, tpl.id, e.alts, e.pnote, e.rt))
   };
   save();
   go('workout');
@@ -1271,9 +1273,16 @@ function toggleSet(xi,si){
   else if(wkg>real.weight || (wkg===real.weight && r>real.reps)) s.cls='win';
   else if(wkg===real.weight && r===real.reps) s.cls='even';
   else s.cls='loss';
-  S.active.rest = { at:Date.now(), key:xi+'-'+si };
-  if(S.restTargetOn) S.active.rest.tgt = S.restTarget;
-  if(S.restTargetOn && S.restSound) unlockAudio(); /* iOS: audio must be unlocked by a tap */
+  /* no rest after the very last set of the workout — nothing left to rest for */
+  if(S.active.exercises.every(exFullyDone)){
+    S.active.rest = null;
+  }else{
+    S.active.rest = { at:Date.now(), key:xi+'-'+si };
+    if(ex.rt){
+      S.active.rest.tgt = ex.rt;
+      if(S.restSound) unlockAudio(); /* iOS: audio must be unlocked by a tap */
+    }
+  }
   V.lastDone = xi+'-'+si;
   updateExDone(ex);
   /* superset: after each set, hand over to the next linked partner that still
@@ -1736,6 +1745,14 @@ function htmlTplEdit(){
         ${repsCtl}
         <button class="rangetog ${p.range?'acc':''}" onclick="toggleRepsRange('${d.id}',${i})">${t('repsRangeTog')}</button>
       </div>
+      <div class="ctlrow">
+        <span class="clbl">${t('tplRest')}</span>
+        <div class="numfield">
+          <button onclick="stepTplRest('${d.id}',${i},-1)">−</button><span class="val ${e.rt?'':'off'}">${e.rt?fmtTime(e.rt):'—'}</span>
+          <button onclick="stepTplRest('${d.id}',${i},1)">+</button>
+        </div>
+        ${e.rt?'':`<span class="resthint">${t('tplRestOff')}</span>`}
+      </div>
       <div class="altsrow">
         <span class="clbl">${t('altLabel')}</span>
         ${(e.alts||[]).map((ak,ai)=>`<span class="altchip">${esc(exName(ak))}<button onclick="delTplAlt('${d.id}',${i},${ai})" aria-label="remove">${ACT_ICONS.x}</button></span>`).join('')}
@@ -1771,7 +1788,7 @@ function dupTpl(id){
   const d = S.templates.find(x=>x.id===id);
   if(!d) return;
   const copy = { id:uid(), name:(d.name+' '+t('tplDupSuffix')).slice(0,60), folderId:d.folderId,
-    ex: d.ex.map(e=>({ id:uid(), k:e.k, s:e.s, r:e.r, ss:!!e.ss, alts:(e.alts||[]).slice(), pnote:e.pnote||'' })) };
+    ex: d.ex.map(e=>({ id:uid(), k:e.k, s:e.s, r:e.r, ss:!!e.ss, alts:(e.alts||[]).slice(), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}) })) };
   S.templates.splice(S.templates.indexOf(d)+1, 0, copy);
   save();
   openTpl(copy.id);
@@ -1799,6 +1816,22 @@ function bumpTplEx(id,i,f,delta){
   const d = S.templates.find(x=>x.id===id);
   if(!d || !d.ex[i]) return;
   d.ex[i][f] = Math.max(1, Math.min(f==='s'?12:50, (parseInt(d.ex[i][f],10)||0)+delta));
+  save(); render();
+}
+/* per-exercise rest target: "—" (plain count-up) or 15 s .. 30 min in 15 s steps;
+   the last picked value is remembered as the starting point for other exercises */
+function stepTplRest(id,i,dir){
+  const d = S.templates.find(x=>x.id===id);
+  if(!d || !d.ex[i]) return;
+  const e = d.ex[i];
+  if(!e.rt){
+    if(dir>0) e.rt = S.restTarget || 120;
+  }else{
+    const v = e.rt + dir*15;
+    if(v < 15) delete e.rt;
+    else e.rt = Math.min(1800, v);
+  }
+  if(e.rt) S.restTarget = e.rt;
   save(); render();
 }
 /* reps target may be a single number or a range (e.g. "10-12") */
@@ -2851,23 +2884,10 @@ function htmlSettings(){
       <div class="switch ${S.keepAwake?'on':''}" onclick="S.keepAwake=!S.keepAwake; save(); render()"></div>
     </div>
     <div class="setline">
-      <span class="lb">${t('setRest')}</span>
-      <div class="switch ${S.restTargetOn?'on':''}" onclick="S.restTargetOn=!S.restTargetOn; save(); render()"></div>
-    </div>
-    ${S.restTargetOn ? `
-    <div class="setline">
-      <span class="lb" style="color:var(--dim)">${t('setRestLen')}</span>
-      <div class="setctl restctl">
-        <button onclick="adjRestDef(-15)">−15s</button>
-        <span class="restdef">${fmtTime(S.restTarget)}</span>
-        <button onclick="adjRestDef(15)">+15s</button>
-      </div>
-    </div>
-    <div class="setline">
-      <span class="lb" style="color:var(--dim)">${t('setRestSnd')}</span>
+      <span class="lb">${t('setRestSnd')}</span>
       <div class="switch ${S.restSound?'on':''}" onclick="toggleRestSound()"></div>
     </div>
-    <div style="font-size:12px;color:var(--ghost);line-height:1.5;margin-top:2px">${t('setRestHint')}</div>` : ''}
+    <div style="font-size:12px;color:var(--ghost);line-height:1.5;margin-top:2px">${t('setRestHint')}</div>
   </div>
   <h2 class="sec">${t('setBackup')}</h2>
   <button class="btn" onclick="copyBackup()">${ACT_ICONS.share} ${t('setBackupCopy')}</button>
@@ -2891,10 +2911,6 @@ function htmlSettings(){
   <div style="text-align:center;color:var(--ghost);font-size:12px;margin-top:24px">Daveedus v${APP_VER}</div>`;
 }
 function setTheme(m){ S.theme=m; save(); applyTheme(); render(); }
-function adjRestDef(d){
-  S.restTarget = Math.min(1800, Math.max(15, S.restTarget + d));
-  save(); render();
-}
 function toggleRestSound(){
   S.restSound = !S.restSound;
   save(); render();
@@ -2961,7 +2977,7 @@ function shareTpl(id){
   const d = S.templates.find(x=>x.id===id);
   if(!d) return;
   const payload = { t:'tpl', name:d.name,
-    ex: d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]), pnote:e.pnote||'' })) };
+    ex: d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]), pnote:e.pnote||'', rt:e.rt||0 })) };
   const code = encodeShare(payload);
   openModal(`<h3>${t('tplShare')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div style="color:var(--dim);font-size:14px;margin:0 4px 10px">${t('tplShareHint')}</div>
@@ -2970,7 +2986,7 @@ function shareTpl(id){
 }
 function copyBackup(){
   const payload = { t:'bak', s:{ lang:S.lang, theme:S.theme, keepAwake:S.keepAwake, plates:S.plates,
-    restTargetOn:S.restTargetOn, restTarget:S.restTarget, restSound:S.restSound,
+    restTarget:S.restTarget, restSound:S.restSound,
     folders:S.folders, customEx:S.customEx, templates:S.templates, history:S.history, weights:S.weights,
     trackedLifts:S.trackedLifts, deloads:S.deloads, mainFolder:S.mainFolder } };
   S.lastBackup = Date.now();
@@ -3068,7 +3084,8 @@ function importTplPayload(d, folderId){
       } else continue;
     }
     const alts = Array.isArray(e.alts) ? e.alts.filter(a=>exInfo(a) && a!==k) : [];
-    tpl.ex.push({ id:uid(), k, s:Math.max(1,Math.min(12,e.s|0||3)), r:normReps(e.r, isTimeEx(k)?600:50), ss:!!e.ss, alts, pnote:String(e.pnote||'').slice(0,200) });
+    const rt = (typeof e.rt==='number' && e.rt>=15 && e.rt<=1800) ? Math.round(e.rt/15)*15 : 0;
+    tpl.ex.push({ id:uid(), k, s:Math.max(1,Math.min(12,e.s|0||3)), r:normReps(e.r, isTimeEx(k)?600:50), ss:!!e.ss, alts, pnote:String(e.pnote||'').slice(0,200), ...(rt?{rt}:{}) });
   }
   S.templates.push(tpl);
   return tpl;
@@ -3100,7 +3117,6 @@ function doImport(){
     if(!Array.isArray(d.s.trackedLifts)) delete d.s.trackedLifts; /* keep the [] default */
     if(!Array.isArray(d.s.deloads)) delete d.s.deloads;
     if(typeof d.s.mainFolder!=='string') delete d.s.mainFolder;
-    if(typeof d.s.restTargetOn!=='boolean') delete d.s.restTargetOn;
     if(typeof d.s.restTarget!=='number' || !(d.s.restTarget>=15 && d.s.restTarget<=1800)) delete d.s.restTarget;
     if(typeof d.s.restSound!=='boolean') delete d.s.restSound;
     S = Object.assign(defaultState(), d.s, { active:null });

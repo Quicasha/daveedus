@@ -286,11 +286,9 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 #topbar .tbr.done{color:var(--green);}
 #topbar .tbr.done .tbdot{background:var(--green); animation:none;}
 #stepper .steptime .rst.ok{color:var(--green);}
-/* rest target duration stepper in Settings */
-.setctl.restctl{margin-top:0; align-items:center;}
-.setctl.restctl button{flex:none; min-width:56px; background:var(--accent-bg); color:var(--accent-soft);}
-.restctl .restdef{font-family:var(--display); font-weight:700; font-size:15px;
-  font-variant-numeric:tabular-nums; min-width:44px; text-align:center;}
+/* per-exercise rest target row in the template editor */
+.numfield .val.off{color:var(--ghost);}
+.ctlrow .resthint{color:var(--ghost); font-size:12px; font-weight:600;}
 
 /* screen entrance (on tab/nav change only, see go()) */
 #screen.screen-in{animation:screen-in .28s ease;}
