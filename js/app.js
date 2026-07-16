@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.10.5'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.11.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -112,6 +112,8 @@ const I18N = {
     histDel:'Ištrinti šią treniruotę iš istorijos?', histSets:'setai', histVolume:'apimtis',
     setTheme:'Tema', themeAuto:'Auto', themeDark:'Tamsi', themeLight:'Šviesi',
     setLang:'Kalba', setAwake:'Neužmigdyti ekrano',
+    setRest:'Poilsio taikinys', setRestLen:'Trukmė', setRestSnd:'Garso signalas',
+    setRestHint:'Kai poilsis pasiekia taikinį, juosta sumirksi ir pyptelės. Treniruotės metu taikinį gali koreguoti ±15 s tiesiai juostoje. Jei telefonas begarsiu režimu — signalas tik vizualus.',
     setBackup:'Atsarginė kopija', setBackupCopy:'Kopijuoti atsarginį kodą', setBackupLoad:'Įkelti atsarginį kodą',
     csvTitle:'CSV eksportas (analizei)',
     csvSets:'Treniruočių setai (CSV)', csvBw:'Kūno svoris (CSV)',
@@ -231,6 +233,8 @@ const I18N = {
     histDel:'Delete this workout from history?', histSets:'sets', histVolume:'volume',
     setTheme:'Theme', themeAuto:'Auto', themeDark:'Dark', themeLight:'Light',
     setLang:'Language', setAwake:'Keep screen awake',
+    setRest:'Rest target', setRestLen:'Duration', setRestSnd:'Sound signal',
+    setRestHint:'When rest reaches the target, the bar flashes and beeps. During a workout you can adjust the target ±15 s right on the bar. On silent mode the signal is visual only.',
     setBackup:'Backup', setBackupCopy:'Copy backup code', setBackupLoad:'Load backup code',
     csvTitle:'CSV export (for analysis)',
     csvSets:'Workout sets (CSV)', csvBw:'Body weight (CSV)',
@@ -288,6 +292,7 @@ const PLATE_DEF  = { kg:[25,20,15,10,5,2.5,1.25],      lb:[45,35,25,10,5,2.5] };
 function defaultState(){
   const fid = uid();
   return { lang:'en', unit:'kg', theme:'auto', keepAwake:true, lastBackup:0, bakSnooze:0, mig13:true,
+           restTargetOn:false, restTarget:120, restSound:true,
            folders:[{ id:fid, name:'Upper / Lower', open:true, pinned:true }],
            customEx:[], templates:seedTemplates(fid), history:[], weights:[], active:null,
            trackedLifts:[], deloads:[], mainFolder:null,
@@ -320,6 +325,9 @@ function hydrate(s){
     if(d.vol!==0.5 && d.vol!==1) d.vol = 1;
   });
   if(typeof s.mainFolder!=='string') s.mainFolder = null;
+  if(typeof s.restTargetOn!=='boolean') s.restTargetOn = false;
+  if(typeof s.restTarget!=='number' || !(s.restTarget>=15 && s.restTarget<=1800)) s.restTarget = 120;
+  if(typeof s.restSound!=='boolean') s.restSound = true;
   if(!s.plates || !Array.isArray(s.plates.kg) || !Array.isArray(s.plates.lb)){
     s.plates = { kg:PLATE_DEF.kg.slice(), lb:PLATE_DEF.lb.slice() };
   }
@@ -552,8 +560,9 @@ function renderTopbar(){
     /* while resting, the label line shows the count-up since the last set — always
        glanceable, even when the rest bar is scrolled away */
     const r = S.active.rest;
+    const rdone = r && r.tgt && (Date.now()-r.at)/1000 >= r.tgt;
     const label = r
-      ? `<span class="tbr"><span class="tbdot"></span>${t('restLabel')} <span id="tbrest-time">${fmtTime((Date.now()-r.at)/1000)}</span></span> · ${esc(S.active.name)}`
+      ? `<span class="tbr${rdone?' done':''}"><span class="tbdot"></span>${t('restLabel')} <span id="tbrest-time">${fmtTime((Date.now()-r.at)/1000)}${r.tgt?'/'+fmtTime(r.tgt):''}</span></span> · ${esc(S.active.name)}`
       : `${t('woElapsed')} · ${esc(S.active.name)}`;
     h = `<button class="iconbtn" onclick="go('home')">‹</button>
          <div class="elapsed"><small>${label}</small><span id="elapsed-time">${el}</span></div>
@@ -1105,10 +1114,29 @@ function htmlWorkout(){
   return h;
 }
 function restBarHtml(){
-  return `<div class="restbar" id="restbar" onclick="dismissRest()">
+  const r = S.active.rest;
+  const el = (Date.now()-r.at)/1000;
+  if(!r.tgt) return `<div class="restbar" id="restbar" onclick="dismissRest()">
     <span class="pulse"></span>
-    <span class="tm" id="rest-time">${t('restLabel')} 0:00</span>
+    <span class="tm" id="rest-time">${t('restLabel')} ${fmtTime(el)}</span>
   </div>`;
+  const done = el >= r.tgt;
+  return `<div class="restbar target${done?' done':''}" id="restbar" onclick="dismissRest()">
+    <div class="rfill" id="rest-fill" style="width:${Math.min(100, el/r.tgt*100)}%"></div>
+    <button class="adj" onclick="event.stopPropagation();adjRest(-15)">−15</button>
+    <span class="mid"><span class="pulse"></span>
+      <span class="tm" id="rest-time">${t('restLabel')} ${fmtTime(el)} / ${fmtTime(r.tgt)}</span></span>
+    <button class="adj" onclick="event.stopPropagation();adjRest(15)">+15</button>
+  </div>`;
+}
+/* nudge the target of the CURRENT rest only (the default in Settings stays) */
+function adjRest(d){
+  const r = S.active && S.active.rest;
+  if(!r || !r.tgt) return;
+  unlockAudio();
+  r.tgt = Math.min(1800, Math.max(15, r.tgt + d));
+  if((Date.now()-r.at)/1000 < r.tgt) r.sig = 0; /* extended past "done" — signal re-arms */
+  save(); render();
 }
 function dismissRest(){
   if(S.active) S.active.rest = null;
@@ -1244,6 +1272,8 @@ function toggleSet(xi,si){
   else if(wkg===real.weight && r===real.reps) s.cls='even';
   else s.cls='loss';
   S.active.rest = { at:Date.now(), key:xi+'-'+si };
+  if(S.restTargetOn) S.active.rest.tgt = S.restTarget;
+  if(S.restTargetOn && S.restSound) unlockAudio(); /* iOS: audio must be unlocked by a tap */
   V.lastDone = xi+'-'+si;
   updateExDone(ex);
   /* superset: after each set, hand over to the next linked partner that still
@@ -1502,11 +1532,25 @@ function tick(){
   const el = $('#elapsed-time'); if(el) el.textContent = elapsed;
   const he = $('#home-elapsed'); if(he) he.textContent = elapsed;
   const r = S.active.rest;
-  if(r && V.screen==='workout'){
-    const tm = $('#rest-time');
-    if(tm) tm.textContent = t('restLabel')+' '+fmtTime((now - r.at)/1000);
+  if(r){
+    const rel = (now - r.at)/1000;
+    const done = !!r.tgt && rel >= r.tgt;
+    if(V.screen==='workout'){
+      const tm = $('#rest-time');
+      if(tm) tm.textContent = t('restLabel')+' '+fmtTime(rel)+(r.tgt ? ' / '+fmtTime(r.tgt) : '');
+      const bar = $('#restbar');
+      if(bar && r.tgt) bar.classList.toggle('done', done);
+      const f = $('#rest-fill');
+      if(f) f.style.width = Math.min(100, rel/r.tgt*100)+'%';
+    }
     const tb = $('#tbrest-time');
-    if(tb) tb.textContent = fmtTime((now - r.at)/1000);
+    if(tb){
+      tb.textContent = fmtTime(rel)+(r.tgt ? '/'+fmtTime(r.tgt) : '');
+      const wrap = tb.closest('.tbr');
+      if(wrap) wrap.classList.toggle('done', done);
+    }
+    /* target reached — signal once, whatever screen is visible */
+    if(r.tgt && !r.sig && done){ r.sig = 1; save(); restSignal(); }
   }
   updateStepTime();
 }
@@ -1517,8 +1561,9 @@ function updateStepTime(){
   if(!el || !S.active) return;
   const now = Date.now();
   const r = S.active.rest;
+  const rdone = r && r.tgt && (now - r.at)/1000 >= r.tgt;
   el.innerHTML = fmtTime((now - new Date(S.active.startedAt).getTime())/1000)
-    + (r ? ` <span class="rst">· ${fmtTime((now - r.at)/1000)}</span>` : '');
+    + (r ? ` <span class="rst${rdone?' ok':''}">· ${fmtTime((now - r.at)/1000)}${r.tgt?'/'+fmtTime(r.tgt):''}</span>` : '');
 }
 
 /* ======================= PROGRAM (splits + templates) ======================= */
@@ -2805,6 +2850,24 @@ function htmlSettings(){
       <span class="lb">${t('setAwake')}</span>
       <div class="switch ${S.keepAwake?'on':''}" onclick="S.keepAwake=!S.keepAwake; save(); render()"></div>
     </div>
+    <div class="setline">
+      <span class="lb">${t('setRest')}</span>
+      <div class="switch ${S.restTargetOn?'on':''}" onclick="S.restTargetOn=!S.restTargetOn; save(); render()"></div>
+    </div>
+    ${S.restTargetOn ? `
+    <div class="setline">
+      <span class="lb" style="color:var(--dim)">${t('setRestLen')}</span>
+      <div class="setctl restctl">
+        <button onclick="adjRestDef(-15)">−15s</button>
+        <span class="restdef">${fmtTime(S.restTarget)}</span>
+        <button onclick="adjRestDef(15)">+15s</button>
+      </div>
+    </div>
+    <div class="setline">
+      <span class="lb" style="color:var(--dim)">${t('setRestSnd')}</span>
+      <div class="switch ${S.restSound?'on':''}" onclick="toggleRestSound()"></div>
+    </div>
+    <div style="font-size:12px;color:var(--ghost);line-height:1.5;margin-top:2px">${t('setRestHint')}</div>` : ''}
   </div>
   <h2 class="sec">${t('setBackup')}</h2>
   <button class="btn" onclick="copyBackup()">${ACT_ICONS.share} ${t('setBackupCopy')}</button>
@@ -2828,6 +2891,15 @@ function htmlSettings(){
   <div style="text-align:center;color:var(--ghost);font-size:12px;margin-top:24px">Daveedus v${APP_VER}</div>`;
 }
 function setTheme(m){ S.theme=m; save(); applyTheme(); render(); }
+function adjRestDef(d){
+  S.restTarget = Math.min(1800, Math.max(15, S.restTarget + d));
+  save(); render();
+}
+function toggleRestSound(){
+  S.restSound = !S.restSound;
+  save(); render();
+  if(S.restSound){ unlockAudio(); setTimeout(beep, 150); } /* preview the sound */
+}
 function setUnit(u){ S.unit=u; save(); render(); }
 function snapListHtml(){
   const keys = Object.keys(localStorage).filter(k=>k.startsWith(SNAP_PREFIX)).sort().reverse();
@@ -2898,6 +2970,7 @@ function shareTpl(id){
 }
 function copyBackup(){
   const payload = { t:'bak', s:{ lang:S.lang, theme:S.theme, keepAwake:S.keepAwake, plates:S.plates,
+    restTargetOn:S.restTargetOn, restTarget:S.restTarget, restSound:S.restSound,
     folders:S.folders, customEx:S.customEx, templates:S.templates, history:S.history, weights:S.weights,
     trackedLifts:S.trackedLifts, deloads:S.deloads, mainFolder:S.mainFolder } };
   S.lastBackup = Date.now();
@@ -3027,6 +3100,9 @@ function doImport(){
     if(!Array.isArray(d.s.trackedLifts)) delete d.s.trackedLifts; /* keep the [] default */
     if(!Array.isArray(d.s.deloads)) delete d.s.deloads;
     if(typeof d.s.mainFolder!=='string') delete d.s.mainFolder;
+    if(typeof d.s.restTargetOn!=='boolean') delete d.s.restTargetOn;
+    if(typeof d.s.restTarget!=='number' || !(d.s.restTarget>=15 && d.s.restTarget<=1800)) delete d.s.restTarget;
+    if(typeof d.s.restSound!=='boolean') delete d.s.restSound;
     S = Object.assign(defaultState(), d.s, { active:null });
     save(); applyTheme(); closeModal();
     go('home');
@@ -3034,6 +3110,39 @@ function doImport(){
   }else{
     toast(t('codeBad'));
   }
+}
+
+/* ======================= rest signal (sound + flash) ======================= */
+let AC = null;
+function unlockAudio(){
+  /* create/resume the AudioContext inside a user gesture so iOS lets us beep later */
+  try{
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if(!Ctx) return;
+    if(!AC) AC = new Ctx();
+    if(AC.state==='suspended') AC.resume();
+  }catch(e){}
+}
+function beep(){
+  if(!AC || AC.state!=='running') return;
+  try{
+    const t0 = AC.currentTime + 0.02;
+    [[0,880],[0.22,1175]].forEach(([off,hz])=>{ /* two rising tones — "ready" */
+      const o = AC.createOscillator(), g = AC.createGain();
+      o.type = 'sine'; o.frequency.value = hz;
+      g.gain.setValueAtTime(0.0001, t0+off);
+      g.gain.linearRampToValueAtTime(0.3, t0+off+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0+off+0.18);
+      o.connect(g); g.connect(AC.destination);
+      o.start(t0+off); o.stop(t0+off+0.2);
+    });
+  }catch(e){}
+}
+function restSignal(){
+  if(S.restSound) beep();
+  try{ if(navigator.vibrate) navigator.vibrate([180,90,180]); }catch(e){} /* no-op on iOS */
+  const bar = $('#restbar');
+  if(bar){ bar.classList.remove('flash'); void bar.offsetWidth; bar.classList.add('flash'); }
 }
 
 /* ======================= wake lock ======================= */

@@ -265,6 +265,32 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
   animation:pulse-dot 1.2s ease-in-out infinite;}
 @keyframes pulse-dot{50%{opacity:.2; transform:scale(.7);}}
 .restbar .tm{font-family:var(--display); font-weight:700; font-size:16px; font-variant-numeric:tabular-nums; color:var(--accent-soft);}
+/* rest target mode: progress fill + inline ±15 s + green "done" state */
+.restbar.target{position:relative; overflow:hidden; justify-content:space-between; padding:0 2px;}
+.restbar .rfill{position:absolute; left:0; top:0; bottom:0; width:0;
+  background:var(--accent); opacity:.14; transition:width 1s linear; pointer-events:none;}
+.restbar .mid{display:flex; align-items:center; gap:10px; position:relative;}
+.restbar .adj{position:relative; background:none; border:none; min-width:54px; min-height:40px;
+  font-family:var(--display); font-weight:700; font-size:13px; color:var(--accent-soft);
+  font-variant-numeric:tabular-nums; cursor:pointer;}
+.restbar.done{background:var(--green-bg);}
+.restbar.done .rfill{background:var(--green); opacity:.1;}
+.restbar.done .tm, .restbar.done .adj{color:var(--green);}
+.restbar.done .pulse{background:var(--green); animation:none;}
+.restbar.flash{animation:rest-flash 1.1s ease;}
+@keyframes rest-flash{
+  0%,100%{box-shadow:0 0 0 0 transparent;}
+  15%,55%{box-shadow:0 0 0 3px var(--green);}
+  35%,80%{box-shadow:0 0 0 0 transparent;}}
+/* topbar + keyboard bar echo the "rest done" state */
+#topbar .tbr.done{color:var(--green);}
+#topbar .tbr.done .tbdot{background:var(--green); animation:none;}
+#stepper .steptime .rst.ok{color:var(--green);}
+/* rest target duration stepper in Settings */
+.setctl.restctl{margin-top:0; align-items:center;}
+.setctl.restctl button{flex:none; min-width:56px; background:var(--accent-bg); color:var(--accent-soft);}
+.restctl .restdef{font-family:var(--display); font-weight:700; font-size:15px;
+  font-variant-numeric:tabular-nums; min-width:44px; text-align:center;}
 
 /* screen entrance (on tab/nav change only, see go()) */
 #screen.screen-in{animation:screen-in .28s ease;}
