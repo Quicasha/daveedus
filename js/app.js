@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.13.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.13.1'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -270,41 +270,41 @@ function seedTemplates(fid){
     ...(alts && alts.length ? { alts } : {}), ...(pn ? { pnote:pn } : {}) });
   return [
     { id:uid(), name:'Upper A', folderId:fid, ex:[
-      tex('bench-press',4,'4-6',['smith-bench-press','db-bench-press'],'1 RIR, paskutinis setas gali 0 RIR'),
-      tex('barbell-row',3,'6-8',['chest-supported-row'],'paskutinis to failure'),
+      tex('bench-press',4,'4-6',['smith-bench-press','db-bench-press'],'1 RIR, last set 0 RIR'),
+      tex('barbell-row',3,'6-8',['chest-supported-row'],'last set to failure'),
       tex('incline-db-press',2,'8-10',['smith-incline-press','incline-bench-press'],'to failure'),
       tex('close-grip-lat-pulldown',2,'10-12',['pull-up'],'to failure'),
       tex('cable-lateral-raise',3,'12-15',['lateral-raise'],'to failure'),
       tex('incline-db-curl',2,'8-12',['preacher-curl'],'to failure'),
       tex('triceps-pushdown',2,'10-12',['overhead-triceps-ext'],'to failure') ]},
     { id:uid(), name:'Lower A', folderId:fid, ex:[
-      tex('back-squat',4,'4-6',['hack-squat','leg-press'],'1-2 RIR, niekada iki failure'),
-      tex('romanian-deadlift',3,'6-8',['db-romanian-deadlift'],'palik 1 rep'),
+      tex('back-squat',4,'4-6',['hack-squat','leg-press'],'1-2 RIR'),
+      tex('romanian-deadlift',3,'6-8',['db-romanian-deadlift'],'1 RIR'),
       tex('leg-press',2,'10-12',['hack-squat'],'to failure'),
       tex('lying-leg-curl',2,'10-12',['seated-leg-curl'],'to failure'),
       tex('leg-extension',2,'12-15',null,'to failure'),
       tex('seated-calf-raise',3,'10-15',['standing-calf-raise'],'to failure') ]},
     { id:uid(), name:'Upper B', folderId:fid, ex:[
       tex('overhead-press',4,'5-7',['seated-db-press'],'1 RIR'),
-      tex('chest-dip',3,'6-8',['machine-dip','close-grip-bench'],'su svoriu; paskutinis to failure'),
-      tex('pull-up',3,'6-8',['close-grip-lat-pulldown'],'su svoriu; paskutinis to failure'),
+      tex('chest-dip',3,'6-8',['machine-dip','close-grip-bench'],'last set to failure'),
+      tex('pull-up',3,'6-8',['close-grip-lat-pulldown'],'last set to failure'),
       tex('chest-supported-row',2,'10-12',['seated-cable-row'],'to failure'),
-      tex('face-pull',2,'15-20',['reverse-cable-fly'],'to failure, traps + rear delt'),
+      tex('face-pull',2,'15-20',['reverse-cable-fly'],'to failure'),
       tex('hammer-curl',2,'8-12',['ez-bar-curl'],'to failure'),
       tex('overhead-triceps-ext',2,'10-12',['triceps-pushdown'],'to failure') ]},
     { id:uid(), name:'Lower B', folderId:fid, ex:[
-      tex('tempo-squat',3,'8-10',['hack-squat'],'1-2 RIR, 3 s žemyn — technikos kalimas'),
+      tex('tempo-squat',3,'8-10',['hack-squat'],'1-2 RIR'),
       tex('bulgarian-split-squat',2,'8-12',['lunge'],'to failure'),
       tex('leg-press',2,'12-15',['hack-squat'],'to failure'),
       tex('lying-leg-curl',2,'10-12',['seated-leg-curl'],'to failure'),
       tex('leg-extension',2,'15-20',null,'to failure'),
       tex('calf-press',3,'12-20',['seated-calf-raise'],'to failure') ]},
     { id:uid(), name:'Upper C', folderId:fid, ex:[
-      tex('close-grip-bench',3,'6-8',['paused-bench-press','db-bench-press'],'1 RIR — antras bench stimulas + tricepsai'),
+      tex('close-grip-bench',3,'6-8',['paused-bench-press','db-bench-press'],'1 RIR'),
       tex('incline-db-press',2,'8-10',['smith-incline-press'],'to failure'),
       tex('seated-cable-row',2,'10-12',['chest-supported-row'],'to failure'),
       tex('close-grip-lat-pulldown',2,'12-15',['pull-up'],'to failure'),
-      tex('lateral-raise',4,'12-20',['cable-lateral-raise'],'to failure — pečių volume čia'),
+      tex('lateral-raise',4,'12-20',['cable-lateral-raise'],'to failure'),
       tex('preacher-curl',2,'8-12',['incline-db-curl'],'to failure'),
       tex('triceps-pushdown',2,'10-15',['overhead-triceps-ext'],'to failure') ]}
   ];
