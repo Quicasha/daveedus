@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.12.3'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.13.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -266,26 +266,47 @@ const LS_KEY = 'daveedus.v1';
 const uid = () => Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-3);
 
 function seedTemplates(fid){
-  const tex = (k,s,r) => ({ id:uid(), k, s, r });
+  const tex = (k,s,r,alts,pn) => ({ id:uid(), k, s, r,
+    ...(alts && alts.length ? { alts } : {}), ...(pn ? { pnote:pn } : {}) });
   return [
     { id:uid(), name:'Upper A', folderId:fid, ex:[
-      tex('bench-press',4,'4-6'), tex('barbell-row',3,'6-8'), tex('smith-incline-press',2,'8-10'),
-      tex('lat-pulldown',2,'10-12'), tex('cable-lateral-raise',2,'12-15'), tex('incline-db-curl',2,'8-12'),
-      tex('triceps-pushdown',2,'10-12') ]},
+      tex('bench-press',4,'4-6',['smith-bench-press','db-bench-press'],'1 RIR, paskutinis setas gali 0 RIR'),
+      tex('barbell-row',3,'6-8',['chest-supported-row'],'paskutinis to failure'),
+      tex('incline-db-press',2,'8-10',['smith-incline-press','incline-bench-press'],'to failure'),
+      tex('close-grip-lat-pulldown',2,'10-12',['pull-up'],'to failure'),
+      tex('cable-lateral-raise',3,'12-15',['lateral-raise'],'to failure'),
+      tex('incline-db-curl',2,'8-12',['preacher-curl'],'to failure'),
+      tex('triceps-pushdown',2,'10-12',['overhead-triceps-ext'],'to failure') ]},
     { id:uid(), name:'Lower A', folderId:fid, ex:[
-      tex('back-squat',4,'4-6'), tex('romanian-deadlift',3,'6-8'), tex('leg-press',2,'10-12'),
-      tex('lying-leg-curl',2,'10-12'), tex('leg-extension',2,'12-15'), tex('seated-calf-raise',3,'10-15') ]},
+      tex('back-squat',4,'4-6',['hack-squat','leg-press'],'1-2 RIR, niekada iki failure'),
+      tex('romanian-deadlift',3,'6-8',['db-romanian-deadlift'],'palik 1 rep'),
+      tex('leg-press',2,'10-12',['hack-squat'],'to failure'),
+      tex('lying-leg-curl',2,'10-12',['seated-leg-curl'],'to failure'),
+      tex('leg-extension',2,'12-15',null,'to failure'),
+      tex('seated-calf-raise',3,'10-15',['standing-calf-raise'],'to failure') ]},
     { id:uid(), name:'Upper B', folderId:fid, ex:[
-      tex('overhead-press',4,'5-7'), tex('chest-dip',3,'6-8'), tex('pull-up',3,'6-8'),
-      tex('chest-supported-row',2,'10-12'), tex('face-pull',2,'15-20'), tex('hammer-curl',2,'8-12'),
-      tex('overhead-triceps-ext',2,'10-12') ]},
+      tex('overhead-press',4,'5-7',['seated-db-press'],'1 RIR'),
+      tex('chest-dip',3,'6-8',['machine-dip','close-grip-bench'],'su svoriu; paskutinis to failure'),
+      tex('pull-up',3,'6-8',['close-grip-lat-pulldown'],'su svoriu; paskutinis to failure'),
+      tex('chest-supported-row',2,'10-12',['seated-cable-row'],'to failure'),
+      tex('face-pull',2,'15-20',['reverse-cable-fly'],'to failure, traps + rear delt'),
+      tex('hammer-curl',2,'8-12',['ez-bar-curl'],'to failure'),
+      tex('overhead-triceps-ext',2,'10-12',['triceps-pushdown'],'to failure') ]},
     { id:uid(), name:'Lower B', folderId:fid, ex:[
-      tex('back-squat',3,'8-10'), tex('bulgarian-split-squat',2,'8-12'), tex('leg-press',2,'12-15'),
-      tex('lying-leg-curl',2,'10-12'), tex('leg-extension',2,'15-20'), tex('calf-press',3,'12-20') ]},
+      tex('tempo-squat',3,'8-10',['hack-squat'],'1-2 RIR, 3 s žemyn — technikos kalimas'),
+      tex('bulgarian-split-squat',2,'8-12',['lunge'],'to failure'),
+      tex('leg-press',2,'12-15',['hack-squat'],'to failure'),
+      tex('lying-leg-curl',2,'10-12',['seated-leg-curl'],'to failure'),
+      tex('leg-extension',2,'15-20',null,'to failure'),
+      tex('calf-press',3,'12-20',['seated-calf-raise'],'to failure') ]},
     { id:uid(), name:'Upper C', folderId:fid, ex:[
-      tex('smith-incline-press',2,'8-10'), tex('seated-cable-row',2,'10-12'), tex('lat-pulldown',2,'12-15'),
-      tex('lateral-raise',3,'12-20'), tex('face-pull',2,'15-20'), tex('preacher-curl',2,'8-12'),
-      tex('overhead-triceps-ext',2,'10-15') ]}
+      tex('close-grip-bench',3,'6-8',['paused-bench-press','db-bench-press'],'1 RIR — antras bench stimulas + tricepsai'),
+      tex('incline-db-press',2,'8-10',['smith-incline-press'],'to failure'),
+      tex('seated-cable-row',2,'10-12',['chest-supported-row'],'to failure'),
+      tex('close-grip-lat-pulldown',2,'12-15',['pull-up'],'to failure'),
+      tex('lateral-raise',4,'12-20',['cable-lateral-raise'],'to failure — pečių volume čia'),
+      tex('preacher-curl',2,'8-12',['incline-db-curl'],'to failure'),
+      tex('triceps-pushdown',2,'10-15',['overhead-triceps-ext'],'to failure') ]}
   ];
 }
 /* plate calculator: full selectable options and the default "what my gym has" set (per unit) */
@@ -1671,7 +1692,7 @@ function shareFolder(id){
   if(!f) return;
   const tpls = S.templates.filter(x=>x.folderId===id);
   const payload = { t:'folder', name:f.name,
-    tpls: tpls.map(d=>({ name:d.name, ex:d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]), pnote:e.pnote||'' })) })) };
+    tpls: tpls.map(d=>({ name:d.name, ex:d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}) })) })) };
   const code = encodeShare(payload);
   openModal(`<h3>${t('folderShare')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div style="color:var(--dim);font-size:14px;margin:0 4px 10px">${t('folderShareHint')}</div>

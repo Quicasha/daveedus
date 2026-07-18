@@ -17,6 +17,8 @@ const EX_DB = [
   { id:'pec-deck',               n:'Pec Deck',                    g:'chest', e:'machine' },
   { id:'machine-chest-press',    n:'Machine Chest Press',         g:'chest', e:'machine' },
   { id:'smith-incline-press',    n:'Smith Incline Press',         g:'chest', e:'machine' },
+  { id:'smith-bench-press',      n:'Smith Bench Press',           g:'chest', e:'machine' },
+  { id:'paused-bench-press',     n:'Paused Bench Press',          g:'chest', e:'barbell' },
   { id:'push-up',                n:'Push-Up',                     g:'chest', e:'bodyweight' },
   { id:'chest-dip',              n:'Chest Dip',                   g:'chest', e:'bodyweight' },
   /* ------- back ------- */
@@ -27,6 +29,7 @@ const EX_DB = [
   { id:'db-row',                 n:'Dumbbell Row',                g:'back', e:'dumbbell' },
   { id:'seated-cable-row',       n:'Seated Cable Row',            g:'back', e:'cable' },
   { id:'lat-pulldown',           n:'Lat Pulldown',                g:'back', e:'cable' },
+  { id:'close-grip-lat-pulldown',n:'Close-Grip Lat Pulldown',     g:'back', e:'cable' },
   { id:'straight-arm-pulldown',  n:'Straight-Arm Pulldown',       g:'back', e:'cable' },
   { id:'pull-up',                n:'Pull-Up',                     g:'back', e:'bodyweight' },
   { id:'chin-up',                n:'Chin-Up',                     g:'back', e:'bodyweight' },
@@ -45,6 +48,7 @@ const EX_DB = [
   { id:'cable-lateral-raise',    n:'Cable Lateral Raise',         g:'shoulders', e:'cable' },
   { id:'front-raise',            n:'Front Raise',                 g:'shoulders', e:'dumbbell' },
   { id:'rear-delt-fly',          n:'Rear Delt Fly',               g:'shoulders', e:'dumbbell' },
+  { id:'reverse-cable-fly',      n:'Reverse Cable Fly',           g:'shoulders', e:'cable' },
   { id:'face-pull',              n:'Face Pull',                   g:'shoulders', e:'cable' },
   { id:'upright-row',            n:'Upright Row',                 g:'shoulders', e:'barbell' },
   /* ------- biceps ------- */
@@ -65,12 +69,14 @@ const EX_DB = [
   { id:'triceps-dip',            n:'Triceps Dip',                 g:'triceps', e:'bodyweight' },
   { id:'db-kickback',            n:'Dumbbell Kickback',           g:'triceps', e:'dumbbell' },
   { id:'machine-triceps-ext',    n:'Machine Triceps Extension',   g:'triceps', e:'machine' },
+  { id:'machine-dip',            n:'Machine Dip',                 g:'triceps', e:'machine' },
   /* ------- forearms ------- */
   { id:'wrist-curl',             n:'Wrist Curl',                  g:'forearms', e:'barbell' },
   { id:'reverse-curl',           n:'Reverse Curl',                g:'forearms', e:'barbell' },
   { id:'farmers-walk',           n:"Farmer's Walk",               g:'forearms', e:'dumbbell' },
   /* ------- quads ------- */
   { id:'back-squat',             n:'Back Squat',                  g:'quads', e:'barbell' },
+  { id:'tempo-squat',            n:'Tempo Squat (3s down)',       g:'quads', e:'barbell' },
   { id:'front-squat',            n:'Front Squat',                 g:'quads', e:'barbell' },
   { id:'goblet-squat',           n:'Goblet Squat',                g:'quads', e:'dumbbell' },
   { id:'leg-press',              n:'Leg Press',                   g:'quads', e:'machine' },
@@ -81,6 +87,7 @@ const EX_DB = [
   { id:'step-up',                n:'Step-Up',                     g:'quads', e:'dumbbell' },
   /* ------- hamstrings ------- */
   { id:'romanian-deadlift',      n:'Romanian Deadlift',           g:'hamstrings', e:'barbell' },
+  { id:'db-romanian-deadlift',   n:'Dumbbell Romanian Deadlift',  g:'hamstrings', e:'dumbbell' },
   { id:'stiff-leg-deadlift',     n:'Stiff-Leg Deadlift',          g:'hamstrings', e:'barbell' },
   { id:'lying-leg-curl',         n:'Lying Leg Curl',              g:'hamstrings', e:'machine' },
   { id:'seated-leg-curl',        n:'Seated Leg Curl',             g:'hamstrings', e:'machine' },
