@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.13.1'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.14.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -115,6 +115,7 @@ const I18N = {
     setRestSnd:'Poilsio garso signalas',
     setRestHint:'Poilsio taikinys nustatomas treniruotės redagavime prie kiekvieno pratimo. Kai laikas sueina, juosta sumirksi ir pyptelės — telefonui esant begarsiu režimu signalas tik vizualus.',
     tplRest:'Poilsis', tplRestOff:'laisvai',
+    swapMakeMain:'Pagrindinis', swapMainDone:'Pagrindinis pakeistas: {n}',
     setBackup:'Atsarginė kopija', setBackupCopy:'Kopijuoti atsarginį kodą', setBackupLoad:'Įkelti atsarginį kodą',
     csvTitle:'CSV eksportas (analizei)',
     csvSets:'Treniruočių setai (CSV)', csvBw:'Kūno svoris (CSV)',
@@ -237,6 +238,7 @@ const I18N = {
     setRestSnd:'Rest sound signal',
     setRestHint:'Set a rest target per exercise when editing a workout. When time is up, the bar flashes and beeps — on silent mode the signal is visual only.',
     tplRest:'Rest', tplRestOff:'free',
+    swapMakeMain:'Main', swapMainDone:'Main is now {n}',
     setBackup:'Backup', setBackupCopy:'Copy backup code', setBackupLoad:'Load backup code',
     csvTitle:'CSV export (for analysis)',
     csvSets:'Workout sets (CSV)', csvBw:'Body weight (CSV)',
@@ -908,13 +910,40 @@ function openSwapMenu(xi){
   const keys = [ex.baseK].concat(ex.alts.filter(k=>k!==ex.baseK));
   const items = keys.map(k=>{
     const on = k===ex.k, isBase = k===ex.baseK;
-    return `<button class="swapitem ${on?'on':''}" onclick="swapExercise(${xi},'${esc(k)}');closeModal()">
-      <span class="sn">${esc(exName(k))}${isBase?` <span class="basetag">${t('swapPlanned')}</span>`:''}</span>
-      ${on?`<span class="chk">${ACT_ICONS.chevron}</span>`:''}</button>`;
+    return `<div class="swapitem swaprow ${on?'on':''}">
+      <button class="swapmain" onclick="swapExercise(${xi},'${esc(k)}');closeModal()">
+        <span class="sn">${esc(exName(k))}${isBase?` <span class="basetag">${t('swapPlanned')}</span>`:''}</span>
+        ${on?`<span class="chk">${ACT_ICONS.chevron}</span>`:''}
+      </button>
+      ${isBase?'':`<button class="pinbtn" onclick="makeMainExercise(${xi},'${esc(k)}')" aria-label="${t('swapMakeMain')}">${ACT_ICONS.pin}<span>${t('swapMakeMain')}</span></button>`}
+    </div>`;
   }).join('');
   openModal(`<h3>${t('swapTitle')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div class="swaplist">${items}</div>
     <button class="btn ghostbtn" style="margin-top:10px" onclick="addAltExercise(${xi})">${t('swapAdd')}</button>`);
+}
+/* promote an alternative to be this slot's MAIN exercise — the template updates too:
+   the old main becomes one of the alternatives (nothing is lost, roles just flip) */
+function makeMainExercise(xi, key){
+  const ex = S.active.exercises[xi];
+  if(!ex || key===ex.baseK) return;
+  const oldBase = ex.baseK;
+  const tpl = S.templates.find(t=>t.id===S.active.tplId);
+  if(tpl){
+    const te = tpl.ex.find(e=>e.k===oldBase);
+    if(te){
+      te.k = key;
+      if(te.n) delete te.n; /* custom label belonged to the old exercise */
+      te.alts = (te.alts||[]).filter(a=>a!==key);
+      if(!te.alts.includes(oldBase)) te.alts.push(oldBase);
+    }
+  }
+  ex.baseK = key;
+  ex.alts = ex.alts.filter(a=>a!==key);
+  if(!ex.alts.includes(oldBase)) ex.alts.push(oldBase);
+  save(); render();
+  openSwapMenu(xi); /* refresh the sheet — the Planned tag moves to the new main */
+  toast(t('swapMainDone',{n:exName(key)}));
 }
 function addAltExercise(xi){
   openPicker(info=>{

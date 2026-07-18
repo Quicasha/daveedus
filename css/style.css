@@ -426,6 +426,16 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
   color:var(--accent-soft); background:var(--accent-bg); padding:2px 7px; border-radius:6px; margin-left:6px;}
 .swapitem .chk{flex:none; display:flex; color:var(--accent-soft);}
 .swapitem .chk svg{width:18px; height:18px;}
+/* swap rows with a trailing "make main" pin: the row is a div, tap zones are separate buttons */
+.swapitem.swaprow{padding:0 8px 0 0;}
+.swapitem .swapmain{flex:1; display:flex; align-items:center; gap:8px; min-width:0;
+  background:none; border:none; color:inherit; font:inherit; text-align:left;
+  min-height:52px; padding:0 0 0 14px; cursor:pointer;}
+.swapitem .pinbtn{flex:none; display:flex; align-items:center; gap:5px;
+  background:var(--accent-bg); color:var(--accent-soft); border:none; border-radius:9px;
+  min-height:36px; padding:0 10px; font-size:12px; font-weight:800; letter-spacing:.3px; cursor:pointer;}
+.swapitem .pinbtn svg{width:14px; height:14px;}
+.swapitem .pinbtn:active{opacity:.6;}
 /* exercise action menu rows: leading icon + label */
 .swapitem .mi{flex:none; display:flex; color:var(--dim);}
 .swapitem .mi svg{width:18px; height:18px;}
