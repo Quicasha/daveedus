@@ -1,5 +1,3 @@
-<p align="right"><strong>English</strong> · <a href="README.lt.md">Lietuviškai</a></p>
-
 <h1 align="center">Daveedus</h1>
 
 <p align="center">A workout tracker that lives in your browser. No account, no ads, no server — your data stays on your phone.</p>
