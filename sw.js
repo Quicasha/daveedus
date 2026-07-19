@@ -1,5 +1,5 @@
 /* Daveedus service worker — offline-first app shell */
-const CACHE = 'daveedus-v1.14.0';
+const CACHE = 'daveedus-v1.15.0';
 const ASSETS = [
   './', './index.html', './css/style.css', './js/app.js', './js/exercises.js',
   './manifest.webmanifest',
@@ -24,6 +24,8 @@ self.addEventListener('activate', e => {
    check) is picked up on every open when online; cache fallback offline */
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  /* never intercept cross-origin calls (GitHub API sync must always hit the network) */
+  if (new URL(e.request.url).origin !== self.location.origin) return;
   if (e.request.mode === 'navigate') {
     e.respondWith(
       fetch(e.request).then(resp => {

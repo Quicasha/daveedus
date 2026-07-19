@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.14.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.15.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -117,6 +117,14 @@ const I18N = {
     tplRest:'Poilsis', tplRestOff:'laisvai',
     swapMakeMain:'Pagrindinis', swapMainDone:'Pagrindinis pakeistas: {n}',
     setBackup:'Atsarginė kopija', setBackupCopy:'Kopijuoti atsarginį kodą', setBackupLoad:'Įkelti atsarginį kodą',
+    ghTitle:'Debesies sinchronizacija (GitHub)', ghRepoPh:'vartotojas/repo', ghTokenPh:'GitHub token',
+    ghConnect:'Prijungti', ghNow:'Sinchronizuoti dabar', ghOff:'Atjungti',
+    ghOffConfirm:'Atjungti sinchronizaciją? Token bus pašalintas iš šio įrenginio.',
+    ghOkToast:'Prijungta ✓', ghBad:'Nepavyko — patikrink repo ir token',
+    ghPublicWarn:'DĖMESIO: šis repo VIEŠAS — tavo duomenis matys visi. Tęsti?',
+    ghSyncing:'Sinchronizuojama…', ghErr:'Laukia sinchronizacijos', ghNever:'Dar nesinchronizuota',
+    ghLastSync:'Sinchronizuota',
+    ghHint:'Po kiekvienos baigtos treniruotės duomenys automatiškai įkeliami į tavo privatų GitHub repo. Token įvedamas vieną kartą, lieka tik šiame įrenginyje ir niekada nepatenka į atsarginius kodus.',
     csvTitle:'CSV eksportas (analizei)',
     csvSets:'Treniruočių setai (CSV)', csvBw:'Kūno svoris (CSV)',
     csvHint:'Viena eilutė = vienas setas. Svoriai {u}, datos ISO, UTF-8 — tinka Excel / Google Sheets / Python.',
@@ -240,6 +248,14 @@ const I18N = {
     tplRest:'Rest', tplRestOff:'free',
     swapMakeMain:'Main', swapMainDone:'Main is now {n}',
     setBackup:'Backup', setBackupCopy:'Copy backup code', setBackupLoad:'Load backup code',
+    ghTitle:'Cloud sync (GitHub)', ghRepoPh:'user/repo', ghTokenPh:'GitHub token',
+    ghConnect:'Connect', ghNow:'Sync now', ghOff:'Disconnect',
+    ghOffConfirm:'Disconnect sync? The token will be removed from this device.',
+    ghOkToast:'Connected ✓', ghBad:'Failed — check the repo and token',
+    ghPublicWarn:'WARNING: this repo is PUBLIC — anyone can see your data. Continue?',
+    ghSyncing:'Syncing…', ghErr:'Sync pending', ghNever:'Not synced yet',
+    ghLastSync:'Synced',
+    ghHint:'After every finished workout your data is pushed to your own private GitHub repo automatically. The token is entered once, stays on this device only and is never included in backup codes.',
     csvTitle:'CSV export (for analysis)',
     csvSets:'Workout sets (CSV)', csvBw:'Body weight (CSV)',
     csvHint:'One row = one set. Weights in {u}, ISO dates, UTF-8 — ready for Excel / Google Sheets / Python.',
@@ -318,6 +334,7 @@ function defaultState(){
   const fid = uid();
   return { lang:'en', unit:'kg', theme:'auto', keepAwake:true, lastBackup:0, bakSnooze:0, mig13:true,
            restTarget:120, restSound:true, /* restTarget = last picked value in the editor */
+           ghRepo:'', ghToken:'', ghLast:0, ghDirty:0, /* cloud sync — device-local, never in share codes */
            folders:[{ id:fid, name:'Upper / Lower', open:true, pinned:true }],
            customEx:[], templates:seedTemplates(fid), history:[], weights:[], active:null,
            trackedLifts:[], deloads:[], mainFolder:null,
@@ -352,6 +369,10 @@ function hydrate(s){
   if(typeof s.mainFolder!=='string') s.mainFolder = null;
   if(typeof s.restTarget!=='number' || !(s.restTarget>=15 && s.restTarget<=1800)) s.restTarget = 120;
   if(typeof s.restSound!=='boolean') s.restSound = true;
+  if(typeof s.ghRepo!=='string') s.ghRepo = '';
+  if(typeof s.ghToken!=='string') s.ghToken = '';
+  if(typeof s.ghLast!=='number') s.ghLast = 0;
+  s.ghDirty = s.ghDirty ? 1 : 0;
   if(!s.plates || !Array.isArray(s.plates.kg) || !Array.isArray(s.plates.lb)){
     s.plates = { kg:PLATE_DEF.kg.slice(), lb:PLATE_DEF.lb.slice() };
   }
@@ -1454,6 +1475,7 @@ function finishWorkout(){
   S.history.unshift(entry);
   S.active = null;
   save();
+  scheduleCloudSync();
   go('home');
   showSummary(dur, vol, done, prs);
 }
@@ -1731,6 +1753,7 @@ function shareFolder(id){
 function openTpl(id){ V.editTpl=id; go('tpledit'); }
 function closeTplEdit(){
   const d = S.templates.find(x=>x.id===V.editTpl);
+  scheduleCloudSync();
   if(d && d.folderId && S.folders.some(f=>f.id===d.folderId)) openSplit(d.folderId);
   else go('program');
 }
@@ -2830,7 +2853,7 @@ function stepBwModal(d){
 }
 function saveBwModal(){
   const inp = $('#bwm-input');
-  if(logWeight(parseNum(inp ? inp.value : ''))){ save(); closeModal(); render(); }
+  if(logWeight(parseNum(inp ? inp.value : ''))){ save(); scheduleCloudSync(); closeModal(); render(); }
 }
 function delWeight(id){
   if(!confirm(t('bwDel'))) return;
@@ -2963,6 +2986,21 @@ function htmlSettings(){
   <h2 class="sec">${t('setBackup')}</h2>
   <button class="btn" onclick="copyBackup()">${ACT_ICONS.share} ${t('setBackupCopy')}</button>
   <button class="btn" onclick="openImportModal('bak')">${ACT_ICONS.dl} ${t('setBackupLoad')}</button>
+  <h2 class="sec">${t('ghTitle')}</h2>
+  <div class="card">${ghOn() ? `
+    <div class="setline">
+      <span class="lb" style="font-weight:600">${esc(S.ghRepo)}</span>
+      <span id="gh-status" style="font-weight:700;font-size:13px;color:var(--dim)">…</span>
+    </div>
+    <div class="setctl">
+      <button onclick="S.ghDirty=1; save(); cloudSync()">${t('ghNow')}</button>
+      <button onclick="ghDisconnect()">${t('ghOff')}</button>
+    </div>` : `
+    <input class="nameinput" id="gh-repo" type="text" placeholder="${t('ghRepoPh')}" autocapitalize="none" autocorrect="off" style="margin-bottom:8px">
+    <input class="nameinput" id="gh-token" type="password" placeholder="${t('ghTokenPh')}" autocapitalize="none" style="margin-bottom:10px">
+    <button class="btn primary" id="gh-connect" style="margin-bottom:0" onclick="ghConnect()">${t('ghConnect')}</button>
+    <div style="font-size:12px;color:var(--ghost);line-height:1.5;margin-top:10px">${t('ghHint')}</div>`}
+  </div>
   <h2 class="sec">${t('csvTitle')}</h2>
   <button class="btn" onclick="exportCSV('sets')">${ACT_ICONS.copy} ${t('csvSets')}</button>
   <button class="btn" onclick="exportCSV('bw')">${ACT_ICONS.scale} ${t('csvBw')}</button>
@@ -3055,14 +3093,18 @@ function shareTpl(id){
     <textarea class="codebox" readonly onclick="this.select()">${esc(code)}</textarea>
     <button class="btn primary" style="margin-top:12px" onclick="copyText(document.querySelector('.codebox').value)">${ACT_ICONS.copy} ${t('copy')}</button>`);
 }
-function copyBackup(){
-  const payload = { t:'bak', s:{ lang:S.lang, theme:S.theme, keepAwake:S.keepAwake, plates:S.plates,
+/* full-data payload for backup codes AND cloud sync — the GitHub token itself is
+   deliberately NOT here: backup codes get pasted around, the token must never travel */
+function bakPayload(){
+  return { t:'bak', s:{ lang:S.lang, theme:S.theme, keepAwake:S.keepAwake, plates:S.plates,
     restTarget:S.restTarget, restSound:S.restSound,
     folders:S.folders, customEx:S.customEx, templates:S.templates, history:S.history, weights:S.weights,
     trackedLifts:S.trackedLifts, deloads:S.deloads, mainFolder:S.mainFolder } };
+}
+function copyBackup(){
   S.lastBackup = Date.now();
   save();
-  copyText(encodeShare(payload));
+  copyText(encodeShare(bakPayload()));
 }
 
 /* ---- CSV export (tidy data for analysis: one row = one set, kg, ISO dates) ---- */
@@ -3190,14 +3232,92 @@ function doImport(){
     if(typeof d.s.mainFolder!=='string') delete d.s.mainFolder;
     if(typeof d.s.restTarget!=='number' || !(d.s.restTarget>=15 && d.s.restTarget<=1800)) delete d.s.restTarget;
     if(typeof d.s.restSound!=='boolean') delete d.s.restSound;
-    S = Object.assign(defaultState(), d.s, { active:null });
-    save(); applyTheme(); closeModal();
+    /* keep this device's cloud-sync setup — backup codes never carry it */
+    const gh = { ghRepo:S.ghRepo, ghToken:S.ghToken, ghLast:S.ghLast, ghDirty:S.ghDirty };
+    S = Object.assign(defaultState(), d.s, { active:null }, gh);
+    save(); scheduleCloudSync(); applyTheme(); closeModal();
     go('home');
     toast(t('bakDone'));
   }else{
     toast(t('codeBad'));
   }
 }
+
+/* ======================= cloud sync (GitHub) =======================
+   Optional: pushes bakPayload() as backup.json to the user's own PRIVATE repo
+   via the Contents API after meaningful checkpoints (finished workout, body
+   weight log, template edits, imports). The token is entered by the user, lives
+   only in this device's storage and is excluded from backup codes. */
+const GH_FILE = 'backup.json';
+let ghTimer = null, ghBusy = false;
+function ghOn(){ return !!(S.ghToken && S.ghRepo); }
+function ghHdr(){ return { 'Authorization':'Bearer '+S.ghToken, 'Accept':'application/vnd.github+json' }; }
+function scheduleCloudSync(){
+  if(!ghOn()) return;
+  if(!S.ghDirty){ S.ghDirty = 1; save(); }
+  clearTimeout(ghTimer);
+  ghTimer = setTimeout(cloudSync, 4000);
+}
+async function cloudSync(){
+  if(!ghOn() || ghBusy || !navigator.onLine) { updateGhStatus(); return; }
+  ghBusy = true; V.gh = 'sync'; updateGhStatus();
+  try{
+    const api = 'https://api.github.com/repos/'+S.ghRepo+'/contents/'+GH_FILE;
+    let sha = null;
+    const g = await fetch(api, { headers:ghHdr() });
+    if(g.status===200) sha = (await g.json()).sha;
+    else if(g.status!==404) throw new Error('HTTP '+g.status);
+    const body = { message:'daveedus sync '+new Date().toISOString(),
+      content: btoa(unescape(encodeURIComponent(JSON.stringify(bakPayload(), null, 1)))) };
+    if(sha) body.sha = sha;
+    const p = await fetch(api, { method:'PUT', headers:ghHdr(), body:JSON.stringify(body) });
+    if(!p.ok) throw new Error('HTTP '+p.status);
+    S.ghDirty = 0; S.ghLast = Date.now(); save();
+    V.gh = 'ok';
+  }catch(e){ V.gh = 'err'; }
+  ghBusy = false;
+  updateGhStatus();
+}
+/* one-time connect: verify the repo is reachable with this token, then sync */
+async function ghConnect(){
+  const repo = ($('#gh-repo')||{}).value, tok = ($('#gh-token')||{}).value;
+  if(!repo || !repo.trim() || !tok || !tok.trim()){ toast(t('ghBad')); return; }
+  const btn = $('#gh-connect'); if(btn) btn.disabled = true;
+  try{
+    const r = await fetch('https://api.github.com/repos/'+repo.trim(),
+      { headers:{ 'Authorization':'Bearer '+tok.trim(), 'Accept':'application/vnd.github+json' } });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const meta = await r.json();
+    if(!meta.private && !confirm(t('ghPublicWarn'))){ if(btn) btn.disabled=false; return; }
+    S.ghRepo = repo.trim(); S.ghToken = tok.trim(); S.ghDirty = 1;
+    save(); render();
+    toast(t('ghOkToast'));
+    cloudSync();
+  }catch(e){
+    if(btn) btn.disabled = false;
+    toast(t('ghBad'));
+  }
+}
+function ghDisconnect(){
+  if(!confirm(t('ghOffConfirm'))) return;
+  S.ghToken = ''; S.ghRepo = ''; S.ghDirty = 0;
+  save(); render();
+}
+function updateGhStatus(){
+  const el = $('#gh-status');
+  if(!el) return;
+  if(V.gh==='sync'){ el.textContent = t('ghSyncing'); el.style.color = 'var(--dim)'; return; }
+  if(V.gh==='err' || S.ghDirty){ el.textContent = t('ghErr'); el.style.color = 'var(--orange)'; return; }
+  if(S.ghLast){
+    const d = new Date(S.ghLast);
+    const today = new Date().toDateString()===d.toDateString();
+    el.textContent = t('ghLastSync')+' '+(today
+      ? d.toLocaleTimeString(S.lang==='lt'?'lt-LT':'en-GB',{hour:'2-digit',minute:'2-digit'})
+      : fmtDate(d.toISOString()));
+    el.style.color = 'var(--green)';
+  }else{ el.textContent = t('ghNever'); el.style.color = 'var(--dim)'; }
+}
+window.addEventListener('online', ()=>{ if(S.ghDirty) scheduleCloudSync(); });
 
 /* ======================= rest signal (sound + flash) ======================= */
 let AC = null;
@@ -3246,7 +3366,7 @@ async function syncWakeLock(){
   }catch(e){ wakeLock=null; }
 }
 document.addEventListener('visibilitychange', ()=>{
-  if(document.visibilityState==='visible'){ syncWakeLock(); tick(); }
+  if(document.visibilityState==='visible'){ syncWakeLock(); tick(); if(S.ghDirty) scheduleCloudSync(); }
 });
 
 /* ======================= boot ======================= */
@@ -3305,5 +3425,5 @@ const _origRender = render;
 render = function(){
   _origRender();
   if(V.screen==='exercises') renderExList();
-  if(V.screen==='settings') updatePersistStatus();
+  if(V.screen==='settings'){ updatePersistStatus(); updateGhStatus(); }
 };
