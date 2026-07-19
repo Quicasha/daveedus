@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.15.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.15.1'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -3096,7 +3096,7 @@ function shareTpl(id){
 /* full-data payload for backup codes AND cloud sync — the GitHub token itself is
    deliberately NOT here: backup codes get pasted around, the token must never travel */
 function bakPayload(){
-  return { t:'bak', s:{ lang:S.lang, theme:S.theme, keepAwake:S.keepAwake, plates:S.plates,
+  return { t:'bak', s:{ lang:S.lang, unit:S.unit, theme:S.theme, keepAwake:S.keepAwake, plates:S.plates,
     restTarget:S.restTarget, restSound:S.restSound,
     folders:S.folders, customEx:S.customEx, templates:S.templates, history:S.history, weights:S.weights,
     trackedLifts:S.trackedLifts, deloads:S.deloads, mainFolder:S.mainFolder } };
