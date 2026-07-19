@@ -1,12 +1,12 @@
 /* ============================================================
-   Daveedus v1.0 — workout tracker
+   Daveedus v1.0 - workout tracker
    Sections: i18n | state | helpers | theme | render core |
              home | workout | rest+elapsed | program | picker |
              exercises | history | settings | share codes | boot
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.15.1'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.15.2'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -34,15 +34,15 @@ const I18N = {
     tplNew:'+ Nauja treniruotė', tplImport:'Įvesti kodą', tplDefaultName:'Nauja treniruotė',
     tplDel:'Ištrinti treniruotę „{n}“?', tplExCount:'{n} prat.',
     tplName:'Treniruotės pavadinimas', tplAddEx:'+ Pridėti pratimą', tplDelEx:'Išimti pratimą „{n}“?',
-    tplShare:'Treniruotės kodas', tplShareHint:'Nusiųsk šį kodą draugui — jis įves jį ir gaus tavo treniruotę.',
+    tplShare:'Treniruotės kodas', tplShareHint:'Nusiųsk šį kodą draugui - jis įves jį ir gaus tavo treniruotę.',
     tplImportTitle:'Įvesti kodą', tplImportHint:'Įklijuok gautą kodą čia:',
     tplImportBtn:'Importuoti', tplImported:'Treniruotė „{n}“ pridėta ✓',
     folderNew:'+ Nauja programa', folderDefault:'Nauja programa', folderNone:'Be programos',
     folderName:'Programos pavadinimas', folderDel:'Ištrinti programą „{n}“? Treniruotės liks, tik be programos.',
-    folderShare:'Programos kodas', folderShareHint:'Nusiųsk šį kodą draugui — jis gaus visą programą su visomis treniruotėmis.',
+    folderShare:'Programos kodas', folderShareHint:'Nusiųsk šį kodą draugui - jis gaus visą programą su visomis treniruotėmis.',
     folderImported:'Programa „{n}“ pridėta ✓', tplFolder:'Programa', deleteBtn:'Ištrinti', nextBadge:'KITA',
-    progEmpty:'Programų dar nėra — spausk „+ Nauja programa“ apačioje ir susikurk savo splitą.',
-    homeNoProg:'Programų nėra — susikurk skiltyje „Programos“.',
+    progEmpty:'Programų dar nėra - spausk „+ Nauja programa“ apačioje ir susikurk savo splitą.',
+    homeNoProg:'Programų nėra - susikurk skiltyje „Programos“.',
     histEditTitle:'Redaguoti treniruotę',
     tplDup:'Dubliuoti', tplDupSuffix:'(kopija)',
     woSec:'sek.',
@@ -54,9 +54,9 @@ const I18N = {
     protOn:'✓ Įjungta', protOff:'Nesuteikta',
     protSnaps:'Automatinės kopijos įrenginyje',
     protRestore:'Atkurti', protRestoreConfirm:'Atkurti duomenis iš {d}? Dabartiniai duomenys bus pakeisti.',
-    protNoSnaps:'Kopijų dar nėra — atsiras po kito išsaugojimo.',
+    protNoSnaps:'Kopijų dar nėra - atsiras po kito išsaugojimo.',
     protRestored:'Atkurta ✓', protRecovered:'Duomenys atkurti iš atsarginės saugyklos ✓',
-    protHint:'Kasdien automatiškai išsaugoma kopija įrenginyje, o duomenys dubliuojami į antrą saugyklą — jei viena sugestų, atsistatys iš kitos. Retkarčiais nusikopijuok ir atsarginį kodą: jis vienintelis padės pametus telefoną.',
+    protHint:'Kasdien automatiškai išsaugoma kopija įrenginyje, o duomenys dubliuojami į antrą saugyklą - jei viena sugestų, atsistatys iš kitos. Retkarčiais nusikopijuok ir atsarginį kodą: jis vienintelis padės pametus telefoną.',
     updToast:'Atnaujinta į naujausią versiją ✓',
     setUnit:'Matavimo vienetai',
     bwEnter:'Įvesk savo kūno svorį',
@@ -70,7 +70,7 @@ const I18N = {
     hs7w:'treniruotės · 7 d.', hs7v:'apimtis · 7 d.', hsGap:'vid. tarpas',
     rhythmTitle:'Ritmas',
     trackedTitle:'Sekami pratimai', trackAdd:'+ Sekti pratimą',
-    trackedEmpty:'Pasirink pratimus, kurių progresą nori matyti čia — pvz. spaudimą ir pritūpimus.',
+    trackedEmpty:'Pasirink pratimus, kurių progresą nori matyti čia - pvz. spaudimą ir pritūpimus.',
     trackedDup:'Šis pratimas jau sekamas',
     trackDelta30:'per 30 d.',
     prTitle:'Nauji rekordai', prEmpty:'Rekordai atsiras po kelių treniruočių.',
@@ -81,15 +81,15 @@ const I18N = {
     dlDone:'Deload ciklas baigtas',
     dlActiveBanner:'DELOAD',
     dlLeft:'liko {n} trenir.', dlSub:'rekordai nesiskaičiuoja · tap = baigti',
-    dlWoBar:'DELOAD — siūlomi svoriai ~{p} %', dlWoBarVol:'setai perpus',
+    dlWoBar:'DELOAD - siūlomi svoriai {p} %', dlWoBarVol:'setai perpus',
     dlBadge:'DELOAD', dlCycles:'Pilni ciklai nuo deload',
-    dlmHow:'Kiekvienai treniruotei — vienas lengvas praėjimas. Setai nesiskaito į rekordus, skaitliukai prasideda iš naujo. Praėjus visas, deload baigsis pats — arba baik anksčiau bakstelėjęs oranžinę juostą pradžioje.',
+    dlmHow:'Kiekvienai treniruotei - vienas lengvas praėjimas. Setai nesiskaito į rekordus, skaitliukai prasideda iš naujo. Praėjus visas, deload baigsis pats - arba baik anksčiau bakstelėjęs oranžinę juostą pradžioje.',
     dlmW:'Siūlomi svoriai',
-    dlmWHint:'Jėgai įprasta 50–60 %. 70 % — švelnesnis variantas. 90 % — beveik darbiniai svoriai: tada rinkis „Perpus“ ir stok toliau nuo nesėkmės.',
+    dlmWHint:'Jėgai įprasta 50-60 %. 70 % - švelnesnis variantas. 90 % - beveik darbiniai svoriai: tada rinkis „Perpus“ ir stok toliau nuo nesėkmės.',
     dlmSets:'Setai',
     dlmSetsAll:'Visi', dlmSetsHalf:'Perpus',
-    dlmSetsHint:'„Perpus“ — pusė suplanuotų setų. Sportininkai deload metu apimtį dažniausiai mažina ~30–50 %.',
-    dlmLight:'Lengvi pratimai (< {n}) mažinami daugiausia iki ~80 % — izoliaciniams didelio sumažinimo nereikia.',
+    dlmSetsHint:'„Perpus“ - pusė suplanuotų setų. Sportininkai deload metu apimtį dažniausiai mažina 30-50 %.',
+    dlmLight:'Lengvi pratimai (< {n}) mažinami daugiausia iki 80 % - izoliaciniams didelio sumažinimo nereikia.',
     dlmStart:'Pradėti deload',
     histMore:'Rodyti daugiau', bwLogNew:'+ Įvesti svorį',
     metricW:'Svoris', metricVol:'Apimtis', metric1RM:'~1RM',
@@ -101,7 +101,7 @@ const I18N = {
     platesAvail:'Kokie svareliai yra salėje',
     superset:'Superset',
     codeBad:'Neteisingas kodas', copy:'Kopijuoti', copied:'Nukopijuota ✓',
-    daySets:'setai', dayReps:'kart.', daySec:'sek.', repsRangeTog:'nuo–iki',
+    daySets:'setai', dayReps:'kart.', daySec:'sek.', repsRangeTog:'nuo-iki',
     exSearch:'Ieškoti pratimo...', exCreate:'+ Sukurti savo pratimą',
     exCreateTitle:'Naujas pratimas', exCreateName:'Pavadinimas', exCreateGroup:'Raumenų grupė',
     exCreateSave:'Išsaugoti', exNameReq:'Įvesk pavadinimą',
@@ -113,23 +113,23 @@ const I18N = {
     setTheme:'Tema', themeAuto:'Auto', themeDark:'Tamsi', themeLight:'Šviesi',
     setLang:'Kalba', setAwake:'Neužmigdyti ekrano',
     setRestSnd:'Poilsio garso signalas',
-    setRestHint:'Poilsio taikinys nustatomas treniruotės redagavime prie kiekvieno pratimo. Kai laikas sueina, juosta sumirksi ir pyptelės — telefonui esant begarsiu režimu signalas tik vizualus.',
+    setRestHint:'Poilsio taikinys nustatomas treniruotės redagavime prie kiekvieno pratimo. Kai laikas sueina, juosta sumirksi ir pyptelės - telefonui esant begarsiu režimu signalas tik vizualus.',
     tplRest:'Poilsis', tplRestOff:'laisvai',
     swapMakeMain:'Pagrindinis', swapMainDone:'Pagrindinis pakeistas: {n}',
     setBackup:'Atsarginė kopija', setBackupCopy:'Kopijuoti atsarginį kodą', setBackupLoad:'Įkelti atsarginį kodą',
     ghTitle:'Debesies sinchronizacija (GitHub)', ghRepoPh:'vartotojas/repo', ghTokenPh:'GitHub token',
     ghConnect:'Prijungti', ghNow:'Sinchronizuoti dabar', ghOff:'Atjungti',
     ghOffConfirm:'Atjungti sinchronizaciją? Token bus pašalintas iš šio įrenginio.',
-    ghOkToast:'Prijungta ✓', ghBad:'Nepavyko — patikrink repo ir token',
-    ghPublicWarn:'DĖMESIO: šis repo VIEŠAS — tavo duomenis matys visi. Tęsti?',
+    ghOkToast:'Prijungta ✓', ghBad:'Nepavyko - patikrink repo ir token',
+    ghPublicWarn:'DĖMESIO: šis repo VIEŠAS - tavo duomenis matys visi. Tęsti?',
     ghSyncing:'Sinchronizuojama…', ghErr:'Laukia sinchronizacijos', ghNever:'Dar nesinchronizuota',
     ghLastSync:'Sinchronizuota',
     ghHint:'Po kiekvienos baigtos treniruotės duomenys automatiškai įkeliami į tavo privatų GitHub repo. Token įvedamas vieną kartą, lieka tik šiame įrenginyje ir niekada nepatenka į atsarginius kodus.',
     csvTitle:'CSV eksportas (analizei)',
     csvSets:'Treniruočių setai (CSV)', csvBw:'Kūno svoris (CSV)',
-    csvHint:'Viena eilutė = vienas setas. Svoriai {u}, datos ISO, UTF-8 — tinka Excel / Google Sheets / Python.',
+    csvHint:'Viena eilutė = vienas setas. Svoriai {u}, datos ISO, UTF-8 - tinka Excel / Google Sheets / Python.',
     csvEmpty:'Dar nėra ką eksportuoti',
-    bakHint:'Įklijuok atsarginį kodą — VISI dabartiniai duomenys bus pakeisti.',
+    bakHint:'Įklijuok atsarginį kodą - VISI dabartiniai duomenys bus pakeisti.',
     bakConfirm:'Atkurti duomenis iš kodo? Dabartiniai duomenys bus pakeisti.',
     bakDone:'Duomenys atkurti ✓',
     setDanger:'Pavojinga zona', setWipe:'Ištrinti visus duomenis',
@@ -165,15 +165,15 @@ const I18N = {
     tplNew:'+ New workout', tplImport:'Enter code', tplDefaultName:'New workout',
     tplDel:'Delete workout “{n}”?', tplExCount:'{n} ex.',
     tplName:'Workout name', tplAddEx:'+ Add exercise', tplDelEx:'Remove exercise “{n}”?',
-    tplShare:'Workout code', tplShareHint:'Send this code to a friend — they enter it and get your workout.',
+    tplShare:'Workout code', tplShareHint:'Send this code to a friend - they enter it and get your workout.',
     tplImportTitle:'Enter code', tplImportHint:'Paste the received code here:',
     tplImportBtn:'Import', tplImported:'Workout “{n}” added ✓',
     folderNew:'+ New program', folderDefault:'New program', folderNone:'No program',
     folderName:'Program name', folderDel:'Delete program “{n}”? Workouts will remain, just without the program.',
-    folderShare:'Program code', folderShareHint:'Send this code to a friend — they get the whole program with all workouts.',
+    folderShare:'Program code', folderShareHint:'Send this code to a friend - they get the whole program with all workouts.',
     folderImported:'Program “{n}” added ✓', tplFolder:'Program', deleteBtn:'Delete', nextBadge:'NEXT',
-    progEmpty:'No programs yet — tap “+ New program” below and build your split.',
-    homeNoProg:'No programs — create one in the Programs tab.',
+    progEmpty:'No programs yet - tap “+ New program” below and build your split.',
+    homeNoProg:'No programs - create one in the Programs tab.',
     histEditTitle:'Edit workout',
     tplDup:'Duplicate', tplDupSuffix:'(copy)',
     woSec:'sec',
@@ -185,9 +185,9 @@ const I18N = {
     protOn:'✓ On', protOff:'Not granted',
     protSnaps:'Automatic on-device snapshots',
     protRestore:'Restore', protRestoreConfirm:'Restore data from {d}? Current data will be replaced.',
-    protNoSnaps:'No snapshots yet — one will appear after the next save.',
+    protNoSnaps:'No snapshots yet - one will appear after the next save.',
     protRestored:'Restored ✓', protRecovered:'Data recovered from backup storage ✓',
-    protHint:'A daily snapshot is kept on this device and data is mirrored to a second storage — if one breaks, the other restores it. Still copy a backup code occasionally: it is the only thing that survives losing the phone.',
+    protHint:'A daily snapshot is kept on this device and data is mirrored to a second storage - if one breaks, the other restores it. Still copy a backup code occasionally: it is the only thing that survives losing the phone.',
     updToast:'Updated to the latest version ✓',
     setUnit:'Units',
     bwEnter:'Enter your body weight',
@@ -201,7 +201,7 @@ const I18N = {
     hs7w:'workouts · 7 d', hs7v:'volume · 7 d', hsGap:'avg gap',
     rhythmTitle:'Rhythm',
     trackedTitle:'Tracked lifts', trackAdd:'+ Track a lift',
-    trackedEmpty:'Pick the lifts whose progress you want to see here — e.g. bench and squat.',
+    trackedEmpty:'Pick the lifts whose progress you want to see here - e.g. bench and squat.',
     trackedDup:'This lift is already tracked',
     trackDelta30:'in 30 d',
     prTitle:'Recent records', prEmpty:'Records will show up after a few workouts.',
@@ -212,15 +212,15 @@ const I18N = {
     dlDone:'Deload cycle complete',
     dlActiveBanner:'DELOAD',
     dlLeft:'{n} workouts left', dlSub:'records paused · tap to end',
-    dlWoBar:'DELOAD — suggested weights ~{p}%', dlWoBarVol:'half sets',
+    dlWoBar:'DELOAD - suggested weights {p}%', dlWoBarVol:'half sets',
     dlBadge:'DELOAD', dlCycles:'Full cycles since deload',
-    dlmHow:'One light pass per workout. Sets do not count toward records and the counters restart. Once every workout is done the deload ends by itself — or end it early by tapping the orange banner on Home.',
+    dlmHow:'One light pass per workout. Sets do not count toward records and the counters restart. Once every workout is done the deload ends by itself - or end it early by tapping the orange banner on Home.',
     dlmW:'Suggested weights',
-    dlmWHint:'50–60% is the strength classic. 70% is gentler. 90% keeps near-working weights: pick “Half” sets then and stay far from failure.',
+    dlmWHint:'50-60% is the strength classic. 70% is gentler. 90% keeps near-working weights: pick “Half” sets then and stay far from failure.',
     dlmSets:'Sets',
     dlmSetsAll:'All', dlmSetsHalf:'Half',
-    dlmSetsHint:'“Half” plans half the sets. Athletes most often deload by cutting volume ~30–50%.',
-    dlmLight:'Light exercises (< {n}) are only trimmed to ~80% — isolation work needs little reduction.',
+    dlmSetsHint:'“Half” plans half the sets. Athletes most often deload by cutting volume 30-50%.',
+    dlmLight:'Light exercises (< {n}) are only trimmed to 80% - isolation work needs little reduction.',
     dlmStart:'Start deload',
     histMore:'Show more', bwLogNew:'+ Log weight',
     metricW:'Weight', metricVol:'Volume', metric1RM:'~1RM',
@@ -244,23 +244,23 @@ const I18N = {
     setTheme:'Theme', themeAuto:'Auto', themeDark:'Dark', themeLight:'Light',
     setLang:'Language', setAwake:'Keep screen awake',
     setRestSnd:'Rest sound signal',
-    setRestHint:'Set a rest target per exercise when editing a workout. When time is up, the bar flashes and beeps — on silent mode the signal is visual only.',
+    setRestHint:'Set a rest target per exercise when editing a workout. When time is up, the bar flashes and beeps - on silent mode the signal is visual only.',
     tplRest:'Rest', tplRestOff:'free',
     swapMakeMain:'Main', swapMainDone:'Main is now {n}',
     setBackup:'Backup', setBackupCopy:'Copy backup code', setBackupLoad:'Load backup code',
     ghTitle:'Cloud sync (GitHub)', ghRepoPh:'user/repo', ghTokenPh:'GitHub token',
     ghConnect:'Connect', ghNow:'Sync now', ghOff:'Disconnect',
     ghOffConfirm:'Disconnect sync? The token will be removed from this device.',
-    ghOkToast:'Connected ✓', ghBad:'Failed — check the repo and token',
-    ghPublicWarn:'WARNING: this repo is PUBLIC — anyone can see your data. Continue?',
+    ghOkToast:'Connected ✓', ghBad:'Failed - check the repo and token',
+    ghPublicWarn:'WARNING: this repo is PUBLIC - anyone can see your data. Continue?',
     ghSyncing:'Syncing…', ghErr:'Sync pending', ghNever:'Not synced yet',
     ghLastSync:'Synced',
     ghHint:'After every finished workout your data is pushed to your own private GitHub repo automatically. The token is entered once, stays on this device only and is never included in backup codes.',
     csvTitle:'CSV export (for analysis)',
     csvSets:'Workout sets (CSV)', csvBw:'Body weight (CSV)',
-    csvHint:'One row = one set. Weights in {u}, ISO dates, UTF-8 — ready for Excel / Google Sheets / Python.',
+    csvHint:'One row = one set. Weights in {u}, ISO dates, UTF-8 - ready for Excel / Google Sheets / Python.',
     csvEmpty:'Nothing to export yet',
-    bakHint:'Paste a backup code — ALL current data will be replaced.',
+    bakHint:'Paste a backup code - ALL current data will be replaced.',
     bakConfirm:'Restore data from code? Current data will be replaced.',
     bakDone:'Data restored ✓',
     setDanger:'Danger zone', setWipe:'Delete all data',
@@ -334,7 +334,7 @@ function defaultState(){
   const fid = uid();
   return { lang:'en', unit:'kg', theme:'auto', keepAwake:true, lastBackup:0, bakSnooze:0, mig13:true,
            restTarget:120, restSound:true, /* restTarget = last picked value in the editor */
-           ghRepo:'', ghToken:'', ghLast:0, ghDirty:0, /* cloud sync — device-local, never in share codes */
+           ghRepo:'', ghToken:'', ghLast:0, ghDirty:0, /* cloud sync - device-local, never in share codes */
            folders:[{ id:fid, name:'Upper / Lower', open:true, pinned:true }],
            customEx:[], templates:seedTemplates(fid), history:[], weights:[], active:null,
            trackedLifts:[], deloads:[], mainFolder:null,
@@ -400,7 +400,7 @@ function maybeSnapshot(){
     if(localStorage.getItem('daveedus.lastSnap')===today) return;
     const prev = localStorage.getItem(LS_KEY);
     /* once state grows large, three full copies would dominate the localStorage
-       quota — skip on-device snapshots and rely on the IndexedDB mirror + backup codes */
+       quota - skip on-device snapshots and rely on the IndexedDB mirror + backup codes */
     if(prev && prev.length < 1500000) localStorage.setItem(SNAP_PREFIX+today, prev);
     localStorage.setItem('daveedus.lastSnap', today);
     const keys = Object.keys(localStorage).filter(k=>k.startsWith(SNAP_PREFIX)).sort();
@@ -444,7 +444,7 @@ function save(){
     maybeSnapshot();
     localStorage.setItem(LS_KEY, json);
   }catch(e){
-    /* quota exceeded — snapshots are the largest extra; drop them so the main
+    /* quota exceeded - snapshots are the largest extra; drop them so the main
        state always persists, then retry once */
     try{
       Object.keys(localStorage).filter(k=>k.startsWith(SNAP_PREFIX)).forEach(k=>localStorage.removeItem(k));
@@ -460,7 +460,7 @@ const V = { screen:'home', editTpl:null, viewFolder:null, exDetail:null, expande
             exTplFilter:'', exFilterNames:[], exMetric:'w', showArch:false,
             histLimit:20,
             /* per-chart period state: p = 'w'|'m'|'y'|'c' (charts), days|'all'|'c' (muscle/bw);
-               f/t = custom from–to as yyyy-mm-dd */
+               f/t = custom from-to as yyyy-mm-dd */
             cp:{ wk:{p:'w',f:'',t:''}, vol:{p:'w',f:'',t:''},
                  mus:{p:'7',f:'',t:''}, bw:{p:'90',f:'',t:''}, rh:{p:'14'} } };
 
@@ -602,7 +602,7 @@ function renderTopbar(){
   let h = '';
   if(V.screen==='workout' && S.active){
     const el = fmtTime((Date.now()-new Date(S.active.startedAt).getTime())/1000);
-    /* while resting, the label line shows the count-up since the last set — always
+    /* while resting, the label line shows the count-up since the last set - always
        glanceable, even when the rest bar is scrolled away */
     const r = S.active.rest;
     const rdone = r && r.tgt && (Date.now()-r.at)/1000 >= r.tgt;
@@ -725,7 +725,7 @@ function htmlHome(){
   /* home shows only PINNED splits as a grid of split cards; fall back to all when none pinned */
   const pinned = S.folders.filter(f=>f.pinned);
   const showFolders = pinned.length ? pinned : S.folders;
-  /* workout + full-cycle counters since the last deload — the "when to deload" gauge */
+  /* workout + full-cycle counters since the last deload - the "when to deload" gauge */
   const counts = tplCounts();
   const mainId = mainFolderId();
   /* the main-program star only matters when there is a choice */
@@ -772,11 +772,11 @@ function htmlHome(){
 /* ======================= DELOAD ======================= */
 /* manual deload CYCLE: every workout of the MAIN program gets exactly one deload
    pass (reduced ghost loads, sets out of records/PRs, tagged dl:1). The deload ends
-   automatically once each workout was done once — or manually anytime. A workout
+   automatically once each workout was done once - or manually anytime. A workout
    whose deload pass is already done counts as a normal session again.
    Options (research-backed, see v1.9.3 notes): load 50/60/70/90 % of previous
    working weights + optional half sets. Light exercises (<20 kg) are only trimmed
-   to ~80 % — surveyed athletes mostly keep isolation loads and cut volume instead. */
+   to 80 % - surveyed athletes mostly keep isolation loads and cut volume instead. */
 const DL_FACTOR = 0.6;      /* default load % */
 const DL_LIGHT_KG = 20;     /* below this, cap the reduction at DL_LIGHT_FLOOR */
 const DL_LIGHT_FLOOR = 0.8;
@@ -816,7 +816,7 @@ function setMainFolder(id){
   toast(t('mainSet',{n:f.name}));
 }
 /* deload suggestion from a previous load (kg), rounded to the plate step;
-   assisted (negative) loads are left alone — scaling them would make the set harder */
+   assisted (negative) loads are left alone - scaling them would make the set harder */
 function dlW(kg){
   if(kg<=0) return kg;
   const d = dlActive();
@@ -872,7 +872,7 @@ function endDeload(){
   d.e = Date.now();
   save(); render();
 }
-/* workouts done per template since the last deload started (deload sets excluded) —
+/* workouts done per template since the last deload started (deload sets excluded) -
    the "how many rounds before the next deload" counters on the home split cards */
 function tplCounts(){
   const from = dlLastStart();
@@ -943,7 +943,7 @@ function openSwapMenu(xi){
     <div class="swaplist">${items}</div>
     <button class="btn ghostbtn" style="margin-top:10px" onclick="addAltExercise(${xi})">${t('swapAdd')}</button>`);
 }
-/* promote an alternative to be this slot's MAIN exercise — the template updates too:
+/* promote an alternative to be this slot's MAIN exercise - the template updates too:
    the old main becomes one of the alternatives (nothing is lost, roles just flip) */
 function makeMainExercise(xi, key){
   const ex = S.active.exercises[xi];
@@ -963,7 +963,7 @@ function makeMainExercise(xi, key){
   ex.alts = ex.alts.filter(a=>a!==key);
   if(!ex.alts.includes(oldBase)) ex.alts.push(oldBase);
   save(); render();
-  openSwapMenu(xi); /* refresh the sheet — the Planned tag moves to the new main */
+  openSwapMenu(xi); /* refresh the sheet - the Planned tag moves to the new main */
   toast(t('swapMainDone',{n:exName(key)}));
 }
 function addAltExercise(xi){
@@ -977,7 +977,7 @@ function addAltExercise(xi){
     swapExercise(xi, info.id);
   });
 }
-/* per-exercise action menu — keeps the exercise header uncluttered */
+/* per-exercise action menu - keeps the exercise header uncluttered */
 function openExMenu(xi){
   const ex = S.active.exercises[xi];
   if(!ex) return;
@@ -1022,7 +1022,7 @@ function lastForExercise(k, name, tplId){
   const nm = (name||'').trim().toLowerCase();
   const match = e => (e.k===k || (nm && e.name && e.name.trim().toLowerCase()===nm))
                      && e.sets && e.sets.length;
-  /* prefer the last session of the SAME workout — exercise order/fatigue context matters.
+  /* prefer the last session of the SAME workout - exercise order/fatigue context matters.
      Deload sessions are skipped, so after a deload the ghosts return to real loads. */
   if(tplId){
     for(const h of S.history){
@@ -1208,7 +1208,7 @@ function adjRest(d){
   if(!r || !r.tgt) return;
   unlockAudio();
   r.tgt = Math.min(1800, Math.max(15, r.tgt + d));
-  if((Date.now()-r.at)/1000 < r.tgt) r.sig = 0; /* extended past "done" — signal re-arms */
+  if((Date.now()-r.at)/1000 < r.tgt) r.sig = 0; /* extended past "done" - signal re-arms */
   save(); render();
 }
 function dismissRest(){
@@ -1236,7 +1236,7 @@ function toggleWarm(xi,si){
   save(); render();
 }
 /* one-tap warmup ramp: empty bar x10 (barbell lifts), then ~40/60/80% of the
-   working weight at 6/4/2 reps — the standard strength ramp; low reps up high
+   working weight at 6/4/2 reps - the standard strength ramp; low reps up high
    so the warmup wakes you up without eating into the work sets. Warmup sets
    are W-typed, so they stay out of records/volume/progress. Tapping W again
    removes the not-yet-done warmups. */
@@ -1322,7 +1322,7 @@ function toggleSet(xi,si){
   const ex = S.active.exercises[xi];
   const s = ex.sets[si];
   if(s.done){
-    /* sets are completed in order — only the last completed set can be un-done */
+    /* sets are completed in order - only the last completed set can be un-done */
     if(ex.sets.slice(si+1).some(x=>x.done)) return;
     s.done=false; s.cls=''; updateExDone(ex); save(); render(); return;
   }
@@ -1344,7 +1344,7 @@ function toggleSet(xi,si){
   else if(wkg>real.weight || (wkg===real.weight && r>real.reps)) s.cls='win';
   else if(wkg===real.weight && r===real.reps) s.cls='even';
   else s.cls='loss';
-  /* no rest after the very last set of the workout — nothing left to rest for */
+  /* no rest after the very last set of the workout - nothing left to rest for */
   if(S.active.exercises.every(exFullyDone)){
     S.active.rest = null;
   }else{
@@ -1494,7 +1494,7 @@ function showSummary(dur, vol, setsDone, prs){
     <button class="btn primary" style="margin-top:14px" onclick="closeModal()">${t('sumOk')}</button>`);
   if(prs.length) confetti();
 }
-/* lightweight one-shot confetti — CSS animated, no library, cleans itself up */
+/* lightweight one-shot confetti - CSS animated, no library, cleans itself up */
 function confetti(){
   if(document.getElementById('confetti')) return;
   const box = document.createElement('div');
@@ -1553,7 +1553,7 @@ function stepperInit(){
 }
 /* follow the keyboard every frame while visible. iOS composites page panning on
    another thread, so any JS-positioned element visibly trails during scroll and
-   the keyboard animation — instead of chasing it, the bar hides while the viewport
+   the keyboard animation - instead of chasing it, the bar hides while the viewport
    is moving and snaps back the moment it settles (what Safari's own bars do). */
 let stepRAF = 0;
 function startStepLoop(){
@@ -1630,12 +1630,12 @@ function tick(){
       const wrap = tb.closest('.tbr');
       if(wrap) wrap.classList.toggle('done', done);
     }
-    /* target reached — signal once, whatever screen is visible */
+    /* target reached - signal once, whatever screen is visible */
     if(r.tgt && !r.sig && done){ r.sig = 1; save(); restSignal(); }
   }
   updateStepTime();
 }
-/* workout + rest time on the keyboard stepper bar — the topbar scrolls away
+/* workout + rest time on the keyboard stepper bar - the topbar scrolls away
    on iOS while the keyboard is open, this stays visible */
 function updateStepTime(){
   const el = $('#step-time');
@@ -1790,7 +1790,7 @@ function htmlTplEdit(){
       <button onclick="stepReps('${d.id}',${i},'${which}',-1)">−</button><span class="val">${val}</span>
       <button onclick="stepReps('${d.id}',${i},'${which}',1)">+</button></div>`;
     const repsCtl = p.range
-      ? rnum('lo',p.lo) + `<span class="rgdash">–</span>` + rnum('hi',p.hi)
+      ? rnum('lo',p.lo) + `<span class="rgdash">-</span>` + rnum('hi',p.hi)
       : rnum('single',p.lo);
     const canSS = i < d.ex.length-1;
     return `<div class="exedit">
@@ -1908,7 +1908,7 @@ function stepTplRest(id,i,dir){
   save(); render();
 }
 /* typed rest works like a microwave: the colon is fixed, digits shift in from the
-   right — keys 1,3,0 read 0:01 -> 0:13 -> 1:30 (numeric keyboards have no ":") */
+   right - keys 1,3,0 read 0:01 -> 0:13 -> 1:30 (numeric keyboards have no ":") */
 function fmtRestInput(el){
   const d = el.value.replace(/\D/g,'').replace(/^0+/,'').slice(0,4);
   el.value = d ? Math.floor(+d/100) + ':' + String(+d%100).padStart(2,'0') : '';
@@ -1955,7 +1955,7 @@ function stepReps(id,i,which,dir){
   }
   save(); render();
 }
-/* toggle a target between a single value and a "from–to" range */
+/* toggle a target between a single value and a "from-to" range */
 function toggleRepsRange(id,i){
   const d = S.templates.find(x=>x.id===id);
   if(!d || !d.ex[i]) return;
@@ -2185,7 +2185,7 @@ function htmlExDetail(){
       `</div>`;
   }
   const tm = isTimeEx(k);
-  /* bodyweight moves: the record is total load — show the "bw + added" split under it */
+  /* bodyweight moves: the record is total load - show the "bw + added" split under it */
   const bestSplit = (!tm && st.best && st.bestBw!=null) ? ` (${bwSplit(st.bestBw, st.bestAdd)})` : '';
   h += `<div class="statrow">
     <div class="stat"><div class="v">${tm ? (st.bestTime?st.bestTime+' s':'—') : (st.best?wu(st.best,true):'—')}</div><div class="l">${tm?t('recTime'):t('exBest')}${bestSplit}</div></div>
@@ -2316,7 +2316,7 @@ function barChartSVG(data){ /* data = [{l:label, v:number}] */
   return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${out}</svg>`;
 }
 /* ---- per-chart period controls ---- */
-/* compact chips on a card header; opts = [[value,label],...]; withCustom adds ⋯ (from–to) */
+/* compact chips on a card header; opts = [[value,label],...]; withCustom adds ⋯ (from-to) */
 function pchipsHtml(cid, opts, withCustom){
   const c = V.cp[cid];
   let h = `<div class="pchips">` + opts.map(([v,lb])=>
@@ -2347,7 +2347,7 @@ function rangeBarHtml(cid){
     <label>${t('pdTo')}<input type="date" value="${c.t}" min="${c.f||''}" onchange="setPdD('${cid}','t',this.value)"></label>
   </div>`;
 }
-/* custom from–to as [startDate, endDateExclusive]; null if incomplete/reversed */
+/* custom from-to as [startDate, endDateExclusive]; null if incomplete/reversed */
 function customRange(c){
   if(!c.f || !c.t) return null;
   const s = new Date(c.f+'T00:00:00'), e = new Date(c.t+'T00:00:00');
@@ -2522,7 +2522,7 @@ function rhythmHtml(){
       ? `<button class="rc on${w.dl?' dl':''}${td}" onclick="rhythmTap('${w.id}')">${esc(w.ltr)}${w.n>1?'⁺':''}</button>`
       : `<span class="rc${td}"></span>`;
   }
-  /* 14 d = one row; longer ranges wrap into 15-day rows (no weekday grid on purpose —
+  /* 14 d = one row; longer ranges wrap into 15-day rows (no weekday grid on purpose -
      the user's rhythm is self-regulated, not weekly) */
   return `<div class="chead" style="margin-bottom:8px"><span class="ct">${t('rhythmTitle')}</span>
       ${pchipsHtml('rh',[['14','14 d.'],['30','30 d.'],['90','90 d.']],false)}</div>
@@ -2666,7 +2666,7 @@ function htmlHistory(){
   let h = '<div style="height:8px"></div>';
   /* 1. rolling summary strip (slot reserved above for a future deload suggestion card) */
   h += histSummaryHtml();
-  /* 2. rhythm strip — the self-regulated U/L/rest pattern at a glance */
+  /* 2. rhythm strip - the self-regulated U/L/rest pattern at a glance */
   h += `<div class="card" style="margin-top:10px">${rhythmHtml()}</div>`;
   /* 3. tracked lifts */
   h += trackedHtml();
@@ -2688,14 +2688,14 @@ function htmlHistory(){
       <div class="chead"><span class="ct">${t('statsMuscle')}</span>${pchipsHtml('mus',[['7','7 d.'],['30','30 d.']],true)}</div>
       ${rangeBarHtml('mus')}${muscleBalanceHtml()}
     </div>`;
-  /* 6. body weight — graph + recent entries; logging via the quick modal */
+  /* 6. body weight - graph + recent entries; logging via the quick modal */
   const cbw = V.cp.bw;
   let ws = S.weights;
   if(cbw.p!=='all'){
     const cut = Date.now() - (+cbw.p)*864e5;
     ws = ws.filter(x=>new Date(x.date).getTime()>=cut);
   }
-  /* chart caps at 24 points — downsample evenly so long ranges keep their shape */
+  /* chart caps at 24 points - downsample evenly so long ranges keep their shape */
   let bwPts = ws.slice().reverse().map(x=>({d:x.date,w:kg2u(x.kg)}));
   if(bwPts.length>24){
     const out = [];
@@ -2735,7 +2735,7 @@ function histRowHtml(w){
   let detail = '';
   if(open){
     detail = `<div class="histdetail">` + w.exercises.map(e=>
-      `<div class="exl"><span class="n">${esc(e.name)}${e.note?` <em style="opacity:.8">— ${esc(e.note)}</em>`:''}</span>
+      `<div class="exl"><span class="n">${esc(e.name)}${e.note?` <em style="opacity:.8">- ${esc(e.note)}</em>`:''}</span>
        <span class="s">${e.sets.map(s=>`<span class="tok">${fmtSet(s, e.k)}</span>`).join(' ')}</span></div>`).join('') +
       `<div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
         <span style="color:var(--ghost);font-size:13px">${t('histVolume')}: ${Math.round(kg2u(vol))} ${unitL()}${w.dur?' · '+fmtTime(w.dur):''}</span>
@@ -2810,7 +2810,7 @@ function delHistSet(id,ei,si){
   w.exercises[ei].sets.splice(si,1);
   if(!w.exercises[ei].sets.length) w.exercises.splice(ei,1);
   if(!w.exercises.length){
-    /* last set of the last exercise deleted — the workout itself is gone */
+    /* last set of the last exercise deleted - the workout itself is gone */
     S.history = S.history.filter(x=>x.id!==id);
     V.expanded = null;
     save(); closeModal(); render();
@@ -2937,7 +2937,7 @@ function renderPlates(){
   let rem = side;
   for(const p of plateSet()){ while(rem >= p - 1e-9){ used.push(p); rem -= p; } }
   rem = Math.round(rem*100)/100;
-  let html = `<div style="font-size:13px;color:var(--dim);font-weight:600;margin-bottom:8px">${t('platesSide')} — ${fmtW(side)} ${unitL()}:</div>`;
+  let html = `<div style="font-size:13px;color:var(--dim);font-weight:600;margin-bottom:8px">${t('platesSide')} - ${fmtW(side)} ${unitL()}:</div>`;
   html += used.length
     ? `<div style="font-size:24px;font-weight:800;color:var(--accent-soft)">${used.map(fmtW).join(' + ')}</div>`
     : `<div style="font-size:16px;font-weight:700">${t('platesEmpty')}</div>`;
@@ -3093,7 +3093,7 @@ function shareTpl(id){
     <textarea class="codebox" readonly onclick="this.select()">${esc(code)}</textarea>
     <button class="btn primary" style="margin-top:12px" onclick="copyText(document.querySelector('.codebox').value)">${ACT_ICONS.copy} ${t('copy')}</button>`);
 }
-/* full-data payload for backup codes AND cloud sync — the GitHub token itself is
+/* full-data payload for backup codes AND cloud sync - the GitHub token itself is
    deliberately NOT here: backup codes get pasted around, the token must never travel */
 function bakPayload(){
   return { t:'bak', s:{ lang:S.lang, unit:S.unit, theme:S.theme, keepAwake:S.keepAwake, plates:S.plates,
@@ -3121,7 +3121,7 @@ function buildSetsCSV(){
     'exercise','exercise_key','muscle_group','equipment','exercise_position','completion_order',
     'set_number','set_type','is_time_exercise','weight_'+u,'reps_or_seconds',
     'bodyweight_'+u,'total_'+u,'volume_'+u,'note']];
-  for(let i=S.history.length-1; i>=0; i--){ /* oldest first — chronological for analysis */
+  for(let i=S.history.length-1; i>=0; i--){ /* oldest first - chronological for analysis */
     const w = S.history[i];
     w.exercises.forEach((e,ei)=>{
       const info = exInfo(e.k);
@@ -3186,7 +3186,7 @@ function importTplPayload(d, folderId){
   for(const e of (d.ex||[])){
     let k = e.k;
     if(!exInfo(k)){
-      /* unknown exercise (friend's custom one) — register it locally */
+      /* unknown exercise (friend's custom one) - register it locally */
       const existing = allExercises().find(x=>x.n.toLowerCase()===String(e.n||'').toLowerCase());
       if(existing) k = existing.id;
       else if(e.n){
@@ -3232,7 +3232,7 @@ function doImport(){
     if(typeof d.s.mainFolder!=='string') delete d.s.mainFolder;
     if(typeof d.s.restTarget!=='number' || !(d.s.restTarget>=15 && d.s.restTarget<=1800)) delete d.s.restTarget;
     if(typeof d.s.restSound!=='boolean') delete d.s.restSound;
-    /* keep this device's cloud-sync setup — backup codes never carry it */
+    /* keep this device's cloud-sync setup - backup codes never carry it */
     const gh = { ghRepo:S.ghRepo, ghToken:S.ghToken, ghLast:S.ghLast, ghDirty:S.ghDirty };
     S = Object.assign(defaultState(), d.s, { active:null }, gh);
     save(); scheduleCloudSync(); applyTheme(); closeModal();
@@ -3334,7 +3334,7 @@ function beep(){
   if(!AC || AC.state!=='running') return;
   try{
     const t0 = AC.currentTime + 0.02;
-    [[0,880],[0.22,1175]].forEach(([off,hz])=>{ /* two rising tones — "ready" */
+    [[0,880],[0.22,1175]].forEach(([off,hz])=>{ /* two rising tones - "ready" */
       const o = AC.createOscillator(), g = AC.createGain();
       o.type = 'sine'; o.frequency.value = hz;
       g.gain.setValueAtTime(0.0001, t0+off);
@@ -3412,7 +3412,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     const hadController = !!navigator.serviceWorker.controller;
     let reloaded = false;
     navigator.serviceWorker.addEventListener('controllerchange', ()=>{
-      if(!hadController || reloaded) return; /* first install — nothing to refresh */
+      if(!hadController || reloaded) return; /* first install - nothing to refresh */
       reloaded = true;
       try{ sessionStorage.setItem('dvd-upd','1'); }catch(e){}
       location.reload();

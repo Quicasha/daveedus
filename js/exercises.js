@@ -1,4 +1,4 @@
-/* Daveedus — built-in exercise database.
+/* Daveedus - built-in exercise database.
    g = muscle group key, e = equipment key. Names use standard gym terminology. */
 'use strict';
 

@@ -1,5 +1,5 @@
-/* Daveedus service worker — offline-first app shell */
-const CACHE = 'daveedus-v1.15.1';
+/* Daveedus service worker - offline-first app shell */
+const CACHE = 'daveedus-v1.15.2';
 const ASSETS = [
   './', './index.html', './css/style.css', './js/app.js', './js/exercises.js',
   './manifest.webmanifest',
@@ -40,7 +40,7 @@ self.addEventListener('fetch', e => {
     );
     return;
   }
-  /* other assets: stale-while-revalidate — serve cache instantly, refresh in background */
+  /* other assets: stale-while-revalidate - serve cache instantly, refresh in background */
   e.respondWith(
     caches.match(e.request).then(cached => {
       const fresh = fetch(e.request).then(resp => {
