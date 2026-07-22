@@ -436,6 +436,8 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 .dldiv .d{color:var(--dim); font-weight:600;}
 .dldiv .r{margin-left:auto; color:var(--dim); font-weight:600;}
 .dldiv::before{content:''; width:14px; height:2px; border-radius:2px; background:var(--orange);}
+.dldiv2{margin:-6px 4px 10px 26px; font-size:12px; font-weight:600; color:var(--ghost); line-height:1.6;}
+.dldiv2 .cy{color:var(--orange); font-weight:700;}
 
 /* "Continue" pill on the newest history row - undo an accidental Finish */
 .contbtn{display:inline-flex; align-items:center; gap:5px; background:var(--accent-bg);

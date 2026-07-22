@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.20.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.20.1'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -121,6 +121,7 @@ const I18N = {
     x2Label:'Pora hantelių - rašai vieno svorį, skaičiuojasi abu',
     rrstLabel:'Skaičiuoti iš naujo',
     histContinue:'Tęsti', histDlAfter:'po {n} treniruočių', dlActiveShort:'vyksta',
+    histDlCycles:'pilni ciklai: {n}',
     setBackup:'Atsarginė kopija', setBackupCopy:'Kopijuoti atsarginį kodą', setBackupLoad:'Įkelti atsarginį kodą',
     ghTitle:'Debesies sinchronizacija (GitHub)', ghRepoPh:'vartotojas/repo', ghTokenPh:'GitHub token',
     ghConnect:'Prijungti', ghNow:'Sinchronizuoti dabar', ghOff:'Atjungti',
@@ -257,6 +258,7 @@ const I18N = {
     x2Label:'Dumbbell pair - enter one, both are counted',
     rrstLabel:'Restart rest',
     histContinue:'Continue', histDlAfter:'after {n} workouts', dlActiveShort:'active',
+    histDlCycles:'full cycles: {n}',
     setBackup:'Backup', setBackupCopy:'Copy backup code', setBackupLoad:'Load backup code',
     ghTitle:'Cloud sync (GitHub)', ghRepoPh:'user/repo', ghTokenPh:'GitHub token',
     ghConnect:'Connect', ghNow:'Sync now', ghOff:'Disconnect',
@@ -2844,11 +2846,16 @@ function histListHtml(act, lim){
   const dls = S.deloads.slice().sort((a,b)=>b.s-a.s); /* newest first */
   const counts = dls.map(d=>{
     const prevEnd = Math.max(0, ...S.deloads.filter(x=>x.s<d.s).map(x=>x.e||x.s));
-    return act.filter(w=>{
-      if(w.dl) return false;
+    const byName = {};
+    let n = 0;
+    for(const w of act){
+      if(w.dl) continue;
       const ts = new Date(w.date).getTime();
-      return ts > prevEnd && ts < d.s;
-    }).length;
+      if(ts > prevEnd && ts < d.s){ n++; byName[w.name] = (byName[w.name]||0)+1; }
+    }
+    const per = Object.keys(byName).map(nm=>({ nm, c:byName[nm] })).sort((a,b)=>b.c-a.c || a.nm.localeCompare(b.nm));
+    const cycles = per.length ? Math.min(...per.map(x=>x.c)) : 0;
+    return { n, per, cycles };
   });
   let di = 0, h = '';
   act.slice(0,lim).forEach(w=>{
@@ -2861,12 +2868,13 @@ function histListHtml(act, lim){
   });
   return h;
 }
-function dlDividerHtml(d, n){
+function dlDividerHtml(d, c){
+  const brk = c.per.map(x=>`${x.c}× ${esc(x.nm)}`).join(' · ');
   return `<div class="dldiv">
     <span class="l">${t('dlBadge')}</span>
     <span class="d">${fmtDate(new Date(d.s).toISOString())}${d.e?'':' · '+t('dlActiveShort')}</span>
-    ${n?`<span class="r">${t('histDlAfter',{n})}</span>`:''}
-  </div>`;
+    ${c.n?`<span class="r">${t('histDlAfter',{n:c.n})}</span>`:''}
+  </div>${c.n?`<div class="dldiv2">${brk}${c.cycles?` · <span class="cy">${t('histDlCycles',{n:c.cycles})}</span>`:''}</div>`:''}`;
 }
 function histRowHtml(w){
   const nsets = w.exercises.reduce((a,e)=>a+e.sets.length,0);
