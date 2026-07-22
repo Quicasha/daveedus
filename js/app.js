@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.15.2'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.16.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -116,6 +116,7 @@ const I18N = {
     setRestHint:'Poilsio taikinys nustatomas treniruotės redagavime prie kiekvieno pratimo. Kai laikas sueina, juosta sumirksi ir pyptelės - telefonui esant begarsiu režimu signalas tik vizualus.',
     tplRest:'Poilsis', tplRestOff:'laisvai',
     swapMakeMain:'Pagrindinis', swapMainDone:'Pagrindinis pakeistas: {n}',
+    pvStart:'Pradėti treniruotę',
     setBackup:'Atsarginė kopija', setBackupCopy:'Kopijuoti atsarginį kodą', setBackupLoad:'Įkelti atsarginį kodą',
     ghTitle:'Debesies sinchronizacija (GitHub)', ghRepoPh:'vartotojas/repo', ghTokenPh:'GitHub token',
     ghConnect:'Prijungti', ghNow:'Sinchronizuoti dabar', ghOff:'Atjungti',
@@ -247,6 +248,7 @@ const I18N = {
     setRestHint:'Set a rest target per exercise when editing a workout. When time is up, the bar flashes and beeps - on silent mode the signal is visual only.',
     tplRest:'Rest', tplRestOff:'free',
     swapMakeMain:'Main', swapMainDone:'Main is now {n}',
+    pvStart:'Start workout',
     setBackup:'Backup', setBackupCopy:'Copy backup code', setBackupLoad:'Load backup code',
     ghTitle:'Cloud sync (GitHub)', ghRepoPh:'user/repo', ghTokenPh:'GitHub token',
     ghConnect:'Connect', ghNow:'Sync now', ghOff:'Disconnect',
@@ -710,10 +712,10 @@ function htmlHome(){
   const tplBtn = (d, isNext) => {
     const last = S.history.find(x=>x.tplId===d.id);
     const names = d.ex.slice(0,3).map(e=>exName(e.k,e.n)).join(', ') + (d.ex.length>3?'…':'');
-    return `<button class="tplbtn ${isNext?'next':''}" onclick="startWorkout('${d.id}')">
+    return `<button class="tplbtn ${isNext?'next':''}" onclick="openWoPreview('${d.id}')">
       <div class="tinfo"><div class="tname">${esc(d.name)}${isNext?` <span class="nextchip">${t('nextBadge')}</span>`:''}</div>
       <div class="tsub">${last?daysAgoStr(last.date):t('never')} · ${esc(names)}</div></div>
-      <div class="go">${ACT_ICONS.play}</div></button>`;
+      <div class="go">${ACT_ICONS.chevron}</div></button>`;
   };
   /* deload: active banner (tap = end early), otherwise a subtle button in the section header */
   const dl = dlActive();
@@ -743,7 +745,7 @@ function htmlHome(){
     const cycles = Math.min(...tpls.map(d=>counts[d.id]||0));
     const rows = tpls.map(d=>{
       const dlDue = dl && dl.tpls.includes(d.id) && !dl.done.includes(d.id);
-      return `<button class="sprow ${d.id===nextId?'next':''}" onclick="startWorkout('${d.id}')">
+      return `<button class="sprow ${d.id===nextId?'next':''}" onclick="openWoPreview('${d.id}')">
       <span class="spn">${esc(d.name)}</span>
       ${dlDue?`<span class="dldot" title="${t('dlBadge')}"></span>`:''}
       ${counts[d.id]?`<span class="spcnt">${counts[d.id]}</span>`:''}
@@ -1040,6 +1042,23 @@ function lastForExercise(k, name, tplId){
     }
   }
   return null;
+}
+/* quick "what's today" preview - tapping a workout on Home shows the plan first;
+   the workout only starts from the button here (or the play button in Programs) */
+function openWoPreview(id){
+  const d = S.templates.find(x=>x.id===id);
+  if(!d) return;
+  const last = S.history.find(x=>x.tplId===id && !x.arch);
+  const dlDue = dlForTpl(id);
+  const rows = d.ex.map((e,i)=>`<div class="pvrow">
+    <span class="pvnum">${i+1}</span>
+    <span class="pvname">${esc(exName(e.k,e.n))}${e.ss && i<d.ex.length-1?` <span class="ssic">${ACT_ICONS.link}</span>`:''}</span>
+    <span class="pvsr">${e.s}×${e.r}${isTimeEx(e.k)?' s':''}</span>
+  </div>`).join('');
+  openModal(`<h3>${esc(d.name)}<button class="x" onclick="closeModal()">✕</button></h3>
+    <div class="pvsub">${last?daysAgoStr(last.date):t('never')} · ${t('tplExCount',{n:d.ex.length})}${dlDue?` · <span class="pvdl">${t('dlBadge')}</span>`:''}</div>
+    <div class="pvlist">${rows || `<div class="empty" style="padding:14px">—</div>`}</div>
+    <button class="btn primary" style="margin-top:14px" onclick="closeModal();startWorkout('${d.id}')">${ACT_ICONS.play} ${t('pvStart')}</button>`);
 }
 function startWorkout(tplId){
   const tpl = S.templates.find(d=>d.id===tplId);

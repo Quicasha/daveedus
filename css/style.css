@@ -414,6 +414,21 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
   font-size:12px; font-weight:700; cursor:pointer;}
 .altbar svg{width:15px; height:15px; flex:none;}
 .altbar:active{opacity:.6;}
+/* workout preview modal (tap a workout on Home) */
+.pvsub{color:var(--dim); font-size:13px; font-weight:600; margin:0 4px 10px;}
+.pvsub .pvdl{color:var(--orange); font-weight:700;}
+.pvrow{display:flex; align-items:center; gap:10px; min-height:38px; border-bottom:1px solid var(--line);}
+.pvrow:last-child{border-bottom:none;}
+.pvnum{flex:none; width:20px; text-align:center; color:var(--ghost); font-size:13px; font-weight:700;
+  font-family:var(--display); font-variant-numeric:tabular-nums;}
+.pvname{flex:1; min-width:0; font-size:15px; font-weight:600;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  display:flex; align-items:center; gap:6px;}
+.pvname .ssic{display:flex; color:var(--accent-soft);}
+.pvname .ssic svg{width:13px; height:13px;}
+.pvsr{flex:none; color:var(--dim); font-size:14px; font-weight:700;
+  font-family:var(--display); font-variant-numeric:tabular-nums;}
+
 /* swap menu (modal) */
 .swaplist{display:flex; flex-direction:column; gap:6px; margin-top:4px;}
 .swapitem{display:flex; align-items:center; gap:8px; width:100%; text-align:left;
