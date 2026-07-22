@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.16.1'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.17.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -118,6 +118,8 @@ const I18N = {
     swapMakeMain:'Pagrindinis', swapMainDone:'Pagrindinis pakeistas: {n}',
     pvStart:'Pradėti treniruotę',
     woAddEx:'Pridėti pratimą', woAddExDone:'Pridėta tik šiai treniruotei',
+    x2Label:'Pora hantelių - rašai vieno svorį, skaičiuojasi abu',
+    rrstLabel:'Skaičiuoti iš naujo',
     setBackup:'Atsarginė kopija', setBackupCopy:'Kopijuoti atsarginį kodą', setBackupLoad:'Įkelti atsarginį kodą',
     ghTitle:'Debesies sinchronizacija (GitHub)', ghRepoPh:'vartotojas/repo', ghTokenPh:'GitHub token',
     ghConnect:'Prijungti', ghNow:'Sinchronizuoti dabar', ghOff:'Atjungti',
@@ -251,6 +253,8 @@ const I18N = {
     swapMakeMain:'Main', swapMainDone:'Main is now {n}',
     pvStart:'Start workout',
     woAddEx:'Add exercise', woAddExDone:'Added to this workout only',
+    x2Label:'Dumbbell pair - enter one, both are counted',
+    rrstLabel:'Restart rest',
     setBackup:'Backup', setBackupCopy:'Copy backup code', setBackupLoad:'Load backup code',
     ghTitle:'Cloud sync (GitHub)', ghRepoPh:'user/repo', ghTokenPh:'GitHub token',
     ghConnect:'Connect', ghNow:'Sync now', ghOff:'Disconnect',
@@ -892,13 +896,14 @@ function tplCounts(){
 /* ======================= WORKOUT ======================= */
 function latestBw(){ return S.weights.length ? S.weights[0].kg : null; }
 function newSet(extra){ return Object.assign({ w:'', r:'', warm:false, drop:false, fail:false, done:false, cls:'' }, extra||{}); }
-function buildActiveEx(k, name, sets, reps, ss, tplId, alts, pnote, rt){
+function buildActiveEx(k, name, sets, reps, ss, tplId, alts, pnote, rt, x2){
   const last = lastForExercise(k, name, tplId);
   const ex = { id:uid(), k, name, targetSets:sets, targetReps:reps, note:'', ss:!!ss, last,
     baseK:k, alts:(alts||[]).slice(), stash:{}, tplId:tplId||null,
     pnote:pnote||'', notePerm:false, prevOrder:(last && last.order) ? last.order : 0,
     sets: Array.from({length:sets}, ()=>newSet()) };
   if(typeof rt==='number' && rt>=15) ex.rt = Math.min(1800, Math.round(rt));
+  if(x2) ex.x2 = true; /* pair of dumbbells: inputs are one-hand, totals count both */
   if(isBwEx(k)){
     /* body weight prefilled from the latest log (or last session), kept separate from the logged load */
     ex.bw = latestBw() != null ? latestBw() : (last && last.bw != null ? last.bw : null);
@@ -1073,7 +1078,7 @@ function startWorkout(tplId){
   const dls = n => Math.max(1, Math.ceil(n*dlv));
   S.active = {
     tplId: tpl.id, name: tpl.name, startedAt: new Date().toISOString(), rest:null,
-    exercises: tpl.ex.map(e => buildActiveEx(e.k, exName(e.k,e.n), dls(e.s), e.r, e.ss, tpl.id, e.alts, e.pnote, e.rt))
+    exercises: tpl.ex.map(e => buildActiveEx(e.k, exName(e.k,e.n), dls(e.s), e.r, e.ss, tpl.id, e.alts, e.pnote, e.rt, e.x2))
   };
   save();
   go('workout');
@@ -1133,8 +1138,11 @@ function htmlWorkout(){
     const tm = isTimeEx(ex.k), bw = isBwEx(ex.k);
     const firstNotDone = ex.sets.findIndex(s=>!s.done); /* -1 = all done */
     const wcol = bw ? t('woAddCol') : (tm ? unitL() : unitL());
+    /* pair-of-dumbbells toggle lives right in the column header - one tap, no menus */
+    const x2chip = (!bw && !tm && (exInfo(ex.k)||{}).e==='dumbbell')
+      ? ` <button class="x2chip${isX2(ex)?' on':''}" onclick="toggleX2(${xi})" aria-label="${t('x2Label')}">×2</button>` : '';
     const hdr = `<div class="setgrid hdr"><div>${t('woSet')}</div><div>${t('woPrev')}</div>
-      <div>${wcol}</div><div>${tm?t('woSec'):t('woReps')}</div><div>${ACT_ICONS.check}</div><div></div></div>`;
+      <div>${wcol}${x2chip}</div><div>${tm?t('woSec'):t('woReps')}</div><div>${ACT_ICONS.check}</div><div></div></div>`;
     let workNum = 0;
     const approx = ex.last && !ex.last.sameTpl ? '~' : ''; /* values borrowed from another workout */
     const rows = ex.sets.map((s,si)=>{
@@ -1224,9 +1232,12 @@ function addWorkoutEx(){
 function restBarHtml(){
   const r = S.active.rest;
   const el = (Date.now()-r.at)/1000;
+  const rrst = `<button class="rrst" onclick="event.stopPropagation();resetRest()" aria-label="${t('rrstLabel')}">${ACT_ICONS.restore}</button>`;
   if(!r.tgt) return `<div class="restbar" id="restbar" onclick="dismissRest()">
-    <span class="pulse"></span>
-    <span class="tm" id="rest-time">${t('restLabel')} ${fmtTime(el)}</span>
+    <span class="rsp"></span>
+    <span class="mid"><span class="pulse"></span>
+      <span class="tm" id="rest-time">${t('restLabel')} ${fmtTime(el)}</span></span>
+    ${rrst}
   </div>`;
   const done = el >= r.tgt;
   return `<div class="restbar target${done?' done':''}" id="restbar" onclick="dismissRest()">
@@ -1235,7 +1246,17 @@ function restBarHtml(){
     <span class="mid"><span class="pulse"></span>
       <span class="tm" id="rest-time">${t('restLabel')} ${fmtTime(el)} / ${fmtTime(r.tgt)}</span></span>
     <button class="adj" onclick="event.stopPropagation();adjRest(15)">+15</button>
+    ${rrst}
   </div>`;
+}
+/* restart the rest clock from zero - e.g. between the left and right arm of a
+   unilateral exercise; a target's signal re-arms too */
+function resetRest(){
+  const r = S.active && S.active.rest;
+  if(!r) return;
+  r.at = Date.now();
+  r.sig = 0;
+  save(); render();
 }
 /* nudge the target of the CURRENT rest only (the default in Settings stays) */
 function adjRest(d){
@@ -1352,6 +1373,16 @@ function ssGroup(xi){
 function updateExDone(ex){
   if(exFullyDone(ex)){ if(!ex.doneAt) ex.doneAt = (S.active.seq = (S.active.seq||0)+1); }
   else ex.doneAt = 0;
+}
+/* the x2 flag only counts while the performed variant is actually a dumbbell move -
+   a slot can be flagged and still swap to a barbell alternative unaffected */
+function isX2(ex){ return !!ex.x2 && (exInfo(ex.k)||{}).e==='dumbbell'; }
+function toggleX2(xi){
+  const ex = S.active.exercises[xi];
+  ex.x2 = !ex.x2;
+  const tpl = S.templates.find(t=>t.id===S.active.tplId);
+  if(tpl){ const te = tpl.ex.find(e=>e.k===ex.baseK); if(te){ if(ex.x2) te.x2 = true; else delete te.x2; } }
+  save(); render();
 }
 function toggleSet(xi,si){
   const ex = S.active.exercises[xi];
@@ -1471,6 +1502,7 @@ function finishWorkout(){
       const o = { k:v.k, name:v.name, targetSets:ex.targetSets, targetReps:ex.targetReps, note:v.note||'', ss:!!ex.ss, sets:done };
       if(orderMap[ex.id]) o.order = orderMap[ex.id];
       if(isBwEx(v.k) && v.bw!=null) o.bw = v.bw;
+      if(ex.x2 && (exInfo(v.k)||{}).e==='dumbbell') o.x2 = 1; /* weights are per hand */
       exercises.push(o);
     });
   });
@@ -1491,12 +1523,14 @@ function finishWorkout(){
       const bt = Math.max(...work.map(s=>s.reps));
       if(prev.bestTime>0 && bt>prev.bestTime) prs.push({ name:e.name, txt:bt+' s' });
     }else{
-      const topW = Math.max(...work.map(s=>s.weight));
+      /* compare in the same scale exStats uses: total load (x2 pairs doubled, body weight added) */
+      const addb = isBwEx(e.k) ? (e.bw||0) : 0;
+      const topW = Math.max(...work.map(s=>s.weight*(e.x2?2:1) + addb));
       if(prev.best>0 && topW>prev.best) prs.push({ name:e.name, txt:wu(topW,true) });
     }
   }
   const dur = Math.round((Date.now()-new Date(S.active.startedAt).getTime())/1000);
-  const vol = exercises.reduce((a,e)=>a+e.sets.filter(s=>!s.warm).reduce((b,s)=>b+s.weight*s.reps,0),0);
+  const vol = exercises.reduce((a,e)=>a+e.sets.filter(s=>!s.warm).reduce((b,s)=>b+s.weight*(e.x2?2:1)*s.reps,0),0);
   const entry = {
     id:uid(), tplId:S.active.tplId, name:S.active.name, date:new Date().toISOString(),
     dur, exercises
@@ -1778,7 +1812,7 @@ function shareFolder(id){
   if(!f) return;
   const tpls = S.templates.filter(x=>x.folderId===id);
   const payload = { t:'folder', name:f.name,
-    tpls: tpls.map(d=>({ name:d.name, ex:d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}) })) })) };
+    tpls: tpls.map(d=>({ name:d.name, ex:d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}), ...(e.x2?{x2:1}:{}) })) })) };
   const code = encodeShare(payload);
   openModal(`<h3>${t('folderShare')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div style="color:var(--dim);font-size:14px;margin:0 4px 10px">${t('folderShareHint')}</div>
@@ -1896,7 +1930,7 @@ function dupTpl(id){
   const d = S.templates.find(x=>x.id===id);
   if(!d) return;
   const copy = { id:uid(), name:(d.name+' '+t('tplDupSuffix')).slice(0,60), folderId:d.folderId,
-    ex: d.ex.map(e=>({ id:uid(), k:e.k, s:e.s, r:e.r, ss:!!e.ss, alts:(e.alts||[]).slice(), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}) })) };
+    ex: d.ex.map(e=>({ id:uid(), k:e.k, s:e.s, r:e.r, ss:!!e.ss, alts:(e.alts||[]).slice(), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}), ...(e.x2?{x2:true}:{}) })) };
   S.templates.splice(S.templates.indexOf(d)+1, 0, copy);
   save();
   openTpl(copy.id);
@@ -2136,8 +2170,9 @@ function exStats(k, name, tplName){
           sessions++;
           if(!lastDate) lastDate = h.date;
           const add = bwKind ? (e.bw||0) : 0; /* records use TOTAL load = body weight + added */
+          const mul = e.x2 ? 2 : 1;          /* dumbbell pairs: stored per hand, counted total */
           for(const s of work){
-            const ew = s.weight + add;
+            const ew = s.weight*mul + add;
             if(ew > best){ best = ew; if(bwKind && e.bw!=null){ bestBw = e.bw; bestAdd = s.weight; } }
             bestTime = Math.max(bestTime, s.reps);
             const est = ew * (1 + s.reps/30); /* Epley */
@@ -2272,13 +2307,14 @@ function chartSVG(k, name, tplName, metric){
         const work = e.sets.filter(s=>!s.warm && !s.drop);
         if(!work.length) continue;
         const add = bwKind ? (e.bw||0) : 0; /* volume/1RM use TOTAL load for bodyweight moves */
+        const mul = e.x2 ? 2 : 1;           /* dumbbell pairs count both hands */
         let v;
         if(tm) v = Math.max(...work.map(s=>s.reps));
-        else if(metric==='vol') v = Math.round(kg2u(work.reduce((a,s)=>a+(s.weight+add)*s.reps,0)));
-        else if(metric==='1rm') v = Math.round(kg2u(Math.max(...work.map(s=>(s.weight+add)*(1+s.reps/30))))*10)/10;
+        else if(metric==='vol') v = Math.round(kg2u(work.reduce((a,s)=>a+(s.weight*mul+add)*s.reps,0)));
+        else if(metric==='1rm') v = Math.round(kg2u(Math.max(...work.map(s=>(s.weight*mul+add)*(1+s.reps/30))))*10)/10;
         /* weight metric on bodyweight moves plots ADDED load only (comparable across
            body-weight changes); the body weight itself shows on point tap */
-        else v = Math.round(kg2u(Math.max(...work.map(s=>bwKind ? s.weight : s.weight+add)))*100)/100;
+        else v = Math.round(kg2u(Math.max(...work.map(s=>bwKind ? s.weight : s.weight*mul+add)))*100)/100;
         pts.push({ d:w.date, w:v, bw:(bwKind && e.bw!=null) ? e.bw : undefined });
       }
     }
@@ -2461,7 +2497,7 @@ function aggBuckets(buckets){
     for(let bi=0; bi<buckets.length; bi++){
       if(d>=buckets[bi].s && d<buckets[bi].e){
         wk[bi].v++;
-        vol[bi].v += h.exercises.reduce((a,ex)=>a+ex.sets.filter(x=>!x.warm).reduce((b,x)=>b+x.weight*x.reps,0),0);
+        vol[bi].v += h.exercises.reduce((a,ex)=>a+ex.sets.filter(x=>!x.warm).reduce((b,x)=>b+x.weight*(ex.x2?2:1)*x.reps,0),0);
         break;
       }
     }
@@ -2588,7 +2624,7 @@ function trackSeries(k){
       if(e.k===k || (e.name && e.name.trim().toLowerCase()===nm)){
         const work = e.sets.filter(s=>!s.warm && !s.drop);
         if(!work.length) continue;
-        pts.push({ ts:new Date(w.date).getTime(), v:Math.max(...work.map(s=>tm?s.reps:s.weight)) });
+        pts.push({ ts:new Date(w.date).getTime(), v:Math.max(...work.map(s=>tm?s.reps:s.weight*(e.x2?2:1))) });
       }
     }
   }
@@ -2668,9 +2704,10 @@ function prEvents(){
       const had = seen[e.k]; seen[e.k] = 1;
       const bwKind = isBwEx(e.k);
       const add = bwKind ? (e.bw||0) : 0; /* records use TOTAL load */
+      const mul = e.x2 ? 2 : 1;
       const top = {};
       for(const s of work){
-        const tot = s.weight + add;
+        const tot = s.weight*mul + add;
         if(!(s.reps in top) || tot>top[s.reps].tot)
           top[s.reps] = { tot, bw:(bwKind && e.bw!=null)?e.bw:null, add:s.weight };
       }
@@ -2765,7 +2802,7 @@ function htmlHistory(){
 }
 function histRowHtml(w){
   const nsets = w.exercises.reduce((a,e)=>a+e.sets.length,0);
-  const vol = w.exercises.reduce((a,e)=>a+e.sets.filter(s=>!s.warm).reduce((b,s)=>b+s.weight*s.reps,0),0);
+  const vol = w.exercises.reduce((a,e)=>a+e.sets.filter(s=>!s.warm).reduce((b,s)=>b+s.weight*(e.x2?2:1)*s.reps,0),0);
   const open = V.expanded===w.id;
   let detail = '';
   if(open){
@@ -3121,7 +3158,7 @@ function shareTpl(id){
   const d = S.templates.find(x=>x.id===id);
   if(!d) return;
   const payload = { t:'tpl', name:d.name,
-    ex: d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}) })) };
+    ex: d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}), ...(e.x2?{x2:1}:{}) })) };
   const code = encodeShare(payload);
   openModal(`<h3>${t('tplShare')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div style="color:var(--dim);font-size:14px;margin:0 4px 10px">${t('tplShareHint')}</div>
@@ -3154,7 +3191,7 @@ function buildSetsCSV(){
   const u = unitL(); /* export in the user's display unit; column names carry it */
   const rows = [['date','workout_name','deload','archived','duration_sec',
     'exercise','exercise_key','muscle_group','equipment','exercise_position','completion_order',
-    'set_number','set_type','is_time_exercise','weight_'+u,'reps_or_seconds',
+    'set_number','set_type','is_time_exercise','is_dumbbell_pair','weight_'+u,'reps_or_seconds',
     'bodyweight_'+u,'total_'+u,'volume_'+u,'note']];
   for(let i=S.history.length-1; i>=0; i--){ /* oldest first - chronological for analysis */
     const w = S.history[i];
@@ -3163,10 +3200,10 @@ function buildSetsCSV(){
       const tm = isTimeEx(e.k), bw = isBwEx(e.k);
       e.sets.forEach((s,si)=>{
         const type = s.warm ? 'warmup' : s.drop ? 'dropset' : s.fail ? 'failure' : 'work';
-        const total = bw ? s.weight + (e.bw||0) : s.weight;
+        const total = bw ? s.weight + (e.bw||0) : s.weight*(e.x2?2:1);
         rows.push([w.date, w.name, w.dl?1:0, w.arch?1:0, w.dur||'',
           e.name, e.k||'', info?info.g:'', info?info.e:'', ei+1, e.order||'',
-          si+1, type, tm?1:0, kg2u(s.weight), s.reps,
+          si+1, type, tm?1:0, e.x2?1:0, kg2u(s.weight), s.reps,
           (bw && e.bw!=null)?kg2u(e.bw):'', kg2u(total),
           tm?'':Math.round(kg2u(total)*s.reps*100)/100, e.note||'']);
       });
@@ -3233,7 +3270,7 @@ function importTplPayload(d, folderId){
     }
     const alts = Array.isArray(e.alts) ? e.alts.filter(a=>exInfo(a) && a!==k) : [];
     const rt = (typeof e.rt==='number' && e.rt>=15 && e.rt<=1800) ? Math.round(e.rt/15)*15 : 0;
-    tpl.ex.push({ id:uid(), k, s:Math.max(1,Math.min(12,e.s|0||3)), r:normReps(e.r, isTimeEx(k)?600:50), ss:!!e.ss, alts, pnote:String(e.pnote||'').slice(0,200), ...(rt?{rt}:{}) });
+    tpl.ex.push({ id:uid(), k, s:Math.max(1,Math.min(12,e.s|0||3)), r:normReps(e.r, isTimeEx(k)?600:50), ss:!!e.ss, alts, pnote:String(e.pnote||'').slice(0,200), ...(rt?{rt}:{}), ...(e.x2?{x2:true}:{}) });
   }
   S.templates.push(tpl);
   return tpl;

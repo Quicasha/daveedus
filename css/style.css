@@ -258,18 +258,27 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 .setctl button:first-child{background:var(--accent-bg); color:var(--accent-soft);}
 
 /* rest stopwatch (inline, counts up after a checked set) */
-.restbar{display:flex; align-items:center; justify-content:center; gap:10px;
+.restbar{display:flex; align-items:center; justify-content:center; gap:4px;
   min-height:40px; border-radius:9px; background:var(--accent-bg);
-  border:none; margin-top:8px; cursor:pointer;}
+  border:none; margin-top:8px; cursor:pointer; position:relative; overflow:hidden;}
+.restbar .rsp{flex:none; width:44px;}
+.restbar .rrst{flex:none; width:44px; min-height:40px; background:none; border:none;
+  color:var(--accent-soft); display:flex; align-items:center; justify-content:center;
+  position:relative; cursor:pointer;}
+.restbar .rrst svg{width:15px; height:15px;}
+.restbar .rrst:active{opacity:.5;}
+.restbar.done .rrst{color:var(--green);}
 .restbar .pulse{width:8px; height:8px; border-radius:50%; background:var(--accent);
   animation:pulse-dot 1.2s ease-in-out infinite;}
 @keyframes pulse-dot{50%{opacity:.2; transform:scale(.7);}}
 .restbar .tm{font-family:var(--display); font-weight:700; font-size:16px; font-variant-numeric:tabular-nums; color:var(--accent-soft);}
 /* rest target mode: progress fill + inline ±15 s + green "done" state */
-.restbar.target{position:relative; overflow:hidden; justify-content:space-between; padding:0 2px;}
+.restbar.target{padding:0 2px;}
 .restbar .rfill{position:absolute; left:0; top:0; bottom:0; width:0;
   background:var(--accent); opacity:.14; transition:width 1s linear; pointer-events:none;}
-.restbar .mid{display:flex; align-items:center; gap:10px; position:relative;}
+.restbar .mid{display:flex; align-items:center; gap:10px; position:relative;
+  flex:1; justify-content:center; min-width:0;}
+.restbar .tm{white-space:nowrap;}
 .restbar .adj{position:relative; background:none; border:none; min-width:54px; min-height:40px;
   font-family:var(--display); font-weight:700; font-size:13px; color:var(--accent-soft);
   font-variant-numeric:tabular-nums; cursor:pointer;}
@@ -414,6 +423,12 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
   font-size:12px; font-weight:700; cursor:pointer;}
 .altbar svg{width:15px; height:15px; flex:none;}
 .altbar:active{opacity:.6;}
+/* pair-of-dumbbells toggle in the set-table weight column header */
+.x2chip{background:none; border:1px solid var(--line); border-radius:7px;
+  color:var(--ghost); font-size:10px; font-weight:800; padding:1px 5px;
+  margin-left:3px; cursor:pointer; vertical-align:1px; letter-spacing:.3px;}
+.x2chip.on{background:var(--accent-bg); border-color:transparent; color:var(--accent-soft);}
+
 /* subtle "add exercise to this session" at the bottom of the workout screen */
 .addexbtn{display:block; width:100%; min-height:48px; margin-top:2px;
   background:none; border:1px dashed var(--line); border-radius:14px;
