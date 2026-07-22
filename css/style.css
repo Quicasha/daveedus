@@ -429,6 +429,21 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
   margin-left:3px; cursor:pointer; vertical-align:1px; letter-spacing:.3px;}
 .x2chip.on{background:var(--accent-bg); border-color:transparent; color:var(--accent-soft);}
 
+/* deload divider woven into the history list */
+.dldiv{display:flex; align-items:center; gap:8px; margin:14px 4px 10px;
+  font-size:12px; font-weight:700; color:var(--orange);}
+.dldiv .l{text-transform:uppercase; letter-spacing:.8px;}
+.dldiv .d{color:var(--dim); font-weight:600;}
+.dldiv .r{margin-left:auto; color:var(--dim); font-weight:600;}
+.dldiv::before{content:''; width:14px; height:2px; border-radius:2px; background:var(--orange);}
+
+/* "Continue" pill on the newest history row - undo an accidental Finish */
+.contbtn{display:inline-flex; align-items:center; gap:5px; background:var(--accent-bg);
+  color:var(--accent-soft); border:none; border-radius:999px; min-height:30px;
+  padding:0 12px; font-size:12px; font-weight:800; cursor:pointer; flex:none;}
+.contbtn svg{width:11px; height:11px;}
+.contbtn:active{opacity:.6;}
+
 /* subtle "add exercise to this session" at the bottom of the workout screen */
 .addexbtn{display:block; width:100%; min-height:48px; margin-top:2px;
   background:none; border:1px dashed var(--line); border-radius:14px;

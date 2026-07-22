@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.19.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.20.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -120,6 +120,7 @@ const I18N = {
     woAddEx:'Pridėti pratimą', woAddExDone:'Pridėta tik šiai treniruotei',
     x2Label:'Pora hantelių - rašai vieno svorį, skaičiuojasi abu',
     rrstLabel:'Skaičiuoti iš naujo',
+    histContinue:'Tęsti', histDlAfter:'po {n} treniruočių', dlActiveShort:'vyksta',
     setBackup:'Atsarginė kopija', setBackupCopy:'Kopijuoti atsarginį kodą', setBackupLoad:'Įkelti atsarginį kodą',
     ghTitle:'Debesies sinchronizacija (GitHub)', ghRepoPh:'vartotojas/repo', ghTokenPh:'GitHub token',
     ghConnect:'Prijungti', ghNow:'Sinchronizuoti dabar', ghOff:'Atjungti',
@@ -255,6 +256,7 @@ const I18N = {
     woAddEx:'Add exercise', woAddExDone:'Added to this workout only',
     x2Label:'Dumbbell pair - enter one, both are counted',
     rrstLabel:'Restart rest',
+    histContinue:'Continue', histDlAfter:'after {n} workouts', dlActiveShort:'active',
     setBackup:'Backup', setBackupCopy:'Copy backup code', setBackupLoad:'Load backup code',
     ghTitle:'Cloud sync (GitHub)', ghRepoPh:'user/repo', ghTokenPh:'GitHub token',
     ghConnect:'Connect', ghNow:'Sync now', ghOff:'Disconnect',
@@ -343,6 +345,7 @@ function defaultState(){
   return { lang:'en', unit:'kg', theme:'auto', keepAwake:true, lastBackup:0, bakSnooze:0, mig13:true,
            restTarget:120, restSound:true, /* restTarget = last picked value in the editor */
            ghRepo:'', ghToken:'', ghLast:0, ghDirty:0, /* cloud sync - device-local, never in share codes */
+           lastActive:null, /* resume snapshot of the most recently finished workout */
            folders:[{ id:fid, name:'Upper / Lower', open:true, pinned:true }],
            customEx:[], templates:seedTemplates(fid), history:[], weights:[], active:null,
            trackedLifts:[], deloads:[], mainFolder:null,
@@ -381,6 +384,8 @@ function hydrate(s){
   if(typeof s.ghToken!=='string') s.ghToken = '';
   if(typeof s.ghLast!=='number') s.ghLast = 0;
   s.ghDirty = s.ghDirty ? 1 : 0;
+  if(!s.lastActive || typeof s.lastActive!=='object' || typeof s.lastActive.id!=='string'
+     || !s.lastActive.act || !Array.isArray(s.lastActive.act.exercises)) s.lastActive = null;
   if(!s.plates || !Array.isArray(s.plates.kg) || !Array.isArray(s.plates.lb)){
     s.plates = { kg:PLATE_DEF.kg.slice(), lb:PLATE_DEF.lb.slice() };
   }
@@ -1572,6 +1577,9 @@ function finishWorkout(){
     if(d && !dlRemaining(d).length){ d.e = Date.now(); toast(t('dlDone')); }
   }
   S.history.unshift(entry);
+  /* keep the finished session resurrectable - "Continue" on the newest history
+     row undoes an accidental Finish with sets and elapsed time intact */
+  S.lastActive = { id:entry.id, act:S.active };
   S.active = null;
   save();
   scheduleCloudSync();
@@ -2819,7 +2827,7 @@ function htmlHistory(){
   const act = S.history.filter(w=>!w.arch);
   const arch = S.history.filter(w=>w.arch);
   const lim = V.histLimit||20;
-  h += act.slice(0,lim).map(histRowHtml).join('') || `<div class="empty">—</div>`;
+  h += histListHtml(act, lim) || `<div class="empty">—</div>`;
   if(act.length>lim){
     h += `<button class="btn ghostbtn" onclick="V.histLimit=(V.histLimit||20)+30; render()">${t('histMore')} (${act.length-lim})</button>`;
   }
@@ -2829,6 +2837,36 @@ function htmlHistory(){
     if(V.showArch) h += arch.slice(0,lim).map(histRowHtml).join('');
   }
   return h;
+}
+/* history list with deload dividers woven in: each divider marks a deload period
+   and says how many workouts the training cycle below it had */
+function histListHtml(act, lim){
+  const dls = S.deloads.slice().sort((a,b)=>b.s-a.s); /* newest first */
+  const counts = dls.map(d=>{
+    const prevEnd = Math.max(0, ...S.deloads.filter(x=>x.s<d.s).map(x=>x.e||x.s));
+    return act.filter(w=>{
+      if(w.dl) return false;
+      const ts = new Date(w.date).getTime();
+      return ts > prevEnd && ts < d.s;
+    }).length;
+  });
+  let di = 0, h = '';
+  act.slice(0,lim).forEach(w=>{
+    const ts = new Date(w.date).getTime();
+    while(di < dls.length && ts <= (dls[di].e || Date.now())){
+      h += dlDividerHtml(dls[di], counts[di]);
+      di++;
+    }
+    h += histRowHtml(w);
+  });
+  return h;
+}
+function dlDividerHtml(d, n){
+  return `<div class="dldiv">
+    <span class="l">${t('dlBadge')}</span>
+    <span class="d">${fmtDate(new Date(d.s).toISOString())}${d.e?'':' · '+t('dlActiveShort')}</span>
+    ${n?`<span class="r">${t('histDlAfter',{n})}</span>`:''}
+  </div>`;
 }
 function histRowHtml(w){
   const nsets = w.exercises.reduce((a,e)=>a+e.sets.length,0);
@@ -2842,19 +2880,34 @@ function histRowHtml(w){
       `<div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
         <span style="color:var(--ghost);font-size:13px">${t('histVolume')}: ${Math.round(kg2u(vol))} ${unitL()}${w.dur?' · '+fmtTime(w.dur):''}</span>
         <div class="rowacts" style="margin-left:auto">
-          <button class="iconbtn2" onclick="event.stopPropagation();toggleArch('${w.id}')" aria-label="${w.arch?t('histUnarch'):t('histArch')}">${w.arch?ACT_ICONS.restore:ACT_ICONS.archive}</button>
+          ${w.arch?`<button class="iconbtn2" onclick="event.stopPropagation();toggleArch('${w.id}')" aria-label="${t('histUnarch')}">${ACT_ICONS.restore}</button>`:''}
           <button class="iconbtn2" onclick="event.stopPropagation();openHistEdit('${w.id}')" aria-label="edit">${ACT_ICONS.edit}</button>
           <button class="iconbtn2 danger" onclick="event.stopPropagation();delHist('${w.id}')" aria-label="delete">${ACT_ICONS.x}</button>
         </div>
       </div></div>`;
   }
+  const canCont = !S.active && S.lastActive && S.lastActive.id===w.id;
   return `<div class="card histrow" id="hw-${w.id}" style="${w.arch?'opacity:.65':''}" onclick="V.expanded=V.expanded==='${w.id}'?null:'${w.id}'; render()">
     <div class="hd">
       <span class="dt">${fmtDate(w.date)}</span>
       <span class="dn">${esc(w.name)}</span>
       ${w.dl?`<span class="dlchip">${t('dlBadge')}</span>`:''}
+      ${canCont?`<button class="contbtn" onclick="event.stopPropagation();continueWorkout()">${ACT_ICONS.play} ${t('histContinue')}</button>`:''}
       <span class="sm">${nsets} ${t('histSets')}${w.dur?' · '+fmtTime(w.dur):''}</span>
     </div>${detail}</div>`;
+}
+/* undo an accidental Finish: pull the entry back out of history and resume the
+   session exactly where it was - the clock keeps running from the original start */
+function continueWorkout(){
+  if(S.active || !S.lastActive) return;
+  const idx = S.history.findIndex(w=>w.id===S.lastActive.id);
+  if(idx<0){ S.lastActive = null; save(); render(); return; }
+  S.history.splice(idx, 1);
+  S.active = S.lastActive.act;
+  S.active.rest = null; /* the old rest clock is long stale */
+  S.lastActive = null;
+  save(); scheduleCloudSync();
+  go('workout');
 }
 function toggleArch(id){
   const w = S.history.find(x=>x.id===id);
@@ -2865,12 +2918,15 @@ function toggleArch(id){
 function delHist(id){
   if(!confirm(t('histDel'))) return;
   S.history = S.history.filter(w=>w.id!==id);
+  if(S.lastActive && S.lastActive.id===id) S.lastActive = null;
   V.expanded = null;
   save(); render();
 }
 
 /* ---- history editing ---- */
 function openHistEdit(id){
+  /* editing the entry invalidates the pre-edit resume snapshot */
+  if(S.lastActive && S.lastActive.id===id) S.lastActive = null;
   openModal(`<h3>${t('histEditTitle')}<button class="x" onclick="closeHistEdit()">✕</button></h3>
     <div id="he-body">${histEditBody(id)}</div>
     <button class="btn primary" onclick="closeHistEdit()">OK</button>`);
