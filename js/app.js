@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.17.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.18.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -1361,6 +1361,26 @@ function removeDrop(xi,si){
 /* an exercise is "done" when every set is checked; doneAt records the order in
    which exercises were completed (for the sequence numbers shown on the cards) */
 function exFullyDone(ex){ return ex.sets.length>0 && ex.sets.every(s=>s.done); }
+/* session-only reorder: called when an exercise logs its FIRST set - if it was
+   started out of template order, its whole superset group moves right below the
+   last group already under way; untouched exercises keep template order below.
+   Returns the exercise's index after the move. The template itself never changes. */
+function autoMoveEx(xi){
+  const exs = S.active.exercises;
+  if(exs[xi].sets.filter(s=>s.done).length !== 1) return xi;
+  const [ga,gb] = ssGroup(xi);
+  let insertAfter = -1; /* end index of the last started group outside ours */
+  for(let i=0;i<exs.length;i++){
+    if(i>=ga && i<=gb) continue;
+    if(exs[i].sets.some(s=>s.done)) insertAfter = Math.max(insertAfter, ssGroup(i)[1]);
+  }
+  let target = insertAfter + 1;
+  if(target === ga) return xi;
+  const group = exs.splice(ga, gb-ga+1);
+  if(target > ga) target -= group.length;
+  exs.splice(target, 0, ...group);
+  return target + (xi - ga);
+}
 /* superset group around exercise xi: [first,last] indices of the linked chain
    (ex.ss links an exercise to the NEXT one); first===last means no superset */
 function ssGroup(xi){
@@ -1410,18 +1430,13 @@ function toggleSet(xi,si){
   else if(wkg>real.weight || (wkg===real.weight && r>real.reps)) s.cls='win';
   else if(wkg===real.weight && r===real.reps) s.cls='even';
   else s.cls='loss';
-  /* no rest after the very last set of the workout - nothing left to rest for */
-  if(S.active.exercises.every(exFullyDone)){
-    S.active.rest = null;
-  }else{
-    S.active.rest = { at:Date.now(), key:xi+'-'+si };
-    if(ex.rt){
-      S.active.rest.tgt = ex.rt;
-      if(S.restSound) unlockAudio(); /* iOS: audio must be unlocked by a tap */
-    }
-  }
-  V.lastDone = xi+'-'+si;
   updateExDone(ex);
+  /* out-of-order training: on an exercise's first set it floats (with its whole
+     superset group) up right below the exercises already under way, so the card
+     being worked on sits near the top instead of far down the template order */
+  const nxi = autoMoveEx(xi);
+  const moved = nxi !== xi;
+  xi = nxi;
   /* superset: after each set, hand over to the next linked partner that still
      has sets left (A -> B -> A ...), so the flow alternates without scrolling */
   let jump = -1;
@@ -1432,10 +1447,25 @@ function toggleSet(xi,si){
       if(!exFullyDone(S.active.exercises[j])){ jump = j; break; }
     }
   }
+  /* rest: none after the workout's final set; inside a superset it starts only
+     when the round wraps back (A -> B is immediate work, B -> A begins the rest) */
+  if(S.active.exercises.every(exFullyDone) || jump > xi){
+    S.active.rest = null;
+  }else{
+    S.active.rest = { at:Date.now(), key:xi+'-'+si };
+    if(ex.rt){
+      S.active.rest.tgt = ex.rt;
+      if(S.restSound) unlockAudio(); /* iOS: audio must be unlocked by a tap */
+    }
+  }
+  V.lastDone = xi+'-'+si;
   S.active.curEx = (jump>=0) ? S.active.exercises[jump].id : ex.id;
   save(); render();
   if(jump>=0 && jump!==xi){
     const card = document.querySelectorAll('#screen .card')[jump];
+    if(card) card.scrollIntoView({ behavior:'smooth', block:'center' });
+  }else if(moved){
+    const card = document.querySelectorAll('#screen .card')[xi];
     if(card) card.scrollIntoView({ behavior:'smooth', block:'center' });
   }
   /* focus the next set's weight field only when it must be typed (no ghost to one-tap) */
