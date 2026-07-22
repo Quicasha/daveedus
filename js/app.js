@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.16.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.16.1'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -117,6 +117,7 @@ const I18N = {
     tplRest:'Poilsis', tplRestOff:'laisvai',
     swapMakeMain:'Pagrindinis', swapMainDone:'Pagrindinis pakeistas: {n}',
     pvStart:'Pradėti treniruotę',
+    woAddEx:'Pridėti pratimą', woAddExDone:'Pridėta tik šiai treniruotei',
     setBackup:'Atsarginė kopija', setBackupCopy:'Kopijuoti atsarginį kodą', setBackupLoad:'Įkelti atsarginį kodą',
     ghTitle:'Debesies sinchronizacija (GitHub)', ghRepoPh:'vartotojas/repo', ghTokenPh:'GitHub token',
     ghConnect:'Prijungti', ghNow:'Sinchronizuoti dabar', ghOff:'Atjungti',
@@ -249,6 +250,7 @@ const I18N = {
     tplRest:'Rest', tplRestOff:'free',
     swapMakeMain:'Main', swapMainDone:'Main is now {n}',
     pvStart:'Start workout',
+    woAddEx:'Add exercise', woAddExDone:'Added to this workout only',
     setBackup:'Backup', setBackupCopy:'Copy backup code', setBackupLoad:'Load backup code',
     ghTitle:'Cloud sync (GitHub)', ghRepoPh:'user/repo', ghTokenPh:'GitHub token',
     ghConnect:'Connect', ghNow:'Sync now', ghOff:'Disconnect',
@@ -1203,7 +1205,21 @@ function htmlWorkout(){
     </div>${ssConn}`;
   }).join('');
   V.lastDone = null; /* pop animation plays once */
+  h += `<button class="addexbtn" onclick="addWorkoutEx()">+ ${t('woAddEx')}</button>`;
   return h;
+}
+/* add an exercise to THIS session only - the template is left untouched */
+function addWorkoutEx(){
+  openPicker(info=>{
+    if(!S.active){ closeModal(); return; }
+    const reps = isTimeEx(info.id) ? '30' : '10';
+    S.active.exercises.push(buildActiveEx(info.id, exName(info.id), 3, reps, false, S.active.tplId, [], ''));
+    closeModal(); save(); render();
+    const cards = document.querySelectorAll('#screen .card');
+    const last = cards[cards.length-1];
+    if(last) last.scrollIntoView({ behavior:'smooth', block:'center' });
+    toast(t('woAddExDone'));
+  });
 }
 function restBarHtml(){
   const r = S.active.rest;

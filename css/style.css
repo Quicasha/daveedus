@@ -414,6 +414,12 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
   font-size:12px; font-weight:700; cursor:pointer;}
 .altbar svg{width:15px; height:15px; flex:none;}
 .altbar:active{opacity:.6;}
+/* subtle "add exercise to this session" at the bottom of the workout screen */
+.addexbtn{display:block; width:100%; min-height:48px; margin-top:2px;
+  background:none; border:1px dashed var(--line); border-radius:14px;
+  color:var(--dim); font-size:14px; font-weight:600; cursor:pointer;}
+.addexbtn:active{opacity:.6;}
+
 /* workout preview modal (tap a workout on Home) */
 .pvsub{color:var(--dim); font-size:13px; font-weight:600; margin:0 4px 10px;}
 .pvsub .pvdl{color:var(--orange); font-weight:700;}
