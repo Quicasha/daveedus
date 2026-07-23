@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.21.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.21.1'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -3494,20 +3494,27 @@ function scheduleCloudSync(){
   clearTimeout(ghTimer);
   ghTimer = setTimeout(cloudSync, 4000);
 }
+async function ghPut(path, content){
+  const api = 'https://api.github.com/repos/'+S.ghRepo+'/contents/'+path;
+  let sha = null;
+  const g = await fetch(api, { headers:ghHdr() });
+  if(g.status===200) sha = (await g.json()).sha;
+  else if(g.status!==404) throw new Error('HTTP '+g.status);
+  const body = { message:'daveedus sync '+new Date().toISOString(),
+    content: btoa(unescape(encodeURIComponent(content))) };
+  if(sha) body.sha = sha;
+  const p = await fetch(api, { method:'PUT', headers:ghHdr(), body:JSON.stringify(body) });
+  if(!p.ok) throw new Error('HTTP '+p.status);
+}
 async function cloudSync(){
   if(!ghOn() || ghBusy || !navigator.onLine) { updateGhStatus(); return; }
   ghBusy = true; V.gh = 'sync'; updateGhStatus();
   try{
-    const api = 'https://api.github.com/repos/'+S.ghRepo+'/contents/'+GH_FILE;
-    let sha = null;
-    const g = await fetch(api, { headers:ghHdr() });
-    if(g.status===200) sha = (await g.json()).sha;
-    else if(g.status!==404) throw new Error('HTTP '+g.status);
-    const body = { message:'daveedus sync '+new Date().toISOString(),
-      content: btoa(unescape(encodeURIComponent(JSON.stringify(bakPayload(), null, 1)))) };
-    if(sha) body.sha = sha;
-    const p = await fetch(api, { method:'PUT', headers:ghHdr(), body:JSON.stringify(body) });
-    if(!p.ok) throw new Error('HTTP '+p.status);
+    const payload = bakPayload();
+    /* two files, same data: JSON for machines, a ready-to-paste DVD1 code for
+       disaster recovery - open the repo on any device, copy, Load backup code */
+    await ghPut(GH_FILE, JSON.stringify(payload, null, 1));
+    await ghPut('backup-code.txt', encodeShare(payload));
     S.ghDirty = 0; S.ghLast = Date.now(); save();
     V.gh = 'ok';
   }catch(e){ V.gh = 'err'; }
