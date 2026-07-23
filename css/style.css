@@ -133,7 +133,7 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 /* ============ workout ============ */
 .exhead{display:flex; align-items:center; gap:8px;}
 .exname{flex:1; font-family:var(--display); font-size:17px; font-weight:700; letter-spacing:-.01em; color:var(--text); min-width:0;}
-.extarget{color:var(--dim); font-family:var(--display); font-size:12px; font-weight:700; flex:none; background:var(--input);
+.extarget{color:var(--dim); font-family:var(--display); font-size:12px; font-weight:700; flex:none; background:var(--input); cursor:pointer;
   border-radius:8px; padding:4px 9px; font-variant-numeric:tabular-nums;}
 .exhead .minibtn{width:34px; min-height:34px; font-size:13px; background:none; color:var(--ghost);}
 .exhead .minibtn.acc{color:var(--accent-soft);}

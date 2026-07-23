@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.23.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.24.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -117,6 +117,7 @@ const I18N = {
     woAddEx:'Pridėti pratimą', woAddExDone:'Pridėta tik šiai treniruotei',
     ghostExHint:'Darei praeitą kartą - bakstelk, jei kartosi šiandien',
     pinExLabel:'Įtraukti į treniruotę visam', pinExDone:'Įtraukta į „{n}" visam',
+    tgtHint:'Išsisaugo ir treniruotės šablone.',
     x2Label:'Pora hantelių - rašai vieno svorį, skaičiuojasi abu',
     rrstLabel:'Skaičiuoti iš naujo',
     histContinue:'Tęsti', histDlAfter:'po {n} treniruočių', dlActiveShort:'vyksta',
@@ -255,6 +256,7 @@ const I18N = {
     woAddEx:'Add exercise', woAddExDone:'Added to this workout only',
     ghostExHint:'Done last time - tap if you are repeating it today',
     pinExLabel:'Add to this workout permanently', pinExDone:'Added to "{n}" permanently',
+    tgtHint:'Also saved to the workout template.',
     x2Label:'Dumbbell pair - enter one, both are counted',
     rrstLabel:'Restart rest',
     histContinue:'Continue', histDlAfter:'after {n} workouts', dlActiveShort:'active',
@@ -1219,7 +1221,7 @@ function htmlWorkout(){
       <div class="exhead">
         <div class="exname" onclick="openExDetailByKey('${esc(ex.k)}')">${esc(ex.name)}</div>
         ${statusBadge}
-        <div class="extarget">${ex.targetSets}×${ex.targetReps}${tm?'s':''}</div>
+        <div class="extarget" onclick="openTargetEdit(${xi})">${ex.targetSets}×${ex.targetReps}${tm?'s':''}</div>
         ${ex.adhoc?`<button class="minibtn pinex" onclick="pinToTpl(${xi})" aria-label="${t('pinExLabel')}">${ACT_ICONS.pin}</button>`:''}
         ${(tm||bw)?'':`<button class="minibtn warm${ex.sets.some(s=>s.warm&&!s.done)?' on':''}" onclick="autoWarmup(${xi})" aria-label="${t('warmBtn')}">W</button>`}
         <button class="minibtn${isAlt||ex.ss?' acc':''}" onclick="openExMenu(${xi})" aria-label="menu">${ACT_ICONS.more}</button>
@@ -1243,6 +1245,84 @@ function htmlWorkout(){
   V.lastDone = null; /* pop animation plays once */
   h += `<button class="addexbtn" onclick="addWorkoutEx()">+ ${t('woAddEx')}</button>`;
   return h;
+}
+/* ===== quick sets x reps editor: tap the "3x10" chip on a workout card =====
+   Changes apply to this session AND (for template exercises) the template. */
+function tplEntryFor(ex){
+  const tpl = S.templates.find(t=>t.id===S.active.tplId);
+  return tpl ? tpl.ex.find(e=>e.k===ex.baseK) : null;
+}
+function syncTargetToTpl(ex){
+  if(ex.adhoc) return;
+  const te = tplEntryFor(ex);
+  if(te){ te.s = ex.targetSets; te.r = ex.targetReps; }
+}
+function openTargetEdit(xi){ V.tgtXi = xi; renderTargetEdit(); }
+function renderTargetEdit(){
+  const xi = V.tgtXi;
+  const ex = S.active && S.active.exercises[xi];
+  if(!ex) return;
+  const tm = isTimeEx(ex.k);
+  const p = repsParse(ex.targetReps);
+  const rnum = (which,val)=>`<div class="numfield">
+    <button onclick="wtReps(${xi},'${which}',-1)">−</button><span class="val">${val}</span>
+    <button onclick="wtReps(${xi},'${which}',1)">+</button></div>`;
+  const repsCtl = p.range
+    ? rnum('lo',p.lo) + `<span class="rgdash">-</span>` + rnum('hi',p.hi)
+    : rnum('single',p.lo);
+  const persists = !ex.adhoc && !!tplEntryFor(ex);
+  openModal(`<h3>${esc(ex.name)}<button class="x" onclick="closeModal()">✕</button></h3>
+    <div class="ctlrow">
+      <span class="clbl">${t('daySets')}</span>
+      <div class="numfield">
+        <button onclick="wtSets(${xi},-1)">−</button><span class="val">${ex.targetSets}</span>
+        <button onclick="wtSets(${xi},1)">+</button>
+      </div>
+    </div>
+    <div class="ctlrow repsrow">
+      <span class="clbl">${tm?t('daySec'):t('dayReps')}</span>
+      ${repsCtl}
+      <button class="rangetog ${p.range?'acc':''}" onclick="wtRangeTog(${xi})">${t('repsRangeTog')}</button>
+    </div>
+    ${persists?`<div style="font-size:12px;color:var(--ghost);margin-top:12px">${t('tgtHint')}</div>`:''}
+    <button class="btn primary" style="margin-top:14px" onclick="closeModal()">${ACT_ICONS.check} ${t('saveDone')}</button>`);
+}
+function wtSets(xi,d){
+  const ex = S.active.exercises[xi];
+  if(!ex) return;
+  if(d>0){
+    if(ex.targetSets>=12) return;
+    ex.targetSets++; ex.sets.push(newSet());
+  }else{
+    if(ex.targetSets<=1 || ex.sets.length<=1) return;
+    if(ex.sets[ex.sets.length-1].done){ toast(t('woRemoveDone')); return; }
+    ex.targetSets--; ex.sets.pop();
+  }
+  updateExDone(ex); syncTargetToTpl(ex);
+  save(); render(); renderTargetEdit();
+}
+function wtReps(xi,which,dir){
+  const ex = S.active.exercises[xi];
+  if(!ex) return;
+  const c = repsCfg(ex.k);
+  const cl = n=>Math.max(c.min, Math.min(c.max, n));
+  const p = repsParse(ex.targetReps);
+  const d = dir*c.step;
+  const rng = (lo,hi)=> lo===hi ? String(lo) : lo+'-'+hi;
+  if(which==='single') ex.targetReps = String(cl(p.lo+d));
+  else if(which==='lo'){ const lo=cl(p.lo+d); ex.targetReps = rng(lo, Math.max(lo,p.hi)); }
+  else{ const hi=cl(p.hi+d); ex.targetReps = rng(Math.min(p.lo,hi), hi); }
+  syncTargetToTpl(ex);
+  save(); render(); renderTargetEdit();
+}
+function wtRangeTog(xi){
+  const ex = S.active.exercises[xi];
+  if(!ex) return;
+  const c = repsCfg(ex.k);
+  const p = repsParse(ex.targetReps);
+  ex.targetReps = p.range ? String(p.lo) : p.lo+'-'+Math.min(c.max, p.lo+c.add);
+  syncTargetToTpl(ex);
+  save(); render(); renderTargetEdit();
 }
 /* wake a ghost suggestion into a real exercise for this session */
 function activateGhost(xi){
