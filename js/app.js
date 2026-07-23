@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.20.2'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.21.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -122,6 +122,8 @@ const I18N = {
     rrstLabel:'Skaičiuoti iš naujo',
     histContinue:'Tęsti', histDlAfter:'po {n} treniruočių', dlActiveShort:'vyksta',
     histDlCycles:'pilni ciklai: {n}',
+    repRecTitle:'Kartojimų rekordai',
+    trend_up:'Kyla', trend_flat:'Stovi', trend_down:'Krenta',
     setBackup:'Atsarginė kopija', setBackupCopy:'Kopijuoti atsarginį kodą', setBackupLoad:'Įkelti atsarginį kodą',
     ghTitle:'Debesies sinchronizacija (GitHub)', ghRepoPh:'vartotojas/repo', ghTokenPh:'GitHub token',
     ghConnect:'Prijungti', ghNow:'Sinchronizuoti dabar', ghOff:'Atjungti',
@@ -259,6 +261,8 @@ const I18N = {
     rrstLabel:'Restart rest',
     histContinue:'Continue', histDlAfter:'after {n} workouts', dlActiveShort:'active',
     histDlCycles:'full cycles: {n}',
+    repRecTitle:'Rep records',
+    trend_up:'Rising', trend_flat:'Flat', trend_down:'Falling',
     setBackup:'Backup', setBackupCopy:'Copy backup code', setBackupLoad:'Load backup code',
     ghTitle:'Cloud sync (GitHub)', ghRepoPh:'user/repo', ghTokenPh:'GitHub token',
     ghConnect:'Connect', ghNow:'Sync now', ghOff:'Disconnect',
@@ -2229,6 +2233,25 @@ function exStats(k, name, tplName){
   }
   return { best, bestBw, bestAdd, bestTime, e1rm, bestSet, sessions, lastDate };
 }
+/* rep-max map: best TOTAL load (x2 doubled, body weight added) at every rep count;
+   warm-ups and drop sets excluded, deloads and archived workouts skipped */
+function repMaxRows(k, nm, tplName){
+  const best = {};
+  for(const h of S.history){
+    if(h.arch || h.dl || (tplName && h.name!==tplName)) continue;
+    for(const e of h.exercises){
+      if(!(e.k===k || (e.name && e.name.trim().toLowerCase()===nm))) continue;
+      const add = isBwEx(e.k) ? (e.bw||0) : 0;
+      const mul = e.x2 ? 2 : 1;
+      for(const s of e.sets){
+        if(s.warm || s.drop || !s.reps) continue;
+        const w = s.weight*mul + add;
+        if(!(s.reps in best) || w > best[s.reps].w) best[s.reps] = { w, d:h.date };
+      }
+    }
+  }
+  return Object.keys(best).map(r=>({ r:+r, w:best[r].w, d:best[r].d })).sort((a,b)=>a.r-b.r);
+}
 /* "80 + 28" / "80 − 20" breakdown (kg stored -> display unit) for bodyweight records */
 function bwSplit(bw, add){
   return wu(bw) + (add>=0 ? ' + ' + wu(add) : ' − ' + wu(Math.abs(add)));
@@ -2316,6 +2339,19 @@ function htmlExDetail(){
         <span style="color:var(--dim);flex:1">${t('recBestSet')}${st.bestSet.bw!=null?` <span style="font-weight:500">(${bwSplit(st.bestSet.bw, st.bestSet.add)})</span>`:''}</span>
         <span style="font-weight:800;font-size:16px">${wu(st.bestSet.weight,true)} × ${st.bestSet.reps}</span></div>
     </div>`;
+  }
+  /* rep-max map: the best total load ever lifted at each rep count */
+  if(!tm){
+    const rm = repMaxRows(k, nm, filter);
+    if(rm.length){
+      h += `<div class="card" style="padding:10px 16px 6px">
+        <div style="font-size:12px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);margin-bottom:4px">${t('repRecTitle')}</div>` +
+        rm.map(x=>`<div class="rmrow">
+          <span class="rr">${x.r} ×</span>
+          <span class="rw">${wu(x.w,true)}</span>
+          <span class="rd">${fmtDate(x.d)}</span>
+        </div>`).join('') + `</div>`;
+    }
   }
   if(!tm){
     h += `<div class="chips" style="padding-bottom:6px">` +
@@ -2685,6 +2721,35 @@ function sparkSVG(vals){
     <polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
     <circle cx="${X(vals.length-1)}" cy="${Y(vals[vals.length-1])}" r="3" fill="var(--accent)"/></svg>`;
 }
+/* passive stall detector: e1RM direction over the last ~6 sessions of a lift -
+   rising means the training is working, flat/falling is the honest deload signal.
+   Purely computed from history, never asks the user anything. */
+function trendFor(k){
+  if(isTimeEx(k)) return null;
+  const info = exInfo(k);
+  const nm = (info?info.n:k).trim().toLowerCase();
+  const pts = [];
+  for(let i=S.history.length-1; i>=0; i--){
+    const w = S.history[i];
+    if(w.arch || w.dl) continue;
+    for(const e of w.exercises){
+      if(!(e.k===k || (e.name && e.name.trim().toLowerCase()===nm))) continue;
+      const work = e.sets.filter(s=>!s.warm && !s.drop && s.reps>0);
+      if(!work.length) continue;
+      const add = isBwEx(e.k) ? (e.bw||0) : 0;
+      const mul = e.x2 ? 2 : 1;
+      pts.push(Math.max(...work.map(s=>(s.weight*mul+add)*(1+s.reps/30))));
+    }
+  }
+  const rec = pts.slice(-6);
+  if(rec.length < 4) return null; /* too little data to call a direction */
+  const half = Math.floor(rec.length/2);
+  const a = rec.slice(0,half).reduce((x,y)=>x+y,0)/half;
+  const b = rec.slice(-half).reduce((x,y)=>x+y,0)/half;
+  if(a <= 0) return null;
+  const pct = (b-a)/a*100;
+  return pct > 1.5 ? 'up' : pct < -1.5 ? 'down' : 'flat';
+}
 function trackedHtml(){
   let h = `<h2 class="sec">${t('trackedTitle')}</h2>`;
   if(!S.trackedLifts.length)
@@ -2706,8 +2771,10 @@ function trackedHtml(){
     const fmtVal = v => tm ? v+' s' : bwKind ? (v ? (v>0?'+':'')+wu(v,true) : 'BW') : wu(v,true);
     const dHtml = (delta==null || delta===0) ? '' :
       `<span class="tkdelta ${delta>0?'up':'down'}">${delta>0?'▲':'▼'} ${tm?Math.abs(delta)+' s':wu(Math.abs(delta),true)} · ${t('trackDelta30')}</span>`;
+    const tr = trendFor(k);
+    const trHtml = tr ? `<span class="tktrend ${tr}" title="${t('trend_'+tr)}">${tr==='up'?'↗':tr==='down'?'↘':'→'}</span>` : '';
     return `<div class="card trackcard" onclick="openExDetailByKey('${k}')">
-      <div class="tkhead"><span class="tkname">${esc(name)}</span>
+      <div class="tkhead"><span class="tkname">${esc(name)}</span>${trHtml}
         <button class="iconbtn2" onclick="event.stopPropagation();trackRemove('${k}')" aria-label="stop tracking">${ACT_ICONS.x}</button></div>
       <div class="tkrow">
         <div class="tkleft"><div class="tkval">${last?fmtVal(last.v):'—'}</div>${dHtml}</div>

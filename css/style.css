@@ -429,6 +429,20 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
   margin-left:3px; cursor:pointer; vertical-align:1px; letter-spacing:.3px;}
 .x2chip.on{background:var(--accent-bg); border-color:transparent; color:var(--accent-soft);}
 
+/* rep-max table in exercise detail */
+.rmrow{display:flex; align-items:baseline; gap:10px; padding:7px 0; border-bottom:1px solid var(--line); font-size:14px;}
+.rmrow:last-child{border-bottom:none;}
+.rmrow .rr{flex:none; width:38px; color:var(--dim); font-weight:700;
+  font-family:var(--display); font-variant-numeric:tabular-nums;}
+.rmrow .rw{flex:1; font-weight:800; font-size:15px; font-family:var(--display); font-variant-numeric:tabular-nums;}
+.rmrow .rd{flex:none; color:var(--ghost); font-size:12px; font-weight:600;}
+
+/* e1RM trend arrow on tracked-lift cards */
+.tktrend{flex:none; font-weight:800; font-size:15px; margin-left:2px;}
+.tktrend.up{color:var(--green);}
+.tktrend.flat{color:var(--dim);}
+.tktrend.down{color:var(--orange);}
+
 /* deload divider woven into the history list */
 .dldiv{display:flex; align-items:center; gap:8px; margin:14px 4px 10px;
   font-size:12px; font-weight:700; color:var(--orange);}
