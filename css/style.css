@@ -460,6 +460,17 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 .contbtn svg{width:11px; height:11px;}
 .contbtn:active{opacity:.6;}
 
+/* ghost exercise suggestion: faded, inert until tapped */
+.card.ghostex{display:flex; align-items:center; gap:10px; background:none; box-shadow:none;
+  border:1px dashed var(--line); padding:12px 8px 12px 16px; opacity:.8;}
+.ghostex .ginfo{flex:1; min-width:0; cursor:pointer;}
+.ghostex .gname{font-weight:700; font-size:15px; color:var(--dim);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.ghostex .gsub{font-size:12px; color:var(--ghost); margin-top:2px; line-height:1.4;}
+.ghostex .gx{flex:none; background:none; border:none; color:var(--ghost);
+  min-width:40px; min-height:40px; font-size:14px; cursor:pointer;}
+.ghostex .gx:active{opacity:.5;}
+
 /* subtle "add exercise to this session" at the bottom of the workout screen */
 .addexbtn{display:block; width:100%; min-height:48px; margin-top:2px;
   background:none; border:1px dashed var(--line); border-radius:14px;

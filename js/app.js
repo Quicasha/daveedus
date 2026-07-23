@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.22.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.23.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -115,6 +115,8 @@ const I18N = {
     swapMakeMain:'Pagrindinis', swapMainDone:'Pagrindinis pakeistas: {n}',
     pvStart:'Pradėti treniruotę',
     woAddEx:'Pridėti pratimą', woAddExDone:'Pridėta tik šiai treniruotei',
+    ghostExHint:'Darei praeitą kartą - bakstelk, jei kartosi šiandien',
+    pinExLabel:'Įtraukti į treniruotę visam', pinExDone:'Įtraukta į „{n}" visam',
     x2Label:'Pora hantelių - rašai vieno svorį, skaičiuojasi abu',
     rrstLabel:'Skaičiuoti iš naujo',
     histContinue:'Tęsti', histDlAfter:'po {n} treniruočių', dlActiveShort:'vyksta',
@@ -251,6 +253,8 @@ const I18N = {
     swapMakeMain:'Main', swapMainDone:'Main is now {n}',
     pvStart:'Start workout',
     woAddEx:'Add exercise', woAddExDone:'Added to this workout only',
+    ghostExHint:'Done last time - tap if you are repeating it today',
+    pinExLabel:'Add to this workout permanently', pinExDone:'Added to "{n}" permanently',
     x2Label:'Dumbbell pair - enter one, both are counted',
     rrstLabel:'Restart rest',
     histContinue:'Continue', histDlAfter:'after {n} workouts', dlActiveShort:'active',
@@ -1078,6 +1082,22 @@ function startWorkout(tplId){
     tplId: tpl.id, name: tpl.name, startedAt: new Date().toISOString(), rest:null,
     exercises: tpl.ex.map(e => buildActiveEx(e.k, exName(e.k,e.n), dls(e.s), e.r, e.ss, tpl.id, e.alts, e.pnote, e.rt, e.x2))
   };
+  /* one-shot ghosts: extra exercises logged LAST session of this template that are
+     not part of it - shown faded at the bottom; ignored once, they vanish (they
+     only exist because last session had them), pinned in they become permanent */
+  const lastW = S.history.find(h=>h.tplId===tpl.id && !h.arch);
+  if(lastW){
+    const known = new Set();
+    tpl.ex.forEach(e=>{ known.add(e.k); (e.alts||[]).forEach(a=>known.add(a)); });
+    for(const e of lastW.exercises){
+      if(!e.k || known.has(e.k) || !e.sets.length) continue;
+      if(S.active.exercises.some(x=>x.k===e.k)) continue;
+      const sets = Math.max(1, Math.min(12, e.sets.filter(s=>!s.warm && !s.drop).length || e.sets.length));
+      const gx = buildActiveEx(e.k, e.name, sets, String(e.targetReps||'10'), false, tpl.id, [], '', undefined, !!e.x2);
+      gx.ghost = true; gx.adhoc = true;
+      S.active.exercises.push(gx);
+    }
+  }
   save();
   go('workout');
 }
@@ -1133,6 +1153,15 @@ function htmlWorkout(){
   const actIdx = S.active.exercises.findIndex(e=>e.id===activeId);
   if(actIdx>=0){ const [ga,gb] = ssGroup(actIdx); for(let j=ga;j<=gb;j++) outlined.add(S.active.exercises[j].id); }
   h += S.active.exercises.map((ex,xi)=>{
+    /* ghost suggestion: an extra exercise from LAST session, faded and inert -
+       tap to bring it into today's workout, ignore it and it's gone next time */
+    if(ex.ghost) return `<div class="card ghostex">
+      <div class="ginfo" onclick="activateGhost(${xi})">
+        <div class="gname">+ ${esc(ex.name)}</div>
+        <div class="gsub">${t('ghostExHint')}</div>
+      </div>
+      <button class="gx" onclick="dismissGhostEx(${xi})" aria-label="dismiss">✕</button>
+    </div>`;
     const tm = isTimeEx(ex.k), bw = isBwEx(ex.k);
     const firstNotDone = ex.sets.findIndex(s=>!s.done); /* -1 = all done */
     const wcol = bw ? t('woAddCol') : (tm ? unitL() : unitL());
@@ -1191,6 +1220,7 @@ function htmlWorkout(){
         <div class="exname" onclick="openExDetailByKey('${esc(ex.k)}')">${esc(ex.name)}</div>
         ${statusBadge}
         <div class="extarget">${ex.targetSets}×${ex.targetReps}${tm?'s':''}</div>
+        ${ex.adhoc?`<button class="minibtn pinex" onclick="pinToTpl(${xi})" aria-label="${t('pinExLabel')}">${ACT_ICONS.pin}</button>`:''}
         ${(tm||bw)?'':`<button class="minibtn warm${ex.sets.some(s=>s.warm&&!s.done)?' on':''}" onclick="autoWarmup(${xi})" aria-label="${t('warmBtn')}">W</button>`}
         <button class="minibtn${isAlt||ex.ss?' acc':''}" onclick="openExMenu(${xi})" aria-label="menu">${ACT_ICONS.more}</button>
       </div>
@@ -1214,12 +1244,48 @@ function htmlWorkout(){
   h += `<button class="addexbtn" onclick="addWorkoutEx()">+ ${t('woAddEx')}</button>`;
   return h;
 }
+/* wake a ghost suggestion into a real exercise for this session */
+function activateGhost(xi){
+  const ex = S.active.exercises[xi];
+  if(!ex || !ex.ghost) return;
+  delete ex.ghost;
+  save(); render();
+}
+/* hide a ghost for this session (it only returns if it gets logged again) */
+function dismissGhostEx(xi){
+  const ex = S.active.exercises[xi];
+  if(!ex || !ex.ghost) return;
+  S.active.exercises.splice(xi, 1);
+  const r = S.active.rest;
+  if(r){
+    const [rx, rs] = r.key.split('-').map(Number);
+    if(rx > xi) r.key = (rx-1)+'-'+rs;
+    else if(rx === xi) S.active.rest = null;
+  }
+  save(); render();
+}
+/* make a session-added exercise part of the template - it shows up every time */
+function pinToTpl(xi){
+  const ex = S.active.exercises[xi];
+  const tpl = S.templates.find(t=>t.id===S.active.tplId);
+  if(!ex || !tpl) return;
+  if(!tpl.ex.some(e=>e.k===ex.k || (e.alts||[]).includes(ex.k))){
+    tpl.ex.push({ id:uid(), k:ex.k,
+      s:Math.max(1, Math.min(12, ex.sets.filter(s=>!s.warm && !s.drop).length || 3)),
+      r:String(ex.targetReps||'10'), ...(isX2(ex)?{x2:true}:{}) });
+  }
+  ex.adhoc = false;
+  save(); render(); scheduleCloudSync();
+  toast(t('pinExDone',{n:tpl.name}));
+}
 /* add an exercise to THIS session only - the template is left untouched */
 function addWorkoutEx(){
   openPicker(info=>{
     if(!S.active){ closeModal(); return; }
     const reps = isTimeEx(info.id) ? '30' : '10';
-    S.active.exercises.push(buildActiveEx(info.id, exName(info.id), 3, reps, false, S.active.tplId, [], ''));
+    const nx = buildActiveEx(info.id, exName(info.id), 3, reps, false, S.active.tplId, [], '');
+    nx.adhoc = true; /* not part of the template - can be pinned in via the pin button */
+    S.active.exercises.push(nx);
     closeModal(); save(); render();
     const cards = document.querySelectorAll('#screen .card');
     const last = cards[cards.length-1];
@@ -1447,7 +1513,7 @@ function toggleSet(xi,si){
   }
   /* rest: none after the workout's final set; inside a superset it starts only
      when the round wraps back (A -> B is immediate work, B -> A begins the rest) */
-  if(S.active.exercises.every(exFullyDone) || jump > xi){
+  if(S.active.exercises.every(e=>e.ghost || exFullyDone(e)) || jump > xi){
     S.active.rest = null;
   }else{
     S.active.rest = { at:Date.now(), key:xi+'-'+si };
@@ -1521,6 +1587,7 @@ function finishWorkout(){
   const exercises = [];
   let total = 0;
   S.active.exercises.forEach(ex=>{
+    if(ex.ghost) return; /* untouched suggestions never reach history */
     const variants = [{ k:ex.k, name:ex.name, note:ex.note, sets:ex.sets, bw:ex.bw }];
     for(const sk in ex.stash){ const v=ex.stash[sk]; variants.push({ k:sk, name:v.name, note:v.note, sets:v.sets, bw:v.bw }); }
     variants.forEach(v=>{
