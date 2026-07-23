@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.21.1'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.22.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -52,11 +52,8 @@ const I18N = {
     bakRemind:'Atsarginis kodas seniai nekopijuotas.',
     protTitle:'Duomenų apsauga', protPersist:'Nuolatinė saugykla',
     protOn:'✓ Įjungta', protOff:'Nesuteikta',
-    protSnaps:'Automatinės kopijos įrenginyje',
-    protRestore:'Atkurti', protRestoreConfirm:'Atkurti duomenis iš {d}? Dabartiniai duomenys bus pakeisti.',
-    protNoSnaps:'Kopijų dar nėra - atsiras po kito išsaugojimo.',
-    protRestored:'Atkurta ✓', protRecovered:'Duomenys atkurti iš atsarginės saugyklos ✓',
-    protHint:'Kasdien automatiškai išsaugoma kopija įrenginyje, o duomenys dubliuojami į antrą saugyklą - jei viena sugestų, atsistatys iš kitos. Retkarčiais nusikopijuok ir atsarginį kodą: jis vienintelis padės pametus telefoną.',
+    protRecovered:'Duomenys atkurti iš atsarginės saugyklos ✓',
+    protHint:'Duomenys dubliuojami į antrą saugyklą įrenginyje - jei viena sugestų, atsistatys iš kitos. Tikram saugumui įjunk debesies sinchronizaciją arba retkarčiais nusikopijuok atsarginį kodą: jie išlieka pametus telefoną.',
     updToast:'Atnaujinta į naujausią versiją ✓',
     setUnit:'Matavimo vienetai',
     bwEnter:'Įvesk savo kūno svorį',
@@ -191,11 +188,8 @@ const I18N = {
     bakRemind:"Backup code hasn't been copied in a while.",
     protTitle:'Data protection', protPersist:'Persistent storage',
     protOn:'✓ On', protOff:'Not granted',
-    protSnaps:'Automatic on-device snapshots',
-    protRestore:'Restore', protRestoreConfirm:'Restore data from {d}? Current data will be replaced.',
-    protNoSnaps:'No snapshots yet - one will appear after the next save.',
-    protRestored:'Restored ✓', protRecovered:'Data recovered from backup storage ✓',
-    protHint:'A daily snapshot is kept on this device and data is mirrored to a second storage - if one breaks, the other restores it. Still copy a backup code occasionally: it is the only thing that survives losing the phone.',
+    protRecovered:'Data recovered from backup storage ✓',
+    protHint:'Data is mirrored to a second on-device storage - if one breaks, the other restores it. For real safety turn on cloud sync or copy a backup code now and then: those survive losing the phone.',
     updToast:'Updated to the latest version ✓',
     setUnit:'Units',
     bwEnter:'Enter your body weight',
@@ -410,22 +404,14 @@ function load(){
 }
 let S = load();
 
-/* ---- storage safety net: daily snapshots + IndexedDB mirror ---- */
+/* ---- storage safety net: IndexedDB mirror (+ backup codes / cloud sync) ----
+   Daily on-device snapshots were retired in v1.22.0: GitHub sync keeps a full
+   commit history of the data, which does the same job better. */
 const SNAP_PREFIX = 'daveedus.snap.';
-function maybeSnapshot(){
-  /* once per day, keep the previous state as an on-device snapshot (newest 3) */
-  try{
-    const today = new Date().toISOString().slice(0,10);
-    if(localStorage.getItem('daveedus.lastSnap')===today) return;
-    const prev = localStorage.getItem(LS_KEY);
-    /* once state grows large, three full copies would dominate the localStorage
-       quota - skip on-device snapshots and rely on the IndexedDB mirror + backup codes */
-    if(prev && prev.length < 1500000) localStorage.setItem(SNAP_PREFIX+today, prev);
-    localStorage.setItem('daveedus.lastSnap', today);
-    const keys = Object.keys(localStorage).filter(k=>k.startsWith(SNAP_PREFIX)).sort();
-    while(keys.length>3) localStorage.removeItem(keys.shift());
-  }catch(e){}
-}
+try{ /* one-time cleanup of legacy snapshot keys */
+  Object.keys(localStorage).filter(k=>k.startsWith(SNAP_PREFIX)).forEach(k=>localStorage.removeItem(k));
+  localStorage.removeItem('daveedus.lastSnap');
+}catch(e){}
 function idbOpen(){
   return new Promise((res,rej)=>{
     const q = indexedDB.open('daveedus', 1);
@@ -460,11 +446,9 @@ let idbTimer = null;
 function save(){
   const json = JSON.stringify(S);
   try{
-    maybeSnapshot();
     localStorage.setItem(LS_KEY, json);
   }catch(e){
-    /* quota exceeded - snapshots are the largest extra; drop them so the main
-       state always persists, then retry once */
+    /* quota exceeded - clear any legacy extras and retry once */
     try{
       Object.keys(localStorage).filter(k=>k.startsWith(SNAP_PREFIX)).forEach(k=>localStorage.removeItem(k));
       localStorage.setItem(LS_KEY, json);
@@ -3249,8 +3233,6 @@ function htmlSettings(){
     </div>
     <div style="font-size:12px;color:var(--ghost);line-height:1.5;margin-top:2px">${t('protHint')}</div>
   </div>
-  <h2 class="sec">${t('protSnaps')}</h2>
-  <div class="card">${snapListHtml()}</div>
   <h2 class="sec" style="color:var(--red)">${t('setDanger')}</h2>
   <button class="btn danger" onclick="wipeAll()">${t('setWipe')}</button>
   <div style="text-align:center;color:var(--ghost);font-size:12px;margin-top:24px">Daveedus v${APP_VER}</div>`;
@@ -3262,27 +3244,6 @@ function toggleRestSound(){
   if(S.restSound){ unlockAudio(); setTimeout(beep, 150); } /* preview the sound */
 }
 function setUnit(u){ S.unit=u; save(); render(); }
-function snapListHtml(){
-  const keys = Object.keys(localStorage).filter(k=>k.startsWith(SNAP_PREFIX)).sort().reverse();
-  if(!keys.length) return `<div style="color:var(--dim);font-size:14px;padding:4px 0">${t('protNoSnaps')}</div>`;
-  return keys.map(k=>`<div class="setline">
-    <span class="lb" style="font-weight:600">${k.slice(SNAP_PREFIX.length)}</span>
-    <button class="btn small" style="background:var(--accent-bg);color:var(--accent-soft)"
-      onclick="restoreSnapshot('${k}')">${t('protRestore')}</button>
-  </div>`).join('');
-}
-function restoreSnapshot(key){
-  try{
-    const s = hydrate(JSON.parse(localStorage.getItem(key)));
-    if(!s){ toast(t('codeBad')); return; }
-    if(!confirm(t('protRestoreConfirm',{d:key.slice(SNAP_PREFIX.length)}))) return;
-    s.active = null;
-    S = s;
-    save(); applyTheme();
-    go('home');
-    toast(t('protRestored'));
-  }catch(e){ toast(t('codeBad')); }
-}
 function updatePersistStatus(){
   const el = $('#persist-status');
   if(!el) return;
