@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.20.1'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.20.2'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -542,6 +542,9 @@ function fmtTime(sec){
   return h>0 ? h+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')
              : m+':'+String(s).padStart(2,'0');
 }
+function fmtClock(iso){
+  return new Date(iso).toLocaleTimeString(S.lang==='lt'?'lt-LT':'en-GB', { hour:'2-digit', minute:'2-digit' });
+}
 function fmtDate(iso){
   return new Date(iso).toLocaleDateString(S.lang==='lt'?'lt-LT':'en-GB',
     { month:'short', day:'numeric', weekday:'short' });
@@ -1070,7 +1073,7 @@ function openWoPreview(id){
     <span class="pvsr">${e.s}×${e.r}${isTimeEx(e.k)?' s':''}</span>
   </div>`).join('');
   openModal(`<h3>${esc(d.name)}<button class="x" onclick="closeModal()">✕</button></h3>
-    <div class="pvsub">${last?daysAgoStr(last.date):t('never')} · ${t('tplExCount',{n:d.ex.length})}${dlDue?` · <span class="pvdl">${t('dlBadge')}</span>`:''}</div>
+    <div class="pvsub">${last?daysAgoStr(last.date)+' '+fmtClock(last.date):t('never')} · ${t('tplExCount',{n:d.ex.length})}${dlDue?` · <span class="pvdl">${t('dlBadge')}</span>`:''}</div>
     <div class="pvlist">${rows || `<div class="empty" style="padding:14px">—</div>`}</div>
     <button class="btn primary" style="margin-top:14px" onclick="closeModal();startWorkout('${d.id}')">${ACT_ICONS.play} ${t('pvStart')}</button>`);
 }
@@ -2897,7 +2900,7 @@ function histRowHtml(w){
   const canCont = !S.active && S.lastActive && S.lastActive.id===w.id;
   return `<div class="card histrow" id="hw-${w.id}" style="${w.arch?'opacity:.65':''}" onclick="V.expanded=V.expanded==='${w.id}'?null:'${w.id}'; render()">
     <div class="hd">
-      <span class="dt">${fmtDate(w.date)}</span>
+      <span class="dt">${fmtDate(w.date)} <span class="tmm">${fmtClock(w.date)}</span></span>
       <span class="dn">${esc(w.name)}</span>
       ${w.dl?`<span class="dlchip">${t('dlBadge')}</span>`:''}
       ${canCont?`<button class="contbtn" onclick="event.stopPropagation();continueWorkout()">${ACT_ICONS.play} ${t('histContinue')}</button>`:''}
