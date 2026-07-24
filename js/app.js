@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.24.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.24.1'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -1091,13 +1091,24 @@ function startWorkout(tplId){
   if(lastW){
     const known = new Set();
     tpl.ex.forEach(e=>{ known.add(e.k); (e.alts||[]).forEach(a=>known.add(a)); });
-    for(const e of lastW.exercises){
-      if(!e.k || known.has(e.k) || !e.sets.length) continue;
-      if(S.active.exercises.some(x=>x.k===e.k)) continue;
-      const sets = Math.max(1, Math.min(12, e.sets.filter(s=>!s.warm && !s.drop).length || e.sets.length));
-      const gx = buildActiveEx(e.k, e.name, sets, String(e.targetReps||'10'), false, tpl.id, [], '', undefined, !!e.x2);
+    const addGhost = (k, name, sets, reps, x2)=>{
+      if(!k || known.has(k)) return;
+      if(S.active.exercises.some(x=>x.k===k)) return;
+      known.add(k); /* also guards against duplicates between logged + suggested */
+      const gx = buildActiveEx(k, name, sets, reps, false, tpl.id, [], '', undefined, x2);
       gx.ghost = true; gx.adhoc = true;
       S.active.exercises.push(gx);
+    };
+    /* extras that were LOGGED last session */
+    for(const e of lastW.exercises){
+      if(!e.sets.length) continue;
+      addGhost(e.k, e.name,
+        Math.max(1, Math.min(12, e.sets.filter(s=>!s.warm && !s.drop).length || e.sets.length)),
+        String(e.targetReps||'10'), !!e.x2);
+    }
+    /* extras that were ADDED last session but never logged */
+    if(Array.isArray(lastW.sug)) for(const g of lastW.sug){
+      addGhost(g.k, g.n || exName(g.k), Math.max(1, Math.min(12, g.s|0 || 3)), String(g.r||'10'), !!g.x2);
     }
   }
   save();
@@ -1716,6 +1727,13 @@ function finishWorkout(){
     if(d && !d.done.includes(entry.tplId)) d.done.push(entry.tplId);
     if(d && !dlRemaining(d).length){ d.e = Date.now(); toast(t('dlDone')); }
   }
+  /* exercises the user ADDED (or woke from a ghost) but never logged a set on:
+     keep them as suggestions so they still ghost next session - only untouched
+     ghosts are allowed to expire */
+  const sug = S.active.exercises
+    .filter(ex=>ex.adhoc && !ex.ghost && !ex.sets.some(s=>s.done))
+    .map(ex=>({ k:ex.k, n:ex.name, s:ex.targetSets, r:ex.targetReps, ...(isX2(ex)?{x2:1}:{}) }));
+  if(sug.length) entry.sug = sug;
   S.history.unshift(entry);
   /* keep the finished session resurrectable - "Continue" on the newest history
      row undoes an accidental Finish with sets and elapsed time intact */
