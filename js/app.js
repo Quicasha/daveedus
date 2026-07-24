@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.24.2'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.24.3'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -900,7 +900,7 @@ function tplCounts(){
 /* ======================= WORKOUT ======================= */
 function latestBw(){ return S.weights.length ? S.weights[0].kg : null; }
 function newSet(extra){ return Object.assign({ w:'', r:'', warm:false, drop:false, fail:false, done:false, cls:'' }, extra||{}); }
-function buildActiveEx(k, name, sets, reps, ss, tplId, alts, pnote, rt, x2){
+function buildActiveEx(k, name, sets, reps, ss, tplId, alts, pnote, rt, x2, teId){
   const last = lastForExercise(k, name, tplId);
   const ex = { id:uid(), k, name, targetSets:sets, targetReps:reps, note:'', ss:!!ss, last,
     baseK:k, alts:(alts||[]).slice(), stash:{}, tplId:tplId||null,
@@ -908,6 +908,7 @@ function buildActiveEx(k, name, sets, reps, ss, tplId, alts, pnote, rt, x2){
     sets: Array.from({length:sets}, ()=>newSet()) };
   if(typeof rt==='number' && rt>=15) ex.rt = Math.min(1800, Math.round(rt));
   if(x2) ex.x2 = true; /* pair of dumbbells: inputs are one-hand, totals count both */
+  if(teId) ex.teId = teId; /* which template slot this card belongs to - survives duplicate keys */
   if(isBwEx(k)){
     /* body weight prefilled from the latest log (or last session), kept separate from the logged load */
     ex.bw = latestBw() != null ? latestBw() : (last && last.bw != null ? last.bw : null);
@@ -962,9 +963,8 @@ function makeMainExercise(xi, key){
   const ex = S.active.exercises[xi];
   if(!ex || key===ex.baseK) return;
   const oldBase = ex.baseK;
-  const tpl = S.templates.find(t=>t.id===S.active.tplId);
-  if(tpl){
-    const te = tpl.ex.find(e=>e.k===oldBase);
+  {
+    const te = tplEntryFor(ex);
     if(te){
       te.k = key;
       if(te.n) delete te.n; /* custom label belonged to the old exercise */
@@ -1082,7 +1082,7 @@ function startWorkout(tplId){
   const dls = n => Math.max(1, Math.ceil(n*dlv));
   S.active = {
     tplId: tpl.id, name: tpl.name, startedAt: new Date().toISOString(), rest:null,
-    exercises: tpl.ex.map(e => buildActiveEx(e.k, exName(e.k,e.n), dls(e.s), e.r, e.ss, tpl.id, e.alts, e.pnote, e.rt, e.x2))
+    exercises: tpl.ex.map(e => buildActiveEx(e.k, exName(e.k,e.n), dls(e.s), e.r, e.ss, tpl.id, e.alts, e.pnote, e.rt, e.x2, e.id))
   };
   /* one-shot ghosts: extra exercises logged LAST session of this template that are
      not part of it - shown faded at the bottom; ignored once, they vanish (they
@@ -1091,10 +1091,16 @@ function startWorkout(tplId){
   if(lastW){
     const known = new Set();
     tpl.ex.forEach(e=>{ known.add(e.k); (e.alts||[]).forEach(a=>known.add(a)); });
-    const addGhost = (k, name, sets, reps, x2)=>{
-      if(!k || known.has(k)) return;
-      if(S.active.exercises.some(x=>x.k===k)) return;
-      known.add(k); /* also guards against duplicates between logged + suggested */
+    const ghostSeen = new Set();
+    /* force = the entry was a standalone addition (adhoc): it ghosts even when its
+       key overlaps a template exercise or alternative - duplicates are deliberate */
+    const addGhost = (k, name, sets, reps, x2, force)=>{
+      if(!k || ghostSeen.has(k)) return;
+      if(!force){
+        if(known.has(k)) return;
+        if(S.active.exercises.some(x=>x.k===k)) return;
+      }
+      ghostSeen.add(k);
       const gx = buildActiveEx(k, name, sets, reps, false, tpl.id, [], '', undefined, x2);
       gx.ghost = true; gx.adhoc = true;
       S.active.exercises.push(gx);
@@ -1104,11 +1110,11 @@ function startWorkout(tplId){
       if(!e.sets.length) continue;
       addGhost(e.k, e.name,
         Math.max(1, Math.min(12, e.sets.filter(s=>!s.warm && !s.drop).length || e.sets.length)),
-        String(e.targetReps||'10'), !!e.x2);
+        String(e.targetReps||'10'), !!e.x2, !!e.adhoc);
     }
-    /* extras that were ADDED last session but never logged */
+    /* extras that were ADDED last session but never logged - adhoc by definition */
     if(Array.isArray(lastW.sug)) for(const g of lastW.sug){
-      addGhost(g.k, g.n || exName(g.k), Math.max(1, Math.min(12, g.s|0 || 3)), String(g.r||'10'), !!g.x2);
+      addGhost(g.k, g.n || exName(g.k), Math.max(1, Math.min(12, g.s|0 || 3)), String(g.r||'10'), !!g.x2, true);
     }
   }
   save();
@@ -1261,7 +1267,9 @@ function htmlWorkout(){
    Changes apply to this session AND (for template exercises) the template. */
 function tplEntryFor(ex){
   const tpl = S.templates.find(t=>t.id===S.active.tplId);
-  return tpl ? tpl.ex.find(e=>e.k===ex.baseK) : null;
+  if(!tpl) return null;
+  /* slot id first - exact even with duplicate exercise keys; key match as fallback */
+  return tpl.ex.find(e=>e.id===ex.teId) || tpl.ex.find(e=>e.k===ex.baseK) || null;
 }
 function syncTargetToTpl(ex){
   if(ex.adhoc) return;
@@ -1360,12 +1368,14 @@ function pinToTpl(xi){
   const ex = S.active.exercises[xi];
   const tpl = S.templates.find(t=>t.id===S.active.tplId);
   if(!ex || !tpl) return;
-  if(!tpl.ex.some(e=>e.k===ex.k || (e.alts||[]).includes(ex.k))){
-    tpl.ex.push({ id:uid(), k:ex.k,
-      s:Math.max(1, Math.min(12, ex.sets.filter(s=>!s.warm && !s.drop).length || 3)),
-      r:String(ex.targetReps||'10'), ...(isX2(ex)?{x2:true}:{}) });
-  }
+  /* always its own slot - duplicating a template exercise (or one of its
+     alternatives) on purpose is a valid plan, e.g. a second bench slot */
+  const te = { id:uid(), k:ex.k,
+    s:Math.max(1, Math.min(12, ex.sets.filter(s=>!s.warm && !s.drop).length || 3)),
+    r:String(ex.targetReps||'10'), ...(isX2(ex)?{x2:true}:{}) };
+  tpl.ex.push(te);
   ex.adhoc = false;
+  ex.teId = te.id;
   save(); render(); scheduleCloudSync();
   toast(t('pinExDone',{n:tpl.name}));
 }
@@ -1434,8 +1444,8 @@ function toggleNoteMode(xi){ const ex=S.active.exercises[xi]; ex.notePerm=!ex.no
 function setPnote(xi,v){
   const ex = S.active.exercises[xi];
   ex.pnote = v;
-  const tpl = S.templates.find(t=>t.id===S.active.tplId);
-  if(tpl){ const te = tpl.ex.find(e=>e.k===ex.baseK); if(te) te.pnote = v; }
+  const te = tplEntryFor(ex);
+  if(te) te.pnote = v;
   save();
 }
 /* tap the set number to cycle its type: number -> W (warmup) -> F (failure) -> number */
@@ -1556,8 +1566,8 @@ function isX2(ex){ return !!ex.x2 && (exInfo(ex.k)||{}).e==='dumbbell'; }
 function toggleX2(xi){
   const ex = S.active.exercises[xi];
   ex.x2 = !ex.x2;
-  const tpl = S.templates.find(t=>t.id===S.active.tplId);
-  if(tpl){ const te = tpl.ex.find(e=>e.k===ex.baseK); if(te){ if(ex.x2) te.x2 = true; else delete te.x2; } }
+  const te = tplEntryFor(ex);
+  if(te){ if(ex.x2) te.x2 = true; else delete te.x2; }
   save(); render();
 }
 function toggleSet(xi,si){
@@ -1690,6 +1700,7 @@ function finishWorkout(){
       if(orderMap[ex.id]) o.order = orderMap[ex.id];
       if(isBwEx(v.k) && v.bw!=null) o.bw = v.bw;
       if(ex.x2 && (exInfo(v.k)||{}).e==='dumbbell') o.x2 = 1; /* weights are per hand */
+      if(ex.adhoc) o.adhoc = 1; /* standalone addition - ghosts next time even if the key overlaps the template */
       exercises.push(o);
     });
   });
