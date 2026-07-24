@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.24.1'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.24.2'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -1382,6 +1382,7 @@ function addWorkoutEx(){
     const last = cards[cards.length-1];
     if(last) last.scrollIntoView({ behavior:'smooth', block:'center' });
     toast(t('woAddExDone'));
+    openTargetEdit(S.active.exercises.length-1); /* set sets x reps right away, no silent defaults */
   });
 }
 function restBarHtml(){
@@ -2233,8 +2234,12 @@ function addTplEx(id){
   openPicker(info=>{
     const d = S.templates.find(x=>x.id===id);
     if(!d) return;
-    d.ex.push({ id:uid(), k:info.id, s:3, r:repsCfg(info.id).def });
+    d.ex.push({ id:uid(), k:info.id, s:3, r:String(repsCfg(info.id).def) });
     save(); closeModal(); render();
+    /* bring the new row's sets/reps controls into view so the defaults get adjusted */
+    const rows = document.querySelectorAll('.exedit');
+    const last = rows[rows.length-1];
+    if(last) last.scrollIntoView({ behavior:'smooth', block:'center' });
   });
 }
 function toggleSS(id,i){
