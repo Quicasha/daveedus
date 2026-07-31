@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.25.1'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.25.2'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -1030,13 +1030,11 @@ function stepBw(xi,d){
   save();
 }
 /* previous-session text for a ghost set, per exercise type */
-/* no unit label here - the KG/LB column header says it, and three-digit weights
-   with double-digit reps must fit the narrow Previous column */
 function ghostText(g, tm, bw){
   if(!g) return '—';
-  if(tm) return (g.weight ? wu(g.weight)+' · ' : '') + g.reps + ' s';
-  if(bw) return (g.weight ? (g.weight>0?'+':'')+wu(g.weight)+' ' : '') + '× ' + g.reps;
-  return wu(g.weight) + '×' + g.reps;
+  if(tm) return (g.weight ? wu(g.weight,true)+' · ' : '') + g.reps + ' s';
+  if(bw) return (g.weight ? (g.weight>0?'+':'')+wu(g.weight,true)+' ' : '') + '× ' + g.reps;
+  return wu(g.weight,true) + ' × ' + g.reps;
 }
 function lastForExercise(k, name, tplId){
   const nm = (name||'').trim().toLowerCase();
