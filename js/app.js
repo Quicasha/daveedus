@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.24.3'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.25.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -118,6 +118,8 @@ const I18N = {
     ghostExHint:'Darei praeitą kartą - bakstelk, jei kartosi šiandien',
     pinExLabel:'Įtraukti į treniruotę visam', pinExDone:'Įtraukta į „{n}" visam',
     tgtHint:'Išsisaugo ir treniruotės šablone.',
+    baseLabel:'Aparato pradinis svoris',
+    baseHint:'Kiek aparatas sveria tuščias (pvz. leg press vežimėlis). Svorio stulpelyje rašysi tik savo uždėtus svarelius - rekordai ir grafikai skaičiuos bendrą svorį. Įsimenama visam. Tuščias laukas išjungia.',
     x2Label:'Pora hantelių - rašai vieno svorį, skaičiuojasi abu',
     rrstLabel:'Skaičiuoti iš naujo',
     histContinue:'Tęsti', histDlAfter:'po {n} treniruočių', dlActiveShort:'vyksta',
@@ -257,6 +259,8 @@ const I18N = {
     ghostExHint:'Done last time - tap if you are repeating it today',
     pinExLabel:'Add to this workout permanently', pinExDone:'Added to "{n}" permanently',
     tgtHint:'Also saved to the workout template.',
+    baseLabel:'Machine starting weight',
+    baseHint:'What the machine weighs empty (e.g. the leg press sled). The weight column then takes only the plates YOU add - records and charts count the full load. Remembered permanently. Empty field turns it off.',
     x2Label:'Dumbbell pair - enter one, both are counted',
     rrstLabel:'Restart rest',
     histContinue:'Continue', histDlAfter:'after {n} workouts', dlActiveShort:'active',
@@ -900,7 +904,7 @@ function tplCounts(){
 /* ======================= WORKOUT ======================= */
 function latestBw(){ return S.weights.length ? S.weights[0].kg : null; }
 function newSet(extra){ return Object.assign({ w:'', r:'', warm:false, drop:false, fail:false, done:false, cls:'' }, extra||{}); }
-function buildActiveEx(k, name, sets, reps, ss, tplId, alts, pnote, rt, x2, teId){
+function buildActiveEx(k, name, sets, reps, ss, tplId, alts, pnote, rt, x2, teId, base){
   const last = lastForExercise(k, name, tplId);
   const ex = { id:uid(), k, name, targetSets:sets, targetReps:reps, note:'', ss:!!ss, last,
     baseK:k, alts:(alts||[]).slice(), stash:{}, tplId:tplId||null,
@@ -909,6 +913,7 @@ function buildActiveEx(k, name, sets, reps, ss, tplId, alts, pnote, rt, x2, teId
   if(typeof rt==='number' && rt>=15) ex.rt = Math.min(1800, Math.round(rt));
   if(x2) ex.x2 = true; /* pair of dumbbells: inputs are one-hand, totals count both */
   if(teId) ex.teId = teId; /* which template slot this card belongs to - survives duplicate keys */
+  if(typeof base==='number' && base>0) ex.base = Math.min(500, base); /* machine starting weight, kg */
   if(isBwEx(k)){
     /* body weight prefilled from the latest log (or last session), kept separate from the logged load */
     ex.bw = latestBw() != null ? latestBw() : (last && last.bw != null ? last.bw : null);
@@ -1025,11 +1030,13 @@ function stepBw(xi,d){
   save();
 }
 /* previous-session text for a ghost set, per exercise type */
+/* no unit label here - the KG/LB column header says it, and three-digit weights
+   with double-digit reps must fit the narrow Previous column */
 function ghostText(g, tm, bw){
   if(!g) return '—';
-  if(tm) return (g.weight ? wu(g.weight,true)+' · ' : '') + g.reps + ' s';
-  if(bw) return (g.weight ? (g.weight>0?'+':'')+wu(g.weight,true)+' ' : '') + '× ' + g.reps;
-  return wu(g.weight,true) + ' × ' + g.reps;
+  if(tm) return (g.weight ? wu(g.weight)+' · ' : '') + g.reps + ' s';
+  if(bw) return (g.weight ? (g.weight>0?'+':'')+wu(g.weight)+' ' : '') + '× ' + g.reps;
+  return wu(g.weight) + '×' + g.reps;
 }
 function lastForExercise(k, name, tplId){
   const nm = (name||'').trim().toLowerCase();
@@ -1082,7 +1089,7 @@ function startWorkout(tplId){
   const dls = n => Math.max(1, Math.ceil(n*dlv));
   S.active = {
     tplId: tpl.id, name: tpl.name, startedAt: new Date().toISOString(), rest:null,
-    exercises: tpl.ex.map(e => buildActiveEx(e.k, exName(e.k,e.n), dls(e.s), e.r, e.ss, tpl.id, e.alts, e.pnote, e.rt, e.x2, e.id))
+    exercises: tpl.ex.map(e => buildActiveEx(e.k, exName(e.k,e.n), dls(e.s), e.r, e.ss, tpl.id, e.alts, e.pnote, e.rt, e.x2, e.id, e.base))
   };
   /* one-shot ghosts: extra exercises logged LAST session of this template that are
      not part of it - shown faded at the bottom; ignored once, they vanish (they
@@ -1094,14 +1101,14 @@ function startWorkout(tplId){
     const ghostSeen = new Set();
     /* force = the entry was a standalone addition (adhoc): it ghosts even when its
        key overlaps a template exercise or alternative - duplicates are deliberate */
-    const addGhost = (k, name, sets, reps, x2, force)=>{
+    const addGhost = (k, name, sets, reps, x2, force, base)=>{
       if(!k || ghostSeen.has(k)) return;
       if(!force){
         if(known.has(k)) return;
         if(S.active.exercises.some(x=>x.k===k)) return;
       }
       ghostSeen.add(k);
-      const gx = buildActiveEx(k, name, sets, reps, false, tpl.id, [], '', undefined, x2);
+      const gx = buildActiveEx(k, name, sets, reps, false, tpl.id, [], '', undefined, x2, undefined, base);
       gx.ghost = true; gx.adhoc = true;
       S.active.exercises.push(gx);
     };
@@ -1110,11 +1117,11 @@ function startWorkout(tplId){
       if(!e.sets.length) continue;
       addGhost(e.k, e.name,
         Math.max(1, Math.min(12, e.sets.filter(s=>!s.warm && !s.drop).length || e.sets.length)),
-        String(e.targetReps||'10'), !!e.x2, !!e.adhoc);
+        String(e.targetReps||'10'), !!e.x2, !!e.adhoc, e.mb);
     }
     /* extras that were ADDED last session but never logged - adhoc by definition */
     if(Array.isArray(lastW.sug)) for(const g of lastW.sug){
-      addGhost(g.k, g.n || exName(g.k), Math.max(1, Math.min(12, g.s|0 || 3)), String(g.r||'10'), !!g.x2, true);
+      addGhost(g.k, g.n || exName(g.k), Math.max(1, Math.min(12, g.s|0 || 3)), String(g.r||'10'), !!g.x2, true, g.mb);
     }
   }
   save();
@@ -1185,10 +1192,14 @@ function htmlWorkout(){
     const firstNotDone = ex.sets.findIndex(s=>!s.done); /* -1 = all done */
     const wcol = bw ? t('woAddCol') : (tm ? unitL() : unitL());
     /* pair-of-dumbbells toggle lives right in the column header - one tap, no menus */
-    const x2chip = (!bw && !tm && (exInfo(ex.k)||{}).e==='dumbbell')
+    const equip = (exInfo(ex.k)||{}).e;
+    const x2chip = (!bw && !tm && equip==='dumbbell')
       ? ` <button class="x2chip${isX2(ex)?' on':''}" onclick="toggleX2(${xi})" aria-label="${t('x2Label')}">×2</button>` : '';
+    /* machine starting weight: enter it once, then log only the plates YOU add */
+    const baseChip = (!bw && !tm && (equip==='machine' || equip==='cable'))
+      ? ` <button class="x2chip${ex.base?' on':''}" onclick="openBaseEdit(${xi})" aria-label="${t('baseLabel')}">+${ex.base?fmtW(kg2u(ex.base)):unitL()}</button>` : '';
     const hdr = `<div class="setgrid hdr"><div>${t('woSet')}</div><div>${t('woPrev')}</div>
-      <div>${wcol}${x2chip}</div><div>${tm?t('woSec'):t('woReps')}</div><div>${ACT_ICONS.check}</div><div></div></div>`;
+      <div>${wcol}${x2chip}${baseChip}</div><div>${tm?t('woSec'):t('woReps')}</div><div>${ACT_ICONS.check}</div><div></div></div>`;
     let workNum = 0;
     const approx = ex.last && !ex.last.sameTpl ? '~' : ''; /* values borrowed from another workout */
     const rows = ex.sets.map((s,si)=>{
@@ -1263,6 +1274,35 @@ function htmlWorkout(){
   h += `<button class="addexbtn" onclick="addWorkoutEx()">+ ${t('woAddEx')}</button>`;
   return h;
 }
+/* ===== machine starting weight: tap the "+kg" chip in the KG column header =====
+   The machine's empty/starting weight is entered ONCE and remembered on the
+   template slot; from then on the weight column takes only the plates YOU add,
+   while records, charts and totals count base + added. */
+function openBaseEdit(xi){
+  const ex = S.active.exercises[xi];
+  if(!ex) return;
+  openModal(`<h3>${esc(ex.name)}<button class="x" onclick="closeModal()">✕</button></h3>
+    <div class="pvsub" style="margin-bottom:12px">${t('baseLabel')}</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <input id="base-in" type="text" inputmode="decimal" class="nameinput" style="flex:1;text-align:center;font-weight:700;font-size:18px"
+        value="${ex.base?esc(fmtW(kg2u(ex.base))):''}" placeholder="0" onfocus="this.select()">
+      <span style="font-weight:700;color:var(--dim)">${unitL()}</span>
+    </div>
+    <div style="font-size:12px;color:var(--ghost);line-height:1.5;margin-top:12px">${t('baseHint')}</div>
+    <button class="btn primary" style="margin-top:14px" onclick="saveBase(${xi})">${ACT_ICONS.check} ${t('saveDone')}</button>`);
+  setTimeout(()=>{ const i=$('#base-in'); if(i) i.focus(); }, 60);
+}
+function saveBase(xi){
+  const ex = S.active.exercises[xi];
+  if(!ex) return;
+  const v = parseNum(($('#base-in')||{}).value);
+  const kg = (!isNaN(v) && v>0) ? Math.min(500, Math.round(u2kg(v)*10)/10) : 0;
+  if(kg) ex.base = kg; else delete ex.base;
+  const te = tplEntryFor(ex);
+  if(te){ if(kg) te.base = kg; else delete te.base; }
+  save(); closeModal(); render(); scheduleCloudSync();
+}
+
 /* ===== quick sets x reps editor: tap the "3x10" chip on a workout card =====
    Changes apply to this session AND (for template exercises) the template. */
 function tplEntryFor(ex){
@@ -1372,7 +1412,7 @@ function pinToTpl(xi){
      alternatives) on purpose is a valid plan, e.g. a second bench slot */
   const te = { id:uid(), k:ex.k,
     s:Math.max(1, Math.min(12, ex.sets.filter(s=>!s.warm && !s.drop).length || 3)),
-    r:String(ex.targetReps||'10'), ...(isX2(ex)?{x2:true}:{}) };
+    r:String(ex.targetReps||'10'), ...(isX2(ex)?{x2:true}:{}), ...(ex.base>0?{base:ex.base}:{}) };
   tpl.ex.push(te);
   ex.adhoc = false;
   ex.teId = te.id;
@@ -1701,6 +1741,7 @@ function finishWorkout(){
       if(isBwEx(v.k) && v.bw!=null) o.bw = v.bw;
       if(ex.x2 && (exInfo(v.k)||{}).e==='dumbbell') o.x2 = 1; /* weights are per hand */
       if(ex.adhoc) o.adhoc = 1; /* standalone addition - ghosts next time even if the key overlaps the template */
+      if(ex.base > 0) o.mb = ex.base; /* machine base: logged weights are added-only, totals include this */
       exercises.push(o);
     });
   });
@@ -1721,8 +1762,8 @@ function finishWorkout(){
       const bt = Math.max(...work.map(s=>s.reps));
       if(prev.bestTime>0 && bt>prev.bestTime) prs.push({ name:e.name, txt:bt+' s' });
     }else{
-      /* compare in the same scale exStats uses: total load (x2 pairs doubled, body weight added) */
-      const addb = isBwEx(e.k) ? (e.bw||0) : 0;
+      /* compare in the same scale exStats uses: total load (x2 pairs doubled, body weight / machine base added) */
+      const addb = (isBwEx(e.k) ? (e.bw||0) : 0) + (e.mb||0);
       const topW = Math.max(...work.map(s=>s.weight*(e.x2?2:1) + addb));
       if(prev.best>0 && topW>prev.best) prs.push({ name:e.name, txt:wu(topW,true) });
     }
@@ -1744,7 +1785,7 @@ function finishWorkout(){
      ghosts are allowed to expire */
   const sug = S.active.exercises
     .filter(ex=>ex.adhoc && !ex.ghost && !ex.sets.some(s=>s.done))
-    .map(ex=>({ k:ex.k, n:ex.name, s:ex.targetSets, r:ex.targetReps, ...(isX2(ex)?{x2:1}:{}) }));
+    .map(ex=>({ k:ex.k, n:ex.name, s:ex.targetSets, r:ex.targetReps, ...(isX2(ex)?{x2:1}:{}), ...(ex.base>0?{mb:ex.base}:{}) }));
   if(sug.length) entry.sug = sug;
   S.history.unshift(entry);
   /* keep the finished session resurrectable - "Continue" on the newest history
@@ -2020,7 +2061,7 @@ function shareFolder(id){
   if(!f) return;
   const tpls = S.templates.filter(x=>x.folderId===id);
   const payload = { t:'folder', name:f.name,
-    tpls: tpls.map(d=>({ name:d.name, ex:d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}), ...(e.x2?{x2:1}:{}) })) })) };
+    tpls: tpls.map(d=>({ name:d.name, ex:d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}), ...(e.x2?{x2:1}:{}), ...(e.base?{base:e.base}:{}) })) })) };
   const code = encodeShare(payload);
   openModal(`<h3>${t('folderShare')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div style="color:var(--dim);font-size:14px;margin:0 4px 10px">${t('folderShareHint')}</div>
@@ -2138,7 +2179,7 @@ function dupTpl(id){
   const d = S.templates.find(x=>x.id===id);
   if(!d) return;
   const copy = { id:uid(), name:(d.name+' '+t('tplDupSuffix')).slice(0,60), folderId:d.folderId,
-    ex: d.ex.map(e=>({ id:uid(), k:e.k, s:e.s, r:e.r, ss:!!e.ss, alts:(e.alts||[]).slice(), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}), ...(e.x2?{x2:true}:{}) })) };
+    ex: d.ex.map(e=>({ id:uid(), k:e.k, s:e.s, r:e.r, ss:!!e.ss, alts:(e.alts||[]).slice(), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}), ...(e.x2?{x2:true}:{}), ...(e.base?{base:e.base}:{}) })) };
   S.templates.splice(S.templates.indexOf(d)+1, 0, copy);
   save();
   openTpl(copy.id);
@@ -2381,7 +2422,7 @@ function exStats(k, name, tplName){
         if(work.length){
           sessions++;
           if(!lastDate) lastDate = h.date;
-          const add = bwKind ? (e.bw||0) : 0; /* records use TOTAL load = body weight + added */
+          const add = (bwKind ? (e.bw||0) : 0) + (e.mb||0); /* records use TOTAL load */
           const mul = e.x2 ? 2 : 1;          /* dumbbell pairs: stored per hand, counted total */
           for(const s of work){
             const ew = s.weight*mul + add;
@@ -2406,7 +2447,7 @@ function repMaxRows(k, nm, tplName){
     if(h.arch || h.dl || (tplName && h.name!==tplName)) continue;
     for(const e of h.exercises){
       if(!(e.k===k || (e.name && e.name.trim().toLowerCase()===nm))) continue;
-      const add = isBwEx(e.k) ? (e.bw||0) : 0;
+      const add = (isBwEx(e.k) ? (e.bw||0) : 0) + (e.mb||0);
       const mul = e.x2 ? 2 : 1;
       for(const s of e.sets){
         if(s.warm || s.drop || !s.reps) continue;
@@ -2550,7 +2591,7 @@ function chartSVG(k, name, tplName, metric){
       if(e.k===k || (e.name && e.name.trim().toLowerCase()===nm)){
         const work = e.sets.filter(s=>!s.warm && !s.drop);
         if(!work.length) continue;
-        const add = bwKind ? (e.bw||0) : 0; /* volume/1RM use TOTAL load for bodyweight moves */
+        const add = (bwKind ? (e.bw||0) : 0) + (e.mb||0); /* volume/1RM use TOTAL load */
         const mul = e.x2 ? 2 : 1;           /* dumbbell pairs count both hands */
         let v;
         if(tm) v = Math.max(...work.map(s=>s.reps));
@@ -2868,7 +2909,7 @@ function trackSeries(k){
       if(e.k===k || (e.name && e.name.trim().toLowerCase()===nm)){
         const work = e.sets.filter(s=>!s.warm && !s.drop);
         if(!work.length) continue;
-        pts.push({ ts:new Date(w.date).getTime(), v:Math.max(...work.map(s=>tm?s.reps:s.weight*(e.x2?2:1))) });
+        pts.push({ ts:new Date(w.date).getTime(), v:Math.max(...work.map(s=>tm?s.reps:s.weight*(e.x2?2:1)+(e.mb||0))) });
       }
     }
   }
@@ -2901,7 +2942,7 @@ function trendFor(k){
       if(!(e.k===k || (e.name && e.name.trim().toLowerCase()===nm))) continue;
       const work = e.sets.filter(s=>!s.warm && !s.drop && s.reps>0);
       if(!work.length) continue;
-      const add = isBwEx(e.k) ? (e.bw||0) : 0;
+      const add = (isBwEx(e.k) ? (e.bw||0) : 0) + (e.mb||0);
       const mul = e.x2 ? 2 : 1;
       pts.push(Math.max(...work.map(s=>(s.weight*mul+add)*(1+s.reps/30))));
     }
@@ -2978,7 +3019,7 @@ function prEvents(){
       const m = best[e.k] || (best[e.k]={});
       const had = seen[e.k]; seen[e.k] = 1;
       const bwKind = isBwEx(e.k);
-      const add = bwKind ? (e.bw||0) : 0; /* records use TOTAL load */
+      const add = (bwKind ? (e.bw||0) : 0) + (e.mb||0); /* records use TOTAL load */
       const mul = e.x2 ? 2 : 1;
       const top = {};
       for(const s of work){
@@ -3464,7 +3505,7 @@ function shareTpl(id){
   const d = S.templates.find(x=>x.id===id);
   if(!d) return;
   const payload = { t:'tpl', name:d.name,
-    ex: d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}), ...(e.x2?{x2:1}:{}) })) };
+    ex: d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}), ...(e.x2?{x2:1}:{}), ...(e.base?{base:e.base}:{}) })) };
   const code = encodeShare(payload);
   openModal(`<h3>${t('tplShare')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div style="color:var(--dim);font-size:14px;margin:0 4px 10px">${t('tplShareHint')}</div>
@@ -3498,7 +3539,7 @@ function buildSetsCSV(){
   const rows = [['date','workout_name','deload','archived','duration_sec',
     'exercise','exercise_key','muscle_group','equipment','exercise_position','completion_order',
     'set_number','set_type','is_time_exercise','is_dumbbell_pair','weight_'+u,'reps_or_seconds',
-    'bodyweight_'+u,'total_'+u,'volume_'+u,'note']];
+    'bodyweight_'+u,'machine_base_'+u,'total_'+u,'volume_'+u,'note']];
   for(let i=S.history.length-1; i>=0; i--){ /* oldest first - chronological for analysis */
     const w = S.history[i];
     w.exercises.forEach((e,ei)=>{
@@ -3506,11 +3547,11 @@ function buildSetsCSV(){
       const tm = isTimeEx(e.k), bw = isBwEx(e.k);
       e.sets.forEach((s,si)=>{
         const type = s.warm ? 'warmup' : s.drop ? 'dropset' : s.fail ? 'failure' : 'work';
-        const total = bw ? s.weight + (e.bw||0) : s.weight*(e.x2?2:1);
+        const total = bw ? s.weight + (e.bw||0) : s.weight*(e.x2?2:1) + (e.mb||0);
         rows.push([w.date, w.name, w.dl?1:0, w.arch?1:0, w.dur||'',
           e.name, e.k||'', info?info.g:'', info?info.e:'', ei+1, e.order||'',
           si+1, type, tm?1:0, e.x2?1:0, kg2u(s.weight), s.reps,
-          (bw && e.bw!=null)?kg2u(e.bw):'', kg2u(total),
+          (bw && e.bw!=null)?kg2u(e.bw):'', e.mb?kg2u(e.mb):'', kg2u(total),
           tm?'':Math.round(kg2u(total)*s.reps*100)/100, e.note||'']);
       });
     });
@@ -3576,7 +3617,8 @@ function importTplPayload(d, folderId){
     }
     const alts = Array.isArray(e.alts) ? e.alts.filter(a=>exInfo(a) && a!==k) : [];
     const rt = (typeof e.rt==='number' && e.rt>=15 && e.rt<=1800) ? Math.round(e.rt/15)*15 : 0;
-    tpl.ex.push({ id:uid(), k, s:Math.max(1,Math.min(12,e.s|0||3)), r:normReps(e.r, isTimeEx(k)?600:50), ss:!!e.ss, alts, pnote:String(e.pnote||'').slice(0,200), ...(rt?{rt}:{}), ...(e.x2?{x2:true}:{}) });
+    const base = (typeof e.base==='number' && e.base>0 && e.base<=500) ? Math.round(e.base*10)/10 : 0;
+    tpl.ex.push({ id:uid(), k, s:Math.max(1,Math.min(12,e.s|0||3)), r:normReps(e.r, isTimeEx(k)?600:50), ss:!!e.ss, alts, pnote:String(e.pnote||'').slice(0,200), ...(rt?{rt}:{}), ...(e.x2?{x2:true}:{}), ...(base?{base}:{}) });
   }
   S.templates.push(tpl);
   return tpl;
