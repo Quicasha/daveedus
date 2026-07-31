@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.25.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.25.1'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -1769,7 +1769,7 @@ function finishWorkout(){
     }
   }
   const dur = Math.round((Date.now()-new Date(S.active.startedAt).getTime())/1000);
-  const vol = exercises.reduce((a,e)=>a+e.sets.filter(s=>!s.warm).reduce((b,s)=>b+s.weight*(e.x2?2:1)*s.reps,0),0);
+  const vol = exercises.reduce((a,e)=>a+e.sets.filter(s=>!s.warm).reduce((b,s)=>b+(s.weight*(e.x2?2:1)+(e.mb||0))*s.reps,0),0);
   const entry = {
     id:uid(), tplId:S.active.tplId, name:S.active.name, date:new Date().toISOString(),
     dur, exercises
@@ -2782,7 +2782,7 @@ function aggBuckets(buckets){
     for(let bi=0; bi<buckets.length; bi++){
       if(d>=buckets[bi].s && d<buckets[bi].e){
         wk[bi].v++;
-        vol[bi].v += h.exercises.reduce((a,ex)=>a+ex.sets.filter(x=>!x.warm).reduce((b,x)=>b+x.weight*(ex.x2?2:1)*x.reps,0),0);
+        vol[bi].v += h.exercises.reduce((a,ex)=>a+ex.sets.filter(x=>!x.warm).reduce((b,x)=>b+(x.weight*(ex.x2?2:1)+(ex.mb||0))*x.reps,0),0);
         break;
       }
     }
@@ -3154,7 +3154,7 @@ function dlDividerHtml(d, c){
 }
 function histRowHtml(w){
   const nsets = w.exercises.reduce((a,e)=>a+e.sets.length,0);
-  const vol = w.exercises.reduce((a,e)=>a+e.sets.filter(s=>!s.warm).reduce((b,s)=>b+s.weight*(e.x2?2:1)*s.reps,0),0);
+  const vol = w.exercises.reduce((a,e)=>a+e.sets.filter(s=>!s.warm).reduce((b,s)=>b+(s.weight*(e.x2?2:1)+(e.mb||0))*s.reps,0),0);
   const open = V.expanded===w.id;
   let detail = '';
   if(open){
