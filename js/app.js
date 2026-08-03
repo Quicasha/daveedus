@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.25.2'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.25.3'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -1725,13 +1725,11 @@ function finishWorkout(){
   const orderMap = {};
   S.active.exercises.filter(e=>e.doneAt).sort((a,b)=>a.doneAt-b.doneAt).forEach((e,i)=>{ orderMap[e.id]=i+1; });
   const exercises = [];
-  let total = 0;
   S.active.exercises.forEach(ex=>{
     if(ex.ghost) return; /* untouched suggestions never reach history */
     const variants = [{ k:ex.k, name:ex.name, note:ex.note, sets:ex.sets, bw:ex.bw }];
     for(const sk in ex.stash){ const v=ex.stash[sk]; variants.push({ k:sk, name:v.name, note:v.note, sets:v.sets, bw:v.bw }); }
     variants.forEach(v=>{
-      total += v.sets.length;
       const done = v.sets.filter(s=>s.done).map(s=>({ weight:u2kg(parseNum(s.w)), reps:parseNum(s.r), warm:!!s.warm, drop:!!s.drop, fail:!!s.fail }));
       if(!done.length) return;
       const o = { k:v.k, name:v.name, targetSets:ex.targetSets, targetReps:ex.targetReps, note:v.note||'', ss:!!ex.ss, sets:done };
@@ -1747,8 +1745,10 @@ function finishWorkout(){
     if(confirm(t('woFinishEmpty'))){ S.active=null; save(); go('home'); }
     return;
   }
-  const done = exercises.reduce((a,e)=>a+e.sets.length,0);
-  if(done < total && !confirm(t('woFinishPart'))) return;
+  /* "unfinished sets?" looks only at each slot's CURRENT variant - sets sitting
+     in a swapped-away variant's stash are not work that was left undone */
+  const unfinished = S.active.exercises.some(ex=>!ex.ghost && ex.sets.some(s=>!s.done));
+  if(unfinished && !confirm(t('woFinishPart'))) return;
   /* detect all-time PRs BEFORE this workout enters history (never on a deload pass) */
   const isDl = dlForTpl(S.active.tplId);
   const prs = [];
@@ -1793,7 +1793,7 @@ function finishWorkout(){
   save();
   scheduleCloudSync();
   go('home');
-  showSummary(dur, vol, done, prs);
+  showSummary(dur, vol, exercises.reduce((a,e)=>a+e.sets.length,0), prs);
 }
 function showSummary(dur, vol, setsDone, prs){
   const prHtml = prs.length ? `<h2 class="sec" style="margin-top:14px">${t('sumPRs')}</h2>` +
@@ -3797,7 +3797,9 @@ document.addEventListener('visibilitychange', ()=>{
 /* ======================= boot ======================= */
 document.addEventListener('DOMContentLoaded', async ()=>{
   applyTheme();
-  $('#modal').addEventListener('click', e=>{ if(e.target.id==='modal') closeModal(); });
+  /* backdrop tap closes AND re-renders - modal edits (history, targets, base
+     weight) must show on the screen behind no matter how the sheet is dismissed */
+  $('#modal').addEventListener('click', e=>{ if(e.target.id==='modal'){ closeModal(); render(); } });
   /* localStorage empty or corrupt? try the IndexedDB mirror before showing defaults */
   if(!LS_OK){
     try{
