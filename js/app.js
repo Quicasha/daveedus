@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.1.2'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.1.3'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -59,7 +59,7 @@ const I18N = {
     bwEnter:'Įvesk savo kūno svorį',
     woBwCol:'Kūno sv.', woAddCol:'Papild.', woBwHint:'Kūno svoris (tik statistikai)',
     exCreateMode:'Tipas', modeReps:'Kartai', modeTime:'Laikas (sek.)',
-    histArch:'Archyvuoti', histUnarch:'Grąžinti', archTitle:'Archyvas',
+    histUnarch:'Grąžinti', archTitle:'Archyvas',
     statsMuscle:'Raumenų balansas',
     statsWorkoutsPer:'Treniruotės', statsVolumePer:'Apimtis',
     pdcW:'Sav', pdcM:'Mėn', pdcY:'Metai', pdAll:'Viskas',
@@ -228,7 +228,7 @@ const I18N = {
     bwEnter:'Enter your body weight',
     woBwCol:'BW', woAddCol:'Added', woBwHint:'Body weight (stats only)',
     exCreateMode:'Type', modeReps:'Reps', modeTime:'Time (sec)',
-    histArch:'Archive', histUnarch:'Restore', archTitle:'Archive',
+    histUnarch:'Restore', archTitle:'Archive',
     statsMuscle:'Muscle balance',
     statsWorkoutsPer:'Workouts', statsVolumePer:'Volume',
     pdcW:'Wk', pdcM:'Mo', pdcY:'Yr', pdAll:'All',
@@ -1534,7 +1534,7 @@ function renderTargetEdit(){
       <button class="rangetog ${p.range?'acc':''}" onclick="wtRangeTog(${xi})">${t('repsRangeTog')}</button>
     </div>
     ${tm?'':`<div class="ctlrow">
-      <span class="clbl">${t('dpLabel')}</span>
+      <span class="clbl wide">${t('dpLabel')}</span>
       ${dpSteps().map(v=>`<button class="rangetog ${Math.abs((ex.dp||0)-v)<.01?'acc':''}" onclick="wtDp(${xi},${v})">+${fmtW(kg2u(v))}</button>`).join('')}
       <button class="rangetog ${ex.dp?'':'acc'}" onclick="wtDp(${xi},0)">—</button>
     </div>
@@ -2372,7 +2372,7 @@ function htmlTplEdit(){
         ${e.rt?'':`<span class="resthint">${t('tplRestOff')}</span>`}
       </div>
       ${tm?'':`<div class="ctlrow">
-        <span class="clbl">${t('dpLabel')}</span>
+        <span class="clbl wide">${t('dpLabel')}</span>
         ${dpSteps().map(v=>`<button class="rangetog ${Math.abs((e.dp||0)-v)<.01?'acc':''}" onclick="setTplDp('${d.id}',${i},${v})">+${fmtW(kg2u(v))}</button>`).join('')}
         <button class="rangetog ${e.dp?'':'acc'}" onclick="setTplDp('${d.id}',${i},0)">—</button>
       </div>`}
@@ -2600,7 +2600,7 @@ function renderPickerList(){
   el.innerHTML = list.map(x=>
     `<button class="exitem" onclick="pickEx('${x.id}')">
       <div class="xi"><div class="xn">${esc(x.n)}</div>
-      <div class="xg">${t('g_'+x.g)} · ${t('e_'+x.e)}</div></div></button>`).join('')
+      <div class="xg">${t('g_'+x.g)} · ${t('e_'+x.e)}${isTimeEx(x.id)?` · <span class="xt">${t('modeTime')}</span>`:''}</div></div></button>`).join('')
     + `<button class="btn ghostbtn" style="margin-top:4px" onclick="openCustomExForm()">${t('exCreate')}</button>`;
 }
 function pickEx(id){
@@ -2737,8 +2737,8 @@ function renderExList(){
     const st = exStats(x.id, x.n);
     return `<button class="exitem" onclick="openExDetailByKey('${x.id}')">
       <div class="xi"><div class="xn">${esc(x.n)}</div>
-      <div class="xg">${t('g_'+x.g)} · ${t('e_'+x.e)}</div></div>
-      ${st.best?`<div class="best">${wu(st.best,true)}</div>`:''}</button>`;
+      <div class="xg">${t('g_'+x.g)} · ${t('e_'+x.e)}${isTimeEx(x.id)?` · <span class="xt">${t('modeTime')}</span>`:''}</div></div>
+      ${(isTimeEx(x.id)?st.bestTime:st.best)?`<div class="best">${isTimeEx(x.id)?st.bestTime+' s':wu(st.best,true)}</div>`:''}</button>`;
   }).join('') + `<button class="btn ghostbtn" style="margin-top:4px" onclick="openCustomExForm()">${t('exCreate')}</button>`;
 }
 function openExDetailByKey(k){
@@ -2762,7 +2762,7 @@ function htmlExDetail(){
   const filter = V.exTplFilter || null;
   const st = exStats(k, name, filter);
   let h = `<div style="height:8px"></div>`;
-  if(info) h += `<div style="color:var(--dim);font-size:14px;margin:0 4px 12px">${t('g_'+info.g)} · ${t('e_'+info.e)}</div>`;
+  if(info) h += `<div style="color:var(--dim);font-size:14px;margin:0 4px 12px">${t('g_'+info.g)} · ${t('e_'+info.e)}${isTimeEx(k)?` · <span class="xt">${t('modeTime')}</span>`:''}</div>`;
   /* filter chips: analyse this exercise per template (e.g. Upper A vs Upper B) */
   V.exFilterNames = [...new Set(S.history.filter(w=>!w.arch && w.exercises.some(matches)).map(w=>w.name))];
   if(V.exFilterNames.length>1){
