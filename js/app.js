@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.26.1'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.27.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -594,7 +594,7 @@ function applyTheme(){
   const mode = S.theme==='auto' ? (mediaDark.matches?'dark':'light') : S.theme;
   document.documentElement.dataset.theme = mode;
   const meta = $('#themecolor');
-  if(meta) meta.content = mode==='dark' ? '#07090c' : '#f2f4f8';
+  if(meta) meta.content = mode==='dark' ? '#0a1220' : '#eef2f8'; /* matches the topbar's blended tone */
 }
 mediaDark.addEventListener('change', ()=>{ if(S.theme==='auto') applyTheme(); });
 
@@ -1874,7 +1874,7 @@ function confetti(){
   if(document.getElementById('confetti')) return;
   const box = document.createElement('div');
   box.id = 'confetti';
-  const cols = ['#3f82f7','#30d158','#ff9f0a','#ff453a','#6ca4ff','#ffd60a'];
+  const cols = ['#38bdf8','#85d3ff','#eef6ff','#2ecf87','#5a8dff','#ffd166']; /* ice, moonlight, one gold */
   let html = '';
   for(let i=0;i<70;i++){
     const l = Math.random()*100, delay = Math.random()*0.5, dur = 1.6+Math.random()*1.2;
