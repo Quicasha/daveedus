@@ -761,6 +761,29 @@ button:focus-visible, .chip:focus-visible, .switch:focus-visible{
   0%,54%{background:var(--input); color:var(--dim);}
   61%,92%{background:var(--green); color:#fff;}
   100%{background:var(--input); color:var(--dim);}}
+/* swap step: tap the menu, the name crossfades to the alternative */
+.obswap{position:relative; min-height:22px;}
+.obswap span{position:absolute; left:0; top:0; white-space:nowrap; display:flex; align-items:center; gap:6px;}
+.obswap svg{width:15px; height:15px; color:var(--accent-soft);}
+.obswap .obn1{animation:ob-n1 5s ease infinite;}
+.obswap .obn2{opacity:0; animation:ob-n2 5s ease infinite; color:var(--accent-soft);}
+.obmenu{position:relative;}
+.obtap.tap4{animation-name:ob-tap4; animation-duration:5s;}
+@keyframes ob-tap4{
+  0%,18%{opacity:0; transform:scale(.4);}
+  26%{opacity:.35; transform:scale(1);}
+  36%,100%{opacity:0; transform:scale(1.7);}}
+@keyframes ob-n1{0%,32%{opacity:1;} 40%,92%{opacity:0;} 100%{opacity:1;}}
+@keyframes ob-n2{0%,36%{opacity:0;} 44%,88%{opacity:1;} 96%,100%{opacity:0;}}
+/* warmup step: tap W, the ramp rows appear one after another */
+.obwbtn{position:relative;}
+.obtap.tap5{animation-name:ob-tap4; animation-duration:5s;}
+.obwr{opacity:0; animation:ob-wrow 5s ease infinite;}
+.obwr.r2{animation-name:ob-wrow2;}
+.obwr.r3{animation-name:ob-wrow3;}
+@keyframes ob-wrow {0%,34%{opacity:0; transform:translateY(4px);} 42%,90%{opacity:1; transform:translateY(0);} 98%,100%{opacity:0;}}
+@keyframes ob-wrow2{0%,40%{opacity:0; transform:translateY(4px);} 48%,90%{opacity:1; transform:translateY(0);} 98%,100%{opacity:0;}}
+@keyframes ob-wrow3{0%,46%{opacity:0; transform:translateY(4px);} 54%,90%{opacity:1; transform:translateY(0);} 98%,100%{opacity:0;}}
 /* step 3: the backup code line */
 .obdemo.ob3{display:flex; align-items:center; gap:10px; padding:14px;}
 .ob3 .obkey{display:flex; color:var(--accent-soft);}

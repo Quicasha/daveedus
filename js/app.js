@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.0.1'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.0.2'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -163,6 +163,8 @@ const I18N = {
     goalLeft:'liko {n}', goalReached:'pasiekta',
     ob1T:'Pilka = praeitas kartas', ob1B:'Programa pati parodo, ką kėlei praeitą kartą. Darai tą patį? Spausk tik varnelę - skaičių vesti nereikia.',
     ob2T:'Rašyk tik pokytį', ob2B:'Pakėlei daugiau? Įrašyk naują svorį. Žalia varnelė - geriau nei praeitą kartą, raudona - mažiau.',
+    ob4T:'Užimta? Pakeisk', ob4B:'⋯ meniu turi alternatyvas: vienas tap ir darai kitą variantą, nelauki eilėje. Kiekvieno varianto progresas skaičiuojamas atskirai - skaičiai nesimaišo.',
+    ob5T:'W sudeda apšilimą', ob5B:'Spausk W - apšilimo setai susidėlioja patys pagal tavo darbinį svorį. Į rekordus jie nesiskaito.',
     ob3T:'Duomenys tik pas tave', ob3B:'Viskas saugoma šitame telefone. Nustatymuose pasidaryk atsarginį kodą - su juo viską atstatysi naujame telefone.',
     obNext:'Toliau', obDone:'Pradėti',
     a2hsTitle:'Įsidiek kaip programėlę',
@@ -326,6 +328,8 @@ const I18N = {
     goalLeft:'{n} to go', goalReached:'reached',
     ob1T:'Grey = last time', ob1B:'The app shows what you lifted last time. Doing the same? Just tap the check - no typing.',
     ob2T:'Type only what changed', ob2B:'Lifted more? Type the new weight. Green check - beat last time, red - below it.',
+    ob4T:'Taken? Swap it', ob4B:'The ⋯ menu holds alternatives: one tap and you do the other variant instead of waiting. Each variant keeps its own progress - numbers never mix.',
+    ob5T:'W builds the warmup', ob5B:'Tap W - warmup sets build themselves from your working weight. They never count toward records.',
     ob3T:'Your data stays with you', ob3B:'Everything lives on this phone. In Settings, copy a backup code - it restores everything on a new phone.',
     obNext:'Next', obDone:'Start',
     a2hsTitle:'Install as an app',
@@ -4169,10 +4173,33 @@ function openOnboarding(){
    shows is pixel-for-pixel what the workout screen looks like */
 function obDemo(step){
   const u = unitL();
-  if(step===2) return `<div class="obdemo ob3">
+  if(step===4) return `<div class="obdemo ob3">
       <span class="obkey">${ACT_ICONS.copy}</span>
       <span class="obcode">DVD1.eyJ0Ijoi…</span>
     </div>`;
+  /* swap: tap the ... menu, the exercise name crossfades to its alternative */
+  if(step===2) return `<div class="obdemo ob4">
+    <div class="exhead" style="margin:2px 0">
+      <div class="exname obswap"><span class="obn1">Bench Press</span><span class="obn2">${ACT_ICONS.swap} Smith Bench Press</span></div>
+      <button class="minibtn obmenu">${ACT_ICONS.more}<span class="obtap tap4"></span></button>
+    </div></div>`;
+  /* warmup: tap W, the ramp rows fade in under the working set */
+  if(step===3) return `<div class="obdemo ob5">
+    <div class="exhead" style="margin:2px 0">
+      <div class="exname">Bench Press</div>
+      <button class="minibtn warm obwbtn">W<span class="obtap tap5"></span></button>
+    </div>
+    ${[['W','20','10','r1'],['W','40','6','r2'],['W','60','2','r3']].map(([l,w,r,c])=>`
+      <div class="setgrid nod obwr ${c}">
+        <span class="setnum warm">${l}</span><div class="prev"></div>
+        <span class="obin">${w}</span><span class="obin">${r}</span>
+        <div class="checkbtn">${ACT_ICONS.check}</div>
+      </div>`).join('')}
+    <div class="setgrid nod">
+      <span class="setnum">1</span><div class="prev">80 ${u} × 5</div>
+      <span class="obin">80</span><span class="obin">5</span>
+      <div class="checkbtn">${ACT_ICONS.check}</div>
+    </div></div>`;
   const up = S.unit==='lb' ? '45' : '42.5'; /* one realistic plate jump in the display unit */
   const hdr = `<div class="setgrid nod hdr" style="margin-top:2px"><div>${t('woSet')}</div><div>${t('woPrev')}</div><div>${u}</div><div>${t('woReps')}</div><div>${ACT_ICONS.check}</div></div>`;
   if(step===0) return `<div class="obdemo ob1">${hdr}
@@ -4189,7 +4216,7 @@ function obDemo(step){
     </div></div>`;
 }
 function renderOb(){
-  const steps = [['ob1T','ob1B'],['ob2T','ob2B'],['ob3T','ob3B']];
+  const steps = [['ob1T','ob1B'],['ob2T','ob2B'],['ob4T','ob4B'],['ob5T','ob5B'],['ob3T','ob3B']];
   const i = V.ob||0;
   const [tt, bb] = steps[i];
   const dots = steps.map((_,j)=>`<span class="obdot${j===i?' on':''}"></span>`).join('');
