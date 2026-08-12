@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.1.1'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.1.2'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -4227,19 +4227,43 @@ function obDemo(step){
 }
 function renderOb(){
   const i = V.ob||0;
-  const N = 7;
+  const N = 8;
   const dots = Array.from({length:N},(_,j)=>`<span class="obdot${j===i?' on':''}"></span>`).join('');
   const dotRow = `<div style="display:flex;justify-content:center;gap:6px;margin-bottom:16px">${dots}</div>`;
-  /* step 0: pick who you are today - the welcome card talks back in those words */
+  /* step 0: language + units together - bilingual labels since nothing is chosen yet;
+     picking re-renders the card, so the Next button answers in the chosen language */
   if(i===0){
+    openModal(`<h3>Daveedus<button class="x" onclick="closeModal()">✕</button></h3>
+      <div class="card">
+        <div class="setline">
+          <span class="lb">Language · Kalba</span>
+          <div class="seg">
+            <button class="${S.lang==='en'?'on':''}" onclick="S.lang='en';save();renderOb()">EN</button>
+            <button class="${S.lang==='lt'?'on':''}" onclick="S.lang='lt';save();renderOb()">LT</button>
+          </div>
+        </div>
+        <div class="setline">
+          <span class="lb">Units · Vienetai</span>
+          <div class="seg">
+            <button class="${(S.unit||'kg')==='kg'?'on':''}" onclick="S.unit='kg';save();renderOb()">kg</button>
+            <button class="${S.unit==='lb'?'on':''}" onclick="S.unit='lb';save();renderOb()">lb</button>
+          </div>
+        </div>
+      </div>
+      ${dotRow}
+      <button class="btn primary" onclick="V.ob=1;renderOb()">${t('obNext')}</button>`);
+    return;
+  }
+  /* step 1: pick who you are today - the welcome card talks back in those words */
+  if(i===1){
     openModal(`<h3>${t('obpT')}<button class="x" onclick="closeModal()">✕</button></h3>
       <div class="obbody">${t('obpB')}</div>
       <div>${['skinny','fluffy','liar'].map(k=>
-        `<button class="btn" onclick="V.obP='${k}';V.ob=1;renderOb()">${t('obp_'+k)}</button>`).join('')}</div>
+        `<button class="btn" onclick="V.obP='${k}';V.ob=2;renderOb()">${t('obp_'+k)}</button>`).join('')}</div>
       ${dotRow}`);
     return;
   }
-  const steps = [null,
+  const steps = [null, null,
     ['obwT','obwB','w'], ['ob1T','ob1B',0], ['ob2T','ob2B',1],
     ['ob4T','ob4B',2], ['ob5T','ob5B',3], ['ob3T','ob3B',4]];
   const [tt, bb, dm] = steps[i];
