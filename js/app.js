@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.0.3'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.0.4'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -791,13 +791,14 @@ function htmlHome(){
       <button class="minibtn" style="width:32px;min-height:32px;font-size:12px" onclick="S.bakSnooze=Date.now(); save(); render()">✕</button>
     </div>`;
   }
-  /* weekday-planned templates turn the first stat into "done/planned this calendar week" */
+  /* weekday plan follows only the STARRED (main) program - same anchor as deload;
+     its templates turn the first stat into "done/planned this calendar week" */
   const wdToday = ((new Date().getDay()+6)%7)+1; /* Mon=1..Sun=7 */
-  const pinnedF = S.folders.filter(f=>f.pinned);
-  const homeF = pinnedF.length ? pinnedF : S.folders;
-  const wdTarget = S.templates.filter(x=>x.wd && homeF.some(f=>f.id===x.folderId)).length;
+  const mainId = mainFolderId();
+  const mainTpls = S.templates.filter(x=>x.folderId===mainId);
+  const wdTarget = mainTpls.filter(x=>x.wd).length;
   const monday = new Date(); monday.setHours(0,0,0,0); monday.setDate(monday.getDate()-(wdToday-1));
-  const wkDone = S.history.filter(w=>!w.arch && new Date(w.date)>=monday).length;
+  const wkDone = S.history.filter(w=>!w.arch && new Date(w.date)>=monday && mainTpls.some(tp=>tp.id===w.tplId)).length;
   h += `<div class="statrow">
       <div class="stat" style="cursor:pointer" onclick="go('history')"><div class="v">${wdTarget?wkDone+'/'+wdTarget:weekCount()}</div><div class="l">${wdTarget?t('statWeekOf'):t('statWeek')}</div></div>
       <div class="stat" style="cursor:pointer" onclick="go('history')"><div class="v">${S.history.length}</div><div class="l">${t('statTotal')}</div></div>
@@ -844,15 +845,15 @@ function htmlHome(){
   const showFolders = pinned.length ? pinned : S.folders;
   /* workout + full-cycle counters since the last deload - the "when to deload" gauge */
   const counts = tplCounts();
-  const mainId = mainFolderId();
   /* the main-program star only matters when there is a choice */
   const multi = showFolders.filter(f=>S.templates.some(x=>x.folderId===f.id)).length > 1;
   const cards = showFolders.map(f=>{
     const tpls = S.templates.filter(x=>x.folderId===f.id);
     if(!tpls.length) return '';
-    /* a workout assigned to TODAY's weekday wins; otherwise suggest the one
-       AFTER the most recently done in this split (cyclic) */
-    const todayTpl = tpls.find(x=>x.wd===wdToday);
+    /* weekday plan applies to the STARRED program only (like deload): there a
+       workout assigned to TODAY wins; otherwise suggest the one AFTER the most
+       recently done in this split (cyclic) */
+    const todayTpl = f.id===mainId ? tpls.find(x=>x.wd===wdToday) : null;
     let nextId = tpls[0].id;
     for(const hw of S.history){
       if(hw.arch) continue;
@@ -867,7 +868,7 @@ function htmlHome(){
       <span class="spn">${esc(d.name)}</span>
       ${dlDue?`<span class="dldot" title="${t('dlBadge')}"></span>`:''}
       ${counts[d.id]?`<span class="spcnt">${counts[d.id]}</span>`:''}
-      ${d.wd?`<span class="spwd">${t('wd'+d.wd)}</span>`:''}
+      ${(f.id===mainId && d.wd)?`<span class="spwd">${t('wd'+d.wd)}</span>`:''}
       ${d.id===nextId?`<span class="nextchip">${todayTpl?t('todayBadge'):t('nextBadge')}</span>`:''}</button>`;
     }).join('');
     return `<div class="splitcard">
