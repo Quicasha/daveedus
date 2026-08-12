@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.27.1'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.0.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -150,7 +150,28 @@ const I18N = {
     g_triceps:'Tricepsai', g_forearms:'Dilbiai', g_quads:'Keturgalviai', g_hamstrings:'Dvigalviai',
     g_glutes:'Sėdmenys', g_calves:'Blauzdos', g_core:'Pilvo presas', g_other:'Kita',
     e_barbell:'Štanga', e_dumbbell:'Hanteliai', e_machine:'Treniruoklis', e_cable:'Trosas',
-    e_bodyweight:'Savo svoris', e_kettlebell:'Girja', e_other:'Kita'
+    e_bodyweight:'Savo svoris', e_kettlebell:'Girja', e_other:'Kita',
+    /* v2.0 */
+    dpLabel:'Progresija', dpHint:'Kai visi darbiniai setai pasiekia diapazono viršų - kitą kartą prie svorio pasiūlys pridėti šitą žingsnį.',
+    dpChipHint:'Praeitą kartą visi setai pasiekė viršų - bakstelk ir svoriai užsipildys su prieaugiu',
+    dlmRemind:'Priminti deload', dlmRemindHint:'Kortelė ekrane primins, kai praeis tiek savaičių nuo paskutinio deload.',
+    dlRemindTitle:'Deload metas', dlRemindSub:'Praėjo {n} sav. nuo paskutinio deload',
+    wdLabel:'Savaitės diena', wdHint:'Priskirta diena rodoma pradžios ekrane kaip ŠIANDIEN. Praleista diena tiesiog praleidžiama.',
+    wd1:'Pr', wd2:'An', wd3:'Tr', wd4:'Kt', wd5:'Pn', wd6:'Št', wd7:'Sk',
+    todayBadge:'ŠIANDIEN', statWeekOf:'šią savaitę',
+    goalTitle:'Tikslas', goalHint:'Įvesk siekiamą e1RM (apskaičiuotą vieno karto maksimumą). Kortelė rodys, kiek liko.',
+    goalLeft:'liko {n}', goalReached:'pasiekta',
+    ob1T:'Kaip loginti', ob1B:'Pasirink treniruotę pradžios ekrane. Pilki skaičiai - ką darei praeitą kartą: jei kartoji tą patį, tiesiog bakstelk varnelę, nieko vesti nereikia.',
+    ob2T:'Pritaikyk sau', ob2B:'Prie kiekvieno pratimo: ⋯ meniu keiti pratimą alternatyva, W sudeda apšilimo setus, +kg įsimena aparato pradinį svorį.',
+    ob3T:'Duomenys tavo', ob3B:'Viskas saugoma tik telefone. Nustatymuose pasidaryk atsarginį kodą arba įjunk cloud sync - telefono praradimas tada nebaisus.',
+    obNext:'Toliau', obDone:'Pradėti',
+    a2hsTitle:'Įsidiek kaip programėlę',
+    a2hsIos:'Safari: Dalintis → Add to Home Screen. Veiks be interneto, per visą ekraną.',
+    a2hsAnd:'Chrome: ⋮ meniu → Įdiegti programėlę. Veiks be interneto, per visą ekraną.',
+    ghRestore:'Atkurti iš cloud', ghRestoreConfirm:'Parsisiųsti paskutinį backup iš cloud? Dabartiniai duomenys bus pakeisti.',
+    ghRestoreFail:'Nepavyko parsisiųsti backup iš cloud',
+    histSearch:'Ieškoti pagal treniruotę ar pratimą...', histNoMatch:'Nieko nerasta',
+    wkS:'sav.'
   },
   en: {
     tabHome:'Workout', tabProgram:'Programs', tabExercises:'Exercises', tabHistory:'History', tabSettings:'Settings',
@@ -292,7 +313,28 @@ const I18N = {
     g_triceps:'Triceps', g_forearms:'Forearms', g_quads:'Quads', g_hamstrings:'Hamstrings',
     g_glutes:'Glutes', g_calves:'Calves', g_core:'Core', g_other:'Other',
     e_barbell:'Barbell', e_dumbbell:'Dumbbell', e_machine:'Machine', e_cable:'Cable',
-    e_bodyweight:'Bodyweight', e_kettlebell:'Kettlebell', e_other:'Other'
+    e_bodyweight:'Bodyweight', e_kettlebell:'Kettlebell', e_other:'Other',
+    /* v2.0 */
+    dpLabel:'Progression', dpHint:'When every working set reaches the top of the rep range - next time the app offers to add this step to the weight.',
+    dpChipHint:'All sets hit the range top last time - tap to fill the weights with the increase',
+    dlmRemind:'Deload reminder', dlmRemindHint:'A card on the home screen will remind you once this many weeks pass since the last deload.',
+    dlRemindTitle:'Time to deload', dlRemindSub:'{n} weeks since the last deload',
+    wdLabel:'Weekday', wdHint:'The assigned day shows on the home screen as TODAY. A missed day is simply skipped.',
+    wd1:'Mo', wd2:'Tu', wd3:'We', wd4:'Th', wd5:'Fr', wd6:'Sa', wd7:'Su',
+    todayBadge:'TODAY', statWeekOf:'this week',
+    goalTitle:'Goal', goalHint:'Enter the e1RM you are aiming for (estimated one-rep max). The card will show how much is left.',
+    goalLeft:'{n} to go', goalReached:'reached',
+    ob1T:'How logging works', ob1B:'Pick a workout on the home screen. Grey numbers are what you did last time: repeating it? Just tap the check - nothing to type.',
+    ob2T:'Make it yours', ob2B:'On every exercise: the ⋯ menu swaps in an alternative, W builds warmup sets, +kg remembers a machine\'s starting weight.',
+    ob3T:'Your data stays yours', ob3B:'Everything lives on this phone only. In Settings, copy a backup code or turn on cloud sync - then losing the phone loses nothing.',
+    obNext:'Next', obDone:'Start',
+    a2hsTitle:'Install as an app',
+    a2hsIos:'Safari: Share → Add to Home Screen. Works offline, full screen.',
+    a2hsAnd:'Chrome: ⋮ menu → Install app. Works offline, full screen.',
+    ghRestore:'Restore from cloud', ghRestoreConfirm:'Download the latest backup from the cloud? Current data will be replaced.',
+    ghRestoreFail:'Could not download the cloud backup',
+    histSearch:'Search by workout or exercise...', histNoMatch:'No matches',
+    wkS:'wk'
   }
 };
 function t(k, vars){
@@ -362,6 +404,9 @@ function defaultState(){
            customEx:[], templates:seedTemplates(fid), history:[], weights:[], active:null,
            trackedLifts:[], deloads:[], mainFolder:null,
            mbase:{}, /* machine starting weight per exercise key, kg; 0 = switched off on purpose */
+           goals:{}, /* tracked-lift targets per exercise key: e1RM in kg */
+           dlEvery:0, dlSnooze:0, /* calendar deload reminder: every N weeks; snoozed-until ts */
+           onboarded:0, a2hsOff:0, /* one-time first-launch intro / install-hint dismissal */
            plates:{ kg:PLATE_DEF.kg.slice(), lb:PLATE_DEF.lb.slice() } };
 }
 /* validate + migrate a raw state object; returns null if unusable */
@@ -408,6 +453,14 @@ function hydrate(s){
     const v = s.mbase[k];
     if(typeof v!=='number' || isNaN(v) || v<0 || v>500) delete s.mbase[k];
   }
+  /* lift goals: key -> target e1RM kg */
+  if(!s.goals || typeof s.goals!=='object' || Array.isArray(s.goals)) s.goals = {};
+  for(const k in s.goals){
+    const v = s.goals[k];
+    if(typeof v!=='number' || isNaN(v) || v<=0 || v>1000) delete s.goals[k];
+  }
+  if(typeof s.dlEvery!=='number' || !(s.dlEvery>=0 && s.dlEvery<=16)) s.dlEvery = 0;
+  if(typeof s.dlSnooze!=='number') s.dlSnooze = 0;
   return Object.assign(defaultState(), s);
 }
 let LS_OK = false; /* did localStorage contain valid data at boot? */
@@ -480,7 +533,7 @@ function save(){
 const V = { screen:'home', editTpl:null, viewFolder:null, exDetail:null, expanded:null,
             pickerCb:null, pickerQ:'', pickerG:'all', exQ:'', exG:'mine',
             exTplFilter:'', exFilterNames:[], exMetric:'w', showArch:false,
-            histLimit:20,
+            histLimit:20, histQ:'',
             /* per-chart period state: p = 'w'|'m'|'y'|'c' (charts), days|'all'|'c' (muscle/bw);
                f/t = custom from-to as yyyy-mm-dd */
             cp:{ wk:{p:'w',f:'',t:''}, vol:{p:'w',f:'',t:''},
@@ -710,10 +763,23 @@ function weekCount(){
   const monday = new Date(now); monday.setHours(0,0,0,0); monday.setDate(now.getDate()-day);
   return S.history.filter(h=>!h.arch && new Date(h.date)>=monday).length;
 }
+/* running as an installed app? (home-screen PWA, not a browser tab) */
+function isStandalone(){
+  return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || !!navigator.standalone;
+}
 function htmlHome(){
   const dateStr = new Date().toLocaleDateString(S.lang==='lt'?'lt-LT':'en-GB',
     { weekday:'long', month:'long', day:'numeric' });
   let h = `<div class="hero"><div class="date">${esc(dateStr)}</div></div>`;
+  /* browser tab on a phone: nudge once toward Add to Home Screen */
+  const iosB = /iPhone|iPad|iPod/.test(navigator.userAgent), andB = /Android/.test(navigator.userAgent);
+  if(!S.a2hsOff && !isStandalone() && (iosB || andB)){
+    h += `<div class="card" style="display:flex;align-items:center;gap:10px">
+      <span style="flex:1;font-size:13px;line-height:1.45"><b>${t('a2hsTitle')}</b><br>
+        <span style="color:var(--dim)">${iosB?t('a2hsIos'):t('a2hsAnd')}</span></span>
+      <button class="minibtn" style="width:32px;min-height:32px;font-size:12px" onclick="S.a2hsOff=1; save(); render()">✕</button>
+    </div>`;
+  }
   if(needBackupReminder()){
     h += `<div class="card" style="display:flex;align-items:center;gap:10px">
       <span style="flex:1;font-size:13px;font-weight:600;color:var(--orange)">${t('bakRemind')}</span>
@@ -721,8 +787,15 @@ function htmlHome(){
       <button class="minibtn" style="width:32px;min-height:32px;font-size:12px" onclick="S.bakSnooze=Date.now(); save(); render()">✕</button>
     </div>`;
   }
+  /* weekday-planned templates turn the first stat into "done/planned this calendar week" */
+  const wdToday = ((new Date().getDay()+6)%7)+1; /* Mon=1..Sun=7 */
+  const pinnedF = S.folders.filter(f=>f.pinned);
+  const homeF = pinnedF.length ? pinnedF : S.folders;
+  const wdTarget = S.templates.filter(x=>x.wd && homeF.some(f=>f.id===x.folderId)).length;
+  const monday = new Date(); monday.setHours(0,0,0,0); monday.setDate(monday.getDate()-(wdToday-1));
+  const wkDone = S.history.filter(w=>!w.arch && new Date(w.date)>=monday).length;
   h += `<div class="statrow">
-      <div class="stat" style="cursor:pointer" onclick="go('history')"><div class="v">${weekCount()}</div><div class="l">${t('statWeek')}</div></div>
+      <div class="stat" style="cursor:pointer" onclick="go('history')"><div class="v">${wdTarget?wkDone+'/'+wdTarget:weekCount()}</div><div class="l">${wdTarget?t('statWeekOf'):t('statWeek')}</div></div>
       <div class="stat" style="cursor:pointer" onclick="go('history')"><div class="v">${S.history.length}</div><div class="l">${t('statTotal')}</div></div>
       <div class="stat" style="cursor:pointer" onclick="openBwModal()">
         <div class="v">${S.weights.length?wu(S.weights[0].kg):'—'}</div><div class="l">${t('bw').toLowerCase()}, ${unitL()}</div></div>
@@ -749,6 +822,18 @@ function htmlHome(){
     h += `<div class="dlcard" onclick="endDeload()">
       <span class="dlttl">${t('dlActiveBanner')}</span>
       <span class="dlsub">${t('dlLeft',{n:dlRemaining(dl).length})} · ${t('dlSub')}</span></div>`;
+  }else if(S.dlEvery>0 && Date.now()>S.dlSnooze){
+    /* calendar reminder: N weeks since the last deload (or since training started) */
+    const anchor = dlLastStart() || (S.history.length ? new Date(S.history[S.history.length-1].date).getTime() : 0);
+    const wks = anchor ? Math.floor((Date.now()-anchor)/(7*864e5)) : 0;
+    if(wks >= S.dlEvery){
+      h += `<div class="dlcard" style="flex-direction:row;align-items:center;gap:10px" onclick="startDeload()">
+        <span style="flex:1;display:flex;flex-direction:column;gap:2px">
+          <span class="dlttl">${t('dlRemindTitle')}</span>
+          <span class="dlsub">${t('dlRemindSub',{n:wks})}</span></span>
+        <button class="minibtn" style="width:32px;min-height:32px;font-size:12px;background:none;color:var(--orange)"
+          onclick="event.stopPropagation();S.dlSnooze=Date.now()+7*864e5; save(); render()">✕</button></div>`;
+    }
   }
   /* home shows only PINNED splits as a grid of split cards; fall back to all when none pinned */
   const pinned = S.folders.filter(f=>f.pinned);
@@ -761,13 +846,16 @@ function htmlHome(){
   const cards = showFolders.map(f=>{
     const tpls = S.templates.filter(x=>x.folderId===f.id);
     if(!tpls.length) return '';
-    /* suggest the workout AFTER the most recently done one in this split (cyclic) */
+    /* a workout assigned to TODAY's weekday wins; otherwise suggest the one
+       AFTER the most recently done in this split (cyclic) */
+    const todayTpl = tpls.find(x=>x.wd===wdToday);
     let nextId = tpls[0].id;
     for(const hw of S.history){
       if(hw.arch) continue;
       const idx = tpls.findIndex(x=>x.id===hw.tplId);
       if(idx>=0){ nextId = tpls[(idx+1)%tpls.length].id; break; }
     }
+    if(todayTpl) nextId = todayTpl.id;
     const cycles = Math.min(...tpls.map(d=>counts[d.id]||0));
     const rows = tpls.map(d=>{
       const dlDue = dl && dl.tpls.includes(d.id) && !dl.done.includes(d.id);
@@ -775,7 +863,8 @@ function htmlHome(){
       <span class="spn">${esc(d.name)}</span>
       ${dlDue?`<span class="dldot" title="${t('dlBadge')}"></span>`:''}
       ${counts[d.id]?`<span class="spcnt">${counts[d.id]}</span>`:''}
-      ${d.id===nextId?`<span class="nextchip">${t('nextBadge')}</span>`:''}</button>`;
+      ${d.wd?`<span class="spwd">${t('wd'+d.wd)}</span>`:''}
+      ${d.id===nextId?`<span class="nextchip">${todayTpl?t('todayBadge'):t('nextBadge')}</span>`:''}</button>`;
     }).join('');
     return `<div class="splitcard">
       <div class="sphead" onclick="openSplit('${f.id}')"><span class="sphn">${esc(f.name)} ›</span>
@@ -849,6 +938,7 @@ function dlW(kg){
   if(kg<=0) return kg;
   const d = dlActive();
   let p = (d && d.pct) || DL_FACTOR;
+  if(p>=1) return kg; /* "same weight, fewer sets" deload - loads untouched, no rounding drift */
   if(kg < DL_LIGHT_KG) p = Math.max(p, DL_LIGHT_FLOOR); /* light/isolation: gentle trim only */
   const step = S.unit==='lb' ? 5/LB_PER_KG : 2.5;
   return Math.max(step, Math.round(kg*p/step)*step);
@@ -870,10 +960,11 @@ function renderDlm(){
   const el = $('#dlm-body');
   if(!el) return;
   const o = V.dlm;
-  const pctChip = p => `<button class="chip ${o.pct===p?'on':''}" onclick="V.dlm.pct=${p}; renderDlm()">${Math.round(p*100)} %</button>`;
+  /* 100 % = "same weight, half the sets" - picking it flips volume to half automatically */
+  const pctChip = p => `<button class="chip ${o.pct===p?'on':''}" onclick="V.dlm.pct=${p};${p===1?' V.dlm.vol=0.5;':''} renderDlm()">${Math.round(p*100)} %</button>`;
   el.innerHTML = `
     <h2 class="sec" style="margin-top:0">${t('dlmW')}</h2>
-    <div class="chips" style="padding-bottom:4px">${[0.5,0.6,0.7,0.9].map(pctChip).join('')}</div>
+    <div class="chips" style="padding-bottom:4px">${[0.5,0.6,0.7,0.9,1].map(pctChip).join('')}</div>
     <div style="color:var(--dim);font-size:12px;line-height:1.45;margin:0 4px 6px">${t('dlmWHint')}</div>
     <h2 class="sec">${t('dlmSets')}</h2>
     <div class="chips" style="padding-bottom:4px">
@@ -881,6 +972,12 @@ function renderDlm(){
       <button class="chip ${o.vol===0.5?'on':''}" onclick="V.dlm.vol=0.5; renderDlm()">${t('dlmSetsHalf')}</button>
     </div>
     <div style="color:var(--dim);font-size:12px;line-height:1.45;margin:0 4px 6px">${t('dlmSetsHint')}</div>
+    <h2 class="sec">${t('dlmRemind')}</h2>
+    <div class="chips" style="padding-bottom:4px">
+      <button class="chip ${!S.dlEvery?'on':''}" onclick="S.dlEvery=0; save(); renderDlm()">—</button>
+      ${[6,7,8].map(w=>`<button class="chip ${S.dlEvery===w?'on':''}" onclick="S.dlEvery=${w}; save(); renderDlm()">${w} ${t('wkS')}</button>`).join('')}
+    </div>
+    <div style="color:var(--dim);font-size:12px;line-height:1.45;margin:0 4px 6px">${t('dlmRemindHint')}</div>
     <div style="color:var(--ghost);font-size:12px;line-height:1.45;margin:12px 4px 0">${t('dlmLight',{n:S.unit==='lb'?'45 lb':'20 kg'})}</div>`;
 }
 function confirmDeload(){
@@ -938,7 +1035,7 @@ function ghostW(ex, g){
   return d ? Math.max(0, g.weight + d) : g.weight;
 }
 function newSet(extra){ return Object.assign({ w:'', r:'', warm:false, drop:false, fail:false, done:false, cls:'' }, extra||{}); }
-function buildActiveEx(k, name, sets, reps, ss, tplId, alts, pnote, rt, x2, teId, base){
+function buildActiveEx(k, name, sets, reps, ss, tplId, alts, pnote, rt, x2, teId, base, dp){
   const last = lastForExercise(k, name, tplId);
   const ex = { id:uid(), k, name, targetSets:sets, targetReps:reps, note:'', ss:!!ss, last,
     baseK:k, alts:(alts||[]).slice(), stash:{}, tplId:tplId||null,
@@ -949,6 +1046,7 @@ function buildActiveEx(k, name, sets, reps, ss, tplId, alts, pnote, rt, x2, teId
   if(teId) ex.teId = teId; /* which template slot this card belongs to - survives duplicate keys */
   const rb = resolveBase(k, base); /* machine starting weight, kg - per machine, not per slot */
   if(rb>0) ex.base = Math.min(500, rb);
+  if(typeof dp==='number' && dp>0) ex.dp = Math.min(10, dp); /* double-progression step, kg */
   if(isBwEx(k)){
     /* body weight prefilled from the latest log (or last session), kept separate from the logged load */
     ex.bw = latestBw() != null ? latestBw() : (last && last.bw != null ? last.bw : null);
@@ -1128,7 +1226,7 @@ function startWorkout(tplId){
   const dls = n => Math.max(1, Math.ceil(n*dlv));
   S.active = {
     tplId: tpl.id, name: tpl.name, startedAt: new Date().toISOString(), rest:null,
-    exercises: tpl.ex.map(e => buildActiveEx(e.k, exName(e.k,e.n), dls(e.s), e.r, e.ss, tpl.id, e.alts, e.pnote, e.rt, e.x2, e.id, e.base))
+    exercises: tpl.ex.map(e => buildActiveEx(e.k, exName(e.k,e.n), dls(e.s), e.r, e.ss, tpl.id, e.alts, e.pnote, e.rt, e.x2, e.id, e.base, e.dp))
   };
   /* one-shot ghosts: extra exercises logged LAST session of this template that are
      not part of it - shown faded at the bottom; ignored once, they vanish (they
@@ -1187,6 +1285,33 @@ function ghostFor(ex, si){
   if(!prevWork.length) return null;
   let wi = 0; for(let i=0;i<si;i++) if(!ex.sets[i].warm && !ex.sets[i].drop) wi++;
   return prevWork[wi] || null;
+}
+/* ===== double progression (opt-in per exercise): when LAST session's working
+   sets all reached the top of the rep range, offer +step on today's weights ===== */
+function dpDue(ex){
+  if(!ex.dp || isTimeEx(ex.k)) return false;
+  if(dlForTpl(S.active && S.active.tplId)) return false;   /* not on a deload pass */
+  if(ex.sets.some(s=>s.done || s.w)) return false;         /* already lifting / typed */
+  if(!ex.last || !ex.last.sameTpl) return false;           /* borrowed values don't count */
+  const p = repsParse(ex.targetReps);
+  const top = p.range ? p.hi : p.lo;
+  const work = ex.last.sets.filter(s=>!s.warm && !s.drop);
+  return work.length > 0 && work.every(s=>s.reps >= top);
+}
+/* fill every empty working-set weight with its previous load + the step */
+function applyDp(xi){
+  const ex = S.active.exercises[xi];
+  if(!ex || !ex.dp) return;
+  let carry = null; /* sets beyond last session's count reuse the previous suggestion */
+  ex.sets.forEach((s,si)=>{
+    if(s.done || s.warm || s.drop || s.w) return;
+    const g = ghostFor(ex,si);
+    const w = g ? ghostW(ex,g) + ex.dp : carry;
+    if(w==null) return;
+    carry = w;
+    s.w = fmtW(kg2u(w));
+  });
+  save(); render();
 }
 /* comparison target = same working set of the previous session */
 function realPrev(ex, si){
@@ -1295,6 +1420,7 @@ function htmlWorkout(){
       <div class="exhead">
         <div class="exname" onclick="openExDetailByKey('${esc(ex.k)}')">${esc(ex.name)}</div>
         ${statusBadge}
+        ${dpDue(ex)?`<button class="dpchip" onclick="applyDp(${xi})" title="${t('dpChipHint')}">+${fmtW(kg2u(ex.dp))}</button>`:''}
         <div class="extarget" onclick="openTargetEdit(${xi})">${ex.targetSets}×${ex.targetReps}${tm?'s':''}</div>
         ${ex.adhoc?`<button class="minibtn pinex" onclick="pinToTpl(${xi})" aria-label="${t('pinExLabel')}">${ACT_ICONS.pin}</button>`:''}
         ${(tm||bw)?'':`<button class="minibtn warm${ex.sets.some(s=>s.warm&&!s.done)?' on':''}" onclick="autoWarmup(${xi})" aria-label="${t('warmBtn')}">W</button>`}
@@ -1394,8 +1520,26 @@ function renderTargetEdit(){
       ${repsCtl}
       <button class="rangetog ${p.range?'acc':''}" onclick="wtRangeTog(${xi})">${t('repsRangeTog')}</button>
     </div>
+    ${tm?'':`<div class="ctlrow">
+      <span class="clbl">${t('dpLabel')}</span>
+      ${dpSteps().map(v=>`<button class="rangetog ${Math.abs((ex.dp||0)-v)<.01?'acc':''}" onclick="wtDp(${xi},${v})">+${fmtW(kg2u(v))}</button>`).join('')}
+      <button class="rangetog ${ex.dp?'':'acc'}" onclick="wtDp(${xi},0)">—</button>
+    </div>
+    <div style="font-size:12px;color:var(--ghost);line-height:1.5;margin-top:8px">${t('dpHint')}</div>`}
     ${persists?`<div style="font-size:12px;color:var(--ghost);margin-top:12px">${t('tgtHint')}</div>`:''}
     <button class="btn primary" style="margin-top:14px" onclick="closeModal()">${ACT_ICONS.check} ${t('saveDone')}</button>`);
+}
+/* progression step options in the display unit (stored in kg) */
+function dpSteps(){
+  return S.unit==='lb' ? [2.5/LB_PER_KG, 5/LB_PER_KG] : [1.25, 2.5, 5];
+}
+function wtDp(xi, v){
+  const ex = S.active && S.active.exercises[xi];
+  if(!ex) return;
+  if(v>0) ex.dp = Math.round(v*1000)/1000; else delete ex.dp;
+  const te = tplEntryFor(ex);
+  if(te && !ex.adhoc){ if(ex.dp) te.dp = ex.dp; else delete te.dp; }
+  save(); render(); renderTargetEdit();
 }
 function wtSets(xi,d){
   const ex = S.active.exercises[xi];
@@ -1463,7 +1607,7 @@ function pinToTpl(xi){
      alternatives) on purpose is a valid plan, e.g. a second bench slot */
   const te = { id:uid(), k:ex.k,
     s:Math.max(1, Math.min(12, ex.sets.filter(s=>!s.warm && !s.drop).length || 3)),
-    r:String(ex.targetReps||'10'), ...(isX2(ex)?{x2:true}:{}), ...(ex.base>0?{base:ex.base}:{}) };
+    r:String(ex.targetReps||'10'), ...(isX2(ex)?{x2:true}:{}), ...(ex.base>0?{base:ex.base}:{}), ...(ex.dp?{dp:ex.dp}:{}) };
   tpl.ex.push(te);
   ex.adhoc = false;
   ex.teId = te.id;
@@ -2125,7 +2269,7 @@ function shareFolder(id){
   if(!f) return;
   const tpls = S.templates.filter(x=>x.folderId===id);
   const payload = { t:'folder', name:f.name,
-    tpls: tpls.map(d=>({ name:d.name, ex:d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}), ...(e.x2?{x2:1}:{}), ...(e.base?{base:e.base}:{}) })) })) };
+    tpls: tpls.map(d=>({ name:d.name, ex:d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}), ...(e.x2?{x2:1}:{}), ...(e.base?{base:e.base}:{}), ...(e.dp?{dp:e.dp}:{}) })) })) };
   const code = encodeShare(payload);
   openModal(`<h3>${t('folderShare')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div style="color:var(--dim);font-size:14px;margin:0 4px 10px">${t('folderShareHint')}</div>
@@ -2162,6 +2306,12 @@ function htmlTplEdit(){
       <input class="nameinput" type="text" value="${esc(d.name)}" oninput="renameTpl('${d.id}',this.value)">
       <div class="ct" style="color:var(--dim);font-size:13px;margin:12px 0 6px">${t('tplFolder')}</div>
       <select class="nameinput" style="width:100%" onchange="setTplFolder('${d.id}',this.value)">${folderOpts}</select>
+      <div class="ct" style="color:var(--dim);font-size:13px;margin:12px 0 6px">${t('wdLabel')}</div>
+      <div class="chips" style="padding-bottom:0">
+        <button class="chip ${!d.wd?'on':''}" onclick="setTplWd('${d.id}',0)">—</button>
+        ${[1,2,3,4,5,6,7].map(w=>`<button class="chip ${d.wd===w?'on':''}" onclick="setTplWd('${d.id}',${w})">${t('wd'+w)}</button>`).join('')}
+      </div>
+      <div style="font-size:12px;color:var(--ghost);line-height:1.5;margin-top:8px">${t('wdHint')}</div>
     </div>
     <div class="card">`;
   h += d.ex.map((e,i)=>{
@@ -2208,6 +2358,11 @@ function htmlTplEdit(){
         </div>
         ${e.rt?'':`<span class="resthint">${t('tplRestOff')}</span>`}
       </div>
+      ${tm?'':`<div class="ctlrow">
+        <span class="clbl">${t('dpLabel')}</span>
+        ${dpSteps().map(v=>`<button class="rangetog ${Math.abs((e.dp||0)-v)<.01?'acc':''}" onclick="setTplDp('${d.id}',${i},${v})">+${fmtW(kg2u(v))}</button>`).join('')}
+        <button class="rangetog ${e.dp?'':'acc'}" onclick="setTplDp('${d.id}',${i},0)">—</button>
+      </div>`}
       <div class="altsrow">
         <span class="clbl">${t('altLabel')}</span>
         ${(e.alts||[]).map((ak,ai)=>`<span class="altchip">${esc(exName(ak))}<button onclick="delTplAlt('${d.id}',${i},${ai})" aria-label="remove">${ACT_ICONS.x}</button></span>`).join('')}
@@ -2243,7 +2398,7 @@ function dupTpl(id){
   const d = S.templates.find(x=>x.id===id);
   if(!d) return;
   const copy = { id:uid(), name:(d.name+' '+t('tplDupSuffix')).slice(0,60), folderId:d.folderId,
-    ex: d.ex.map(e=>({ id:uid(), k:e.k, s:e.s, r:e.r, ss:!!e.ss, alts:(e.alts||[]).slice(), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}), ...(e.x2?{x2:true}:{}), ...(e.base?{base:e.base}:{}) })) };
+    ex: d.ex.map(e=>({ id:uid(), k:e.k, s:e.s, r:e.r, ss:!!e.ss, alts:(e.alts||[]).slice(), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}), ...(e.x2?{x2:true}:{}), ...(e.base?{base:e.base}:{}), ...(e.dp?{dp:e.dp}:{}) })) };
   S.templates.splice(S.templates.indexOf(d)+1, 0, copy);
   save();
   openTpl(copy.id);
@@ -2259,6 +2414,20 @@ function setTplFolder(id,fid){
   if(!d) return;
   d.folderId = fid || null;
   save();
+}
+/* fixed weekday for this workout (0 = none) - drives the TODAY badge on home */
+function setTplWd(id,wd){
+  const d = S.templates.find(x=>x.id===id);
+  if(!d) return;
+  if(wd>=1 && wd<=7) d.wd = wd; else delete d.wd;
+  save(); render();
+}
+/* per-exercise double-progression step on the template (0 = off) */
+function setTplDp(id,i,v){
+  const d = S.templates.find(x=>x.id===id);
+  if(!d || !d.ex[i]) return;
+  if(v>0) d.ex[i].dp = Math.round(v*1000)/1000; else delete d.ex[i].dp;
+  save(); render();
 }
 function moveTplEx(id,i,dir){
   const d = S.templates.find(x=>x.id===id);
@@ -3043,13 +3212,27 @@ function trackedHtml(){
       `<span class="tkdelta ${delta>0?'up':'down'}">${delta>0?'▲':'▼'} ${tm?Math.abs(delta)+' s':wu(Math.abs(delta),true)} · ${t('trackDelta30')}</span>`;
     const tr = trendFor(k);
     const trHtml = tr ? `<span class="tktrend ${tr}" title="${t('trend_'+tr)}">${tr==='up'?'↗':tr==='down'?'↘':'→'}</span>` : '';
+    /* goal line: target e1RM vs the all-time best e1RM */
+    const goal = (S.goals||{})[k];
+    let goalHtml = '';
+    if(goal>0 && !tm){
+      const cur = exStats(k, name).e1rm;
+      const pct = Math.min(100, Math.round(cur/goal*100));
+      const done = cur >= goal;
+      goalHtml = `<div class="goalrow">
+        <span class="goalbar"><i style="width:${pct}%${done?';background:var(--green)':''}"></i></span>
+        <span class="goaltxt${done?' done':''}">${wu(Math.round(cur*10)/10)} / ${wu(goal,true)} · ${done?t('goalReached'):t('goalLeft',{n:wu(Math.round((goal-cur)*10)/10)})}</span>
+      </div>`;
+    }
     return `<div class="card trackcard" onclick="openExDetailByKey('${k}')">
       <div class="tkhead"><span class="tkname">${esc(name)}</span>${trHtml}
+        ${tm?'':`<button class="iconbtn2 ${goal>0?'on':''}" onclick="event.stopPropagation();openGoalEdit('${k}')" aria-label="${t('goalTitle')}">${ACT_ICONS.star}</button>`}
         <button class="iconbtn2" onclick="event.stopPropagation();trackRemove('${k}')" aria-label="stop tracking">${ACT_ICONS.x}</button></div>
       <div class="tkrow">
         <div class="tkleft"><div class="tkval">${last?fmtVal(last.v):'—'}</div>${dHtml}</div>
         ${sparkSVG(pts.slice(-16).map(p=>p.v))}
       </div>
+      ${goalHtml}
     </div>`;
   }).join('');
   h += `<button class="btn ghostbtn" onclick="trackAdd()">${t('trackAdd')}</button>`;
@@ -3065,6 +3248,27 @@ function trackAdd(){
 function trackRemove(k){
   S.trackedLifts = S.trackedLifts.filter(x=>x!==k);
   save(); render();
+}
+/* target e1RM for a tracked lift (kg stored, edited in the display unit) */
+function openGoalEdit(k){
+  const goal = (S.goals||{})[k];
+  openModal(`<h3>${esc(exName(k))}<button class="x" onclick="closeModal()">✕</button></h3>
+    <div class="pvsub" style="margin-bottom:12px">${t('goalTitle')} (e1RM)</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <input id="goal-in" type="text" inputmode="decimal" class="nameinput" style="flex:1;text-align:center;font-weight:700;font-size:18px"
+        value="${goal?esc(fmtW(kg2u(goal))):''}" placeholder="0" onfocus="this.select()">
+      <span style="font-weight:700;color:var(--dim)">${unitL()}</span>
+    </div>
+    <div style="font-size:12px;color:var(--ghost);line-height:1.5;margin-top:12px">${t('goalHint')}</div>
+    <button class="btn primary" style="margin-top:14px" onclick="saveGoal('${k}')">${ACT_ICONS.check} ${t('saveDone')}</button>`);
+  setTimeout(()=>{ const i=$('#goal-in'); if(i) i.focus(); }, 60);
+}
+function saveGoal(k){
+  const v = parseNum(($('#goal-in')||{}).value);
+  const kg = (!isNaN(v) && v>0) ? Math.min(1000, Math.round(u2kg(v)*10)/10) : 0;
+  if(!S.goals) S.goals = {};
+  if(kg) S.goals[k] = kg; else delete S.goals[k];
+  save(); closeModal(); render(); scheduleCloudSync();
 }
 
 /* ---- PR feed: rep-specific records ("the record at those reps") ---- */
@@ -3166,20 +3370,36 @@ function htmlHistory(){
     </div>
     <h2 class="sec">${t('tabHistory')}</h2>`;
   if(!S.history.length) return h + `<div class="empty">${t('histEmpty')}</div>`;
-  const act = S.history.filter(w=>!w.arch);
-  const arch = S.history.filter(w=>w.arch);
+  h += `<div class="searchbox">${TAB_ICONS.exercises}
+      <input id="hist-q" type="text" value="${esc(V.histQ||'')}" placeholder="${t('histSearch')}"
+        oninput="V.histQ=this.value; renderHistList()">
+    </div>
+    <div id="histlist">${histListSection()}</div>`;
+  return h;
+}
+/* the filterable part of the History list - re-rendered alone while typing */
+function histMatches(w, q){
+  return w.name.toLowerCase().includes(q) || w.exercises.some(e=>(e.name||'').toLowerCase().includes(q));
+}
+function histListSection(){
+  const q = (V.histQ||'').trim().toLowerCase();
+  const act = S.history.filter(w=>!w.arch && (!q || histMatches(w,q)));
+  const arch = S.history.filter(w=>w.arch && (!q || histMatches(w,q)));
   const lim = V.histLimit||20;
-  h += histListHtml(act, lim) || `<div class="empty">—</div>`;
+  if(!act.length && !arch.length) return `<div class="empty">${t('histNoMatch')}</div>`;
+  /* deload dividers only make sense on the full timeline - plain rows when filtered */
+  let h = q ? act.slice(0,lim).map(histRowHtml).join('') : histListHtml(act, lim);
   if(act.length>lim){
-    h += `<button class="btn ghostbtn" onclick="V.histLimit=(V.histLimit||20)+30; render()">${t('histMore')} (${act.length-lim})</button>`;
+    h += `<button class="btn ghostbtn" onclick="V.histLimit=(V.histLimit||20)+30; renderHistList()">${t('histMore')} (${act.length-lim})</button>`;
   }
   if(arch.length){
-    h += `<h2 class="sec" style="cursor:pointer" onclick="V.showArch=!V.showArch; render()">
+    h += `<h2 class="sec" style="cursor:pointer" onclick="V.showArch=!V.showArch; renderHistList()">
             ${V.showArch?'▾':'▸'} ${t('archTitle')} (${arch.length})</h2>`;
     if(V.showArch) h += arch.slice(0,lim).map(histRowHtml).join('');
   }
   return h;
 }
+function renderHistList(){ const el = $('#histlist'); if(el) el.innerHTML = histListSection(); }
 /* history list with deload dividers woven in: each divider marks a deload period
    and says how many workouts the training cycle below it had */
 function histListHtml(act, lim){
@@ -3501,6 +3721,7 @@ function htmlSettings(){
     </div>
     <div class="setctl">
       <button onclick="S.ghDirty=1; save(); cloudSync()">${t('ghNow')}</button>
+      <button onclick="ghRestore()">${t('ghRestore')}</button>
       <button onclick="ghDisconnect()">${t('ghOff')}</button>
     </div>` : `
     <input class="nameinput" id="gh-repo" type="text" placeholder="${t('ghRepoPh')}" autocapitalize="none" autocorrect="off" style="margin-bottom:8px">
@@ -3570,7 +3791,7 @@ function shareTpl(id){
   const d = S.templates.find(x=>x.id===id);
   if(!d) return;
   const payload = { t:'tpl', name:d.name,
-    ex: d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}), ...(e.x2?{x2:1}:{}), ...(e.base?{base:e.base}:{}) })) };
+    ex: d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}), ...(e.x2?{x2:1}:{}), ...(e.base?{base:e.base}:{}), ...(e.dp?{dp:e.dp}:{}) })) };
   const code = encodeShare(payload);
   openModal(`<h3>${t('tplShare')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div style="color:var(--dim);font-size:14px;margin:0 4px 10px">${t('tplShareHint')}</div>
@@ -3583,7 +3804,8 @@ function bakPayload(){
   return { t:'bak', s:{ lang:S.lang, unit:S.unit, theme:S.theme, keepAwake:S.keepAwake, plates:S.plates,
     restTarget:S.restTarget, restSound:S.restSound,
     folders:S.folders, customEx:S.customEx, templates:S.templates, history:S.history, weights:S.weights,
-    trackedLifts:S.trackedLifts, deloads:S.deloads, mainFolder:S.mainFolder, mbase:S.mbase } };
+    trackedLifts:S.trackedLifts, deloads:S.deloads, mainFolder:S.mainFolder, mbase:S.mbase,
+    goals:S.goals, dlEvery:S.dlEvery } };
 }
 function copyBackup(){
   S.lastBackup = Date.now();
@@ -3683,10 +3905,34 @@ function importTplPayload(d, folderId){
     const alts = Array.isArray(e.alts) ? e.alts.filter(a=>exInfo(a) && a!==k) : [];
     const rt = (typeof e.rt==='number' && e.rt>=15 && e.rt<=1800) ? Math.round(e.rt/15)*15 : 0;
     const base = (typeof e.base==='number' && e.base>0 && e.base<=500) ? Math.round(e.base*10)/10 : 0;
-    tpl.ex.push({ id:uid(), k, s:Math.max(1,Math.min(12,e.s|0||3)), r:normReps(e.r, isTimeEx(k)?600:50), ss:!!e.ss, alts, pnote:String(e.pnote||'').slice(0,200), ...(rt?{rt}:{}), ...(e.x2?{x2:true}:{}), ...(base?{base}:{}) });
+    const dp = (typeof e.dp==='number' && e.dp>0 && e.dp<=10) ? Math.round(e.dp*1000)/1000 : 0;
+    tpl.ex.push({ id:uid(), k, s:Math.max(1,Math.min(12,e.s|0||3)), r:normReps(e.r, isTimeEx(k)?600:50), ss:!!e.ss, alts, pnote:String(e.pnote||'').slice(0,200), ...(rt?{rt}:{}), ...(e.x2?{x2:true}:{}), ...(base?{base}:{}), ...(dp?{dp}:{}) });
   }
   S.templates.push(tpl);
   return tpl;
+}
+/* replace all data from a bak payload (backup code or cloud backup.json);
+   this device's cloud-sync setup survives - backup payloads never carry it */
+function applyBak(d){
+  if(!Array.isArray(d.s.folders)){ /* backup from pre-split version */
+    const fid = uid();
+    d.s.folders = [{ id:fid, name:'Upper / Lower', open:true }];
+    d.s.templates.forEach(tp=>{ if(!tp.folderId) tp.folderId=fid; });
+  }
+  d.s.folders.forEach(f=>{ if(typeof f.pinned==='undefined') f.pinned=true; });
+  if(!Array.isArray(d.s.trackedLifts)) delete d.s.trackedLifts; /* keep the [] default */
+  if(!Array.isArray(d.s.deloads)) delete d.s.deloads;
+  if(!d.s.mbase || typeof d.s.mbase!=='object' || Array.isArray(d.s.mbase)) delete d.s.mbase;
+  if(!d.s.goals || typeof d.s.goals!=='object' || Array.isArray(d.s.goals)) delete d.s.goals;
+  if(typeof d.s.dlEvery!=='number') delete d.s.dlEvery;
+  if(typeof d.s.mainFolder!=='string') delete d.s.mainFolder;
+  if(typeof d.s.restTarget!=='number' || !(d.s.restTarget>=15 && d.s.restTarget<=1800)) delete d.s.restTarget;
+  if(typeof d.s.restSound!=='boolean') delete d.s.restSound;
+  const gh = { ghRepo:S.ghRepo, ghToken:S.ghToken, ghLast:S.ghLast, ghDirty:S.ghDirty };
+  S = Object.assign(defaultState(), d.s, { active:null, onboarded:1 }, gh);
+  save(); scheduleCloudSync(); applyTheme(); closeModal();
+  go('home');
+  toast(t('bakDone'));
 }
 function doImport(){
   const code = $('#import-code').value;
@@ -3706,24 +3952,7 @@ function doImport(){
     toast(t('folderImported',{n:f.name}));
   }else if(d.t==='bak' && d.s && Array.isArray(d.s.templates)){
     if(!confirm(t('bakConfirm'))) return;
-    if(!Array.isArray(d.s.folders)){ /* backup from pre-split version */
-      const fid = uid();
-      d.s.folders = [{ id:fid, name:'Upper / Lower', open:true }];
-      d.s.templates.forEach(tp=>{ if(!tp.folderId) tp.folderId=fid; });
-    }
-    d.s.folders.forEach(f=>{ if(typeof f.pinned==='undefined') f.pinned=true; });
-    if(!Array.isArray(d.s.trackedLifts)) delete d.s.trackedLifts; /* keep the [] default */
-    if(!Array.isArray(d.s.deloads)) delete d.s.deloads;
-    if(!d.s.mbase || typeof d.s.mbase!=='object' || Array.isArray(d.s.mbase)) delete d.s.mbase;
-    if(typeof d.s.mainFolder!=='string') delete d.s.mainFolder;
-    if(typeof d.s.restTarget!=='number' || !(d.s.restTarget>=15 && d.s.restTarget<=1800)) delete d.s.restTarget;
-    if(typeof d.s.restSound!=='boolean') delete d.s.restSound;
-    /* keep this device's cloud-sync setup - backup codes never carry it */
-    const gh = { ghRepo:S.ghRepo, ghToken:S.ghToken, ghLast:S.ghLast, ghDirty:S.ghDirty };
-    S = Object.assign(defaultState(), d.s, { active:null }, gh);
-    save(); scheduleCloudSync(); applyTheme(); closeModal();
-    go('home');
-    toast(t('bakDone'));
+    applyBak(d);
   }else{
     toast(t('codeBad'));
   }
@@ -3790,6 +4019,19 @@ async function ghConnect(){
     if(btn) btn.disabled = false;
     toast(t('ghBad'));
   }
+}
+/* new phone / reinstall: pull the latest cloud backup and restore it in one tap */
+async function ghRestore(){
+  if(!ghOn()) return;
+  if(!confirm(t('ghRestoreConfirm'))) return;
+  try{
+    const r = await fetch('https://api.github.com/repos/'+S.ghRepo+'/contents/'+GH_FILE,
+      { headers:{ 'Authorization':'Bearer '+S.ghToken, 'Accept':'application/vnd.github.raw+json' } });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const d = await r.json();
+    if(!d || d.t!=='bak' || !d.s || !Array.isArray(d.s.templates)) throw new Error('bad payload');
+    applyBak(d);
+  }catch(e){ toast(t('ghRestoreFail')); }
 }
 function ghDisconnect(){
   if(!confirm(t('ghOffConfirm'))) return;
@@ -3885,6 +4127,8 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   if(S.active) V.screen = 'workout';
   render();
   stepperInit();
+  /* first launch ever: a three-card tour, shown exactly once */
+  if(!S.onboarded && !S.history.length && !S.active) openOnboarding();
   /* subtle divider under the sticky header once the page is scrolled */
   const onScroll = ()=>{ const tb=$('#topbar'); if(tb) tb.classList.toggle('scrolled', window.scrollY>4); };
   window.addEventListener('scroll', onScroll, {passive:true});
@@ -3914,6 +4158,24 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     });
   }
 });
+
+/* ===== first-launch intro: three short cards, never shown again ===== */
+function openOnboarding(){
+  S.onboarded = 1; save(); /* even a backdrop dismiss counts as seen */
+  V.ob = 0;
+  renderOb();
+}
+function renderOb(){
+  const steps = [['ob1T','ob1B'],['ob2T','ob2B'],['ob3T','ob3B']];
+  const i = V.ob||0;
+  const [tt, bb] = steps[i];
+  const dots = steps.map((_,j)=>`<span class="obdot${j===i?' on':''}"></span>`).join('');
+  const lastStep = i === steps.length-1;
+  openModal(`<h3>${t(tt)}<button class="x" onclick="closeModal()">✕</button></h3>
+    <div style="font-size:15px;line-height:1.6;color:var(--text);margin:0 2px 18px">${t(bb)}</div>
+    <div style="display:flex;justify-content:center;gap:6px;margin-bottom:16px">${dots}</div>
+    <button class="btn primary" onclick="${lastStep?'closeModal()':'V.ob++; renderOb()'}">${lastStep?t('obDone'):t('obNext')}</button>`);
+}
 
 /* screens with async bits need a follow-up after each full render */
 const _origRender = render;

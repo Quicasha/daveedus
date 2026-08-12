@@ -35,6 +35,7 @@ const EX_DB = [
   { id:'single-arm-cable-row',   n:'Single-Arm Cable Row',        g:'back', e:'cable' },
   { id:'lat-pulldown',           n:'Lat Pulldown',                g:'back', e:'cable' },
   { id:'close-grip-lat-pulldown',n:'Close-Grip Lat Pulldown',     g:'back', e:'cable' },
+  { id:'neutral-grip-lat-pulldown',n:'Neutral-Grip Lat Pulldown', g:'back', e:'cable' },
   { id:'wide-grip-lat-pulldown', n:'Wide-Grip Lat Pulldown',      g:'back', e:'cable' },
   { id:'straight-arm-pulldown',  n:'Straight-Arm Pulldown',       g:'back', e:'cable' },
   { id:'pull-up',                n:'Pull-Up',                     g:'back', e:'bodyweight' },

@@ -16,22 +16,25 @@ Takes half a minute. After that it runs full-screen and works fully offline.
 ## What you get
 
 - **Programs** - build your split (e.g. Upper / Lower), pin what you're running, the home screen shows which workout is next
+- **Weekly schedule** - assign workouts to fixed weekdays; the home screen marks TODAY and counts your week. A missed day is simply skipped, nothing shifts
 - **Fast logging** - last session's numbers sit right next to the inputs; check a set off and the rest clock starts. Green or red tells you if you beat last time
-- **Set types** - warm-ups, failure sets, drop sets, supersets
+- **Progression hints** - opt-in per exercise: when every working set hits the top of the rep range, next session offers the weight bump (+1.25 / +2.5 / +5) with one tap
+- **Set types** - warm-ups, failure sets, drop sets (opt-in per exercise), supersets
 - **Alternatives** - every exercise can have backups; rack taken? Swap with one tap, or pin the alternative as your new main. Each variant keeps its own history, so numbers never mix
+- **Machine base weight** - enter what the machine weighs empty once; from then on you log only the plates you add, while records count the full load. Remembered per machine
 - **Rest targets** - optional, per exercise; when time is up the bar flashes and beeps
 - **Bodyweight exercises** - pull-ups and dips log added weight separately, while records count the full load you moved
-- **Progress** - training rhythm at a glance, weekly stats, muscle balance, per-exercise charts (weight / volume / est. 1RM), rep-specific PRs, tracked lifts
-- **Deload** - one light pass over your program when you need it, kept out of your records
+- **Progress** - training rhythm at a glance, weekly stats, muscle balance, per-exercise charts (weight / volume / est. 1RM), rep-specific PRs, tracked lifts with goal targets
+- **Deload** - one light pass over your program when you need it (pick the load, down to "same weight, half the sets"), kept out of your records; an optional calendar reminder nudges you every N weeks
 - **Share codes** - send a program to a friend as a short code; they paste it and have your exact routine
 - **kg / lb, English / Lithuanian, dark / light**
 
 ## Your data
 
-Everything is stored on the device, in two places at once - if one breaks, the app restores from the other. A daily snapshot is kept as well (Settings › Data protection).
+Everything is stored on the device, in two places at once - if one breaks, the app restores from the other.
 
 - **Backup code** - copy it once in a while and keep it somewhere safe; it's the one thing that survives a lost phone
-- **Cloud sync** (optional) - every finished workout is pushed to your own private GitHub repo automatically. Your repo, your token; without it nothing ever leaves the device
+- **Cloud sync** (optional) - every finished workout is pushed to your own private GitHub repo automatically. Your repo, your token; without it nothing ever leaves the device. On a new phone, connect and tap **Restore from cloud** - everything comes back
 - **CSV export** - tidy per-set data for Excel or anything else
 
 Updates install themselves the next time you open the app.

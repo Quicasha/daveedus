@@ -150,6 +150,11 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 .exname{flex:1; font-family:var(--display); font-size:17px; font-weight:700; letter-spacing:-.01em; color:var(--text); min-width:0;}
 .extarget{color:var(--dim); font-family:var(--display); font-size:12px; font-weight:700; flex:none; background:var(--input); cursor:pointer;
   border-radius:8px; padding:4px 9px; font-variant-numeric:tabular-nums;}
+/* double-progression offer: all sets hit the range top last time - tap fills weights+step */
+.dpchip{flex:none; border:none; border-radius:8px; background:var(--accent-bg); color:var(--accent-soft);
+  font-family:var(--display); font-size:12px; font-weight:800; padding:4px 9px; cursor:pointer;
+  font-variant-numeric:tabular-nums;}
+.dpchip:active{opacity:.6;}
 .exhead .minibtn{width:34px; min-height:34px; font-size:13px; background:none; color:var(--ghost);}
 .exhead .minibtn.acc{color:var(--accent-soft);}
 .exhead .minibtn.del{color:var(--red);}
@@ -195,6 +200,9 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
   font-size:10px; font-weight:800; padding:3px 6px; font-variant-numeric:tabular-nums;}
 /* per-workout counter on split rows */
 .spcnt{flex:none; font-size:11px; font-weight:800; opacity:.5; font-variant-numeric:tabular-nums;}
+/* assigned weekday tag on split rows */
+.sprow .spwd{flex:none; font-size:10px; font-weight:800; color:var(--ghost); text-transform:uppercase; letter-spacing:.4px;}
+.sprow.next .spwd{color:var(--on-accent); opacity:.65;}
 /* orange dot: this workout's deload pass is still due */
 .dldot{flex:none; width:7px; height:7px; border-radius:50%; background:var(--orange);}
 /* main-program star on split card headers */
@@ -621,6 +629,12 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 .tkdelta.up{color:var(--green);}
 .tkdelta.down{color:var(--red);}
 svg.spark{flex:none; width:130px; height:40px;}
+/* lift goal: thin progress toward the target e1RM */
+.goalrow{display:flex; align-items:center; gap:10px; margin-top:10px;}
+.goalrow .goalbar{flex:1; height:5px; background:var(--input); border-radius:3px; overflow:hidden;}
+.goalrow .goalbar i{display:block; height:100%; background:var(--accent); border-radius:3px;}
+.goalrow .goaltxt{flex:none; font-size:11px; font-weight:700; color:var(--dim); font-variant-numeric:tabular-nums;}
+.goalrow .goaltxt.done{color:var(--green);}
 /* PR feed rows */
 .prrow{display:flex; align-items:center; gap:10px; padding:9px 0;
   border-bottom:1px solid var(--line); cursor:pointer;}
@@ -710,6 +724,10 @@ button:focus-visible, .chip:focus-visible, .switch:focus-visible{
     transition-duration:.01ms !important;}
   html{scroll-behavior:auto;}
 }
+
+/* onboarding step dots */
+.obdot{width:7px; height:7px; border-radius:50%; background:var(--input); display:inline-block;}
+.obdot.on{background:var(--accent);}
 
 /* ============ toast ============ */
 #toast{position:fixed; left:50%; transform:translateX(-50%) translateY(20px);
