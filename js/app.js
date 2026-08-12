@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.27.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.27.1'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -1237,8 +1237,12 @@ function htmlWorkout(){
     /* machine starting weight: enter it once, then log only the plates YOU add */
     const baseChip = (!bw && !tm && (equip==='machine' || equip==='cable'))
       ? ` <button class="x2chip${ex.base?' on':''}" onclick="openBaseEdit(${xi})" aria-label="${t('baseLabel')}">+${ex.base?fmtW(kg2u(ex.base)):unitL()}</button>` : '';
-    const hdr = `<div class="setgrid hdr"><div>${t('woSet')}</div><div>${t('woPrev')}</div>
-      <div>${wcol}${x2chip}${baseChip}</div><div>${tm?t('woSec'):t('woReps')}</div><div>${ACT_ICONS.check}</div><div></div></div>`;
+    /* the D column exists only while it's needed (D+ enabled or drop rows present) -
+       otherwise the grid is 5 columns and the check button sits flush at the edge */
+    const dropCol = !!ex.dropUi || ex.sets.some(s=>s.drop);
+    const gcls = dropCol ? 'setgrid' : 'setgrid nod';
+    const hdr = `<div class="${gcls} hdr"><div>${t('woSet')}</div><div>${t('woPrev')}</div>
+      <div>${wcol}${x2chip}${baseChip}</div><div>${tm?t('woSec'):t('woReps')}</div><div>${ACT_ICONS.check}</div>${dropCol?'<div></div>':''}</div>`;
     let workNum = 0;
     const approx = ex.last && !ex.last.sameTpl ? '~' : ''; /* values borrowed from another workout */
     const rows = ex.sets.map((s,si)=>{
@@ -1251,14 +1255,15 @@ function htmlWorkout(){
       const restHere = S.active.rest && S.active.rest.key===xi+'-'+si;
       /* D+ hidden by default (small target, easy to fat-finger) - the exercise menu
          turns it on per block; an existing drop row always keeps its remove button */
-      const rowBtn = s.drop
-        ? `<button class="dropbtn del" onclick="removeDrop(${xi},${si})">✕</button>`
-        : (ex.dropUi ? `<button class="dropbtn" onclick="addDrop(${xi},${si})">D+</button>` : '<div></div>');
+      const rowBtn = !dropCol ? ''
+        : s.drop ? `<button class="dropbtn del" onclick="removeDrop(${xi},${si})">✕</button>`
+        : ex.dropUi ? `<button class="dropbtn" onclick="addDrop(${xi},${si})">D+</button>`
+        : '<div></div>';
       const wph = g ? wu(dl && !s.warm ? dlW(ghostW(ex,g)) : ghostW(ex,g)) : (bw ? '+' : unitL());
       const isCur = si === firstNotDone;                          /* the set to do now */
       const isLocked = firstNotDone!==-1 && !s.done && !isCur;    /* later sets: ✓ waits its turn */
       return `<div class="setrow-wrap ${s.done?'done':''} ${s.drop?'droprow':''} ${isLocked?'locked':''}">
-        <div class="setgrid">
+        <div class="${gcls}">
           <button class="setnum ${s.warm?'warm':''} ${s.drop?'dropn':''} ${s.fail?'failn':''}" onclick="toggleWarm(${xi},${si})">${label}</button>
           <div class="prev">${prevTxt}</div>
           <input type="text" inputmode="decimal" id="w-${xi}-${si}" placeholder="${wph}" value="${esc(s.w)}"
