@@ -728,6 +728,45 @@ button:focus-visible, .chip:focus-visible, .switch:focus-visible{
 /* onboarding step dots */
 .obdot{width:7px; height:7px; border-radius:50%; background:var(--input); display:inline-block;}
 .obdot.on{background:var(--accent);}
+/* onboarding demo: a real set row acting out the gesture on a loop */
+.obdemo{background:var(--card); border:1px solid var(--edge); border-radius:12px;
+  padding:8px 14px 12px; margin:0 0 16px; pointer-events:none;}
+.obdemo .obin{min-height:42px; background:var(--input); border-radius:9px;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--display); font-size:17px; font-weight:650; color:var(--ghost);
+  font-variant-numeric:tabular-nums;}
+.obdemo .checkbtn{position:relative;}
+/* the "finger": a soft dot that lands on the check button */
+.obtap{position:absolute; inset:0; margin:auto; width:26px; height:26px; border-radius:50%;
+  background:var(--text); opacity:0; animation:ob-tap 3.6s ease-in-out infinite;}
+.ob1 .obchk{animation:ob-done 3.6s ease-in-out infinite;}
+@keyframes ob-tap{
+  0%,38%{opacity:0; transform:scale(.4);}
+  46%{opacity:.35; transform:scale(1);}
+  56%,100%{opacity:0; transform:scale(1.7);}}
+@keyframes ob-done{
+  0%,50%{background:var(--input); color:var(--dim);}
+  57%,90%{background:var(--green); color:#fff;}
+  100%{background:var(--input); color:var(--dim);}}
+/* step 2: the new weight "types itself", then the check lands and goes green */
+.ob2 .obtype{font-style:normal; color:var(--text); opacity:0; animation:ob-type 4.4s ease infinite;}
+.ob2 .obtap{animation:ob-tap2 4.4s ease-in-out infinite;}
+.ob2 .obchk2{animation:ob-done2 4.4s ease-in-out infinite;}
+@keyframes ob-type{0%,10%{opacity:0;} 20%,100%{opacity:1;}}
+@keyframes ob-tap2{
+  0%,42%{opacity:0; transform:scale(.4);}
+  50%{opacity:.35; transform:scale(1);}
+  60%,100%{opacity:0; transform:scale(1.7);}}
+@keyframes ob-done2{
+  0%,54%{background:var(--input); color:var(--dim);}
+  61%,92%{background:var(--green); color:#fff;}
+  100%{background:var(--input); color:var(--dim);}}
+/* step 3: the backup code line */
+.obdemo.ob3{display:flex; align-items:center; gap:10px; padding:14px;}
+.ob3 .obkey{display:flex; color:var(--accent-soft);}
+.ob3 .obkey svg{width:18px; height:18px;}
+.ob3 .obcode{font-family:ui-monospace,Consolas,monospace; font-size:13px; color:var(--dim);
+  overflow:hidden; white-space:nowrap; text-overflow:ellipsis;}
 
 /* ============ toast ============ */
 #toast{position:fixed; left:50%; transform:translateX(-50%) translateY(20px);

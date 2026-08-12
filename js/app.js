@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.0.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.0.1'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -161,9 +161,9 @@ const I18N = {
     todayBadge:'ŠIANDIEN', statWeekOf:'šią savaitę',
     goalTitle:'Tikslas', goalHint:'Įvesk siekiamą e1RM (apskaičiuotą vieno karto maksimumą). Kortelė rodys, kiek liko.',
     goalLeft:'liko {n}', goalReached:'pasiekta',
-    ob1T:'Kaip loginti', ob1B:'Pasirink treniruotę pradžios ekrane. Pilki skaičiai - ką darei praeitą kartą: jei kartoji tą patį, tiesiog bakstelk varnelę, nieko vesti nereikia.',
-    ob2T:'Pritaikyk sau', ob2B:'Prie kiekvieno pratimo: ⋯ meniu keiti pratimą alternatyva, W sudeda apšilimo setus, +kg įsimena aparato pradinį svorį.',
-    ob3T:'Duomenys tavo', ob3B:'Viskas saugoma tik telefone. Nustatymuose pasidaryk atsarginį kodą arba įjunk cloud sync - telefono praradimas tada nebaisus.',
+    ob1T:'Pilka = praeitas kartas', ob1B:'Programa pati parodo, ką kėlei praeitą kartą. Darai tą patį? Spausk tik varnelę - skaičių vesti nereikia.',
+    ob2T:'Rašyk tik pokytį', ob2B:'Pakėlei daugiau? Įrašyk naują svorį. Žalia varnelė - geriau nei praeitą kartą, raudona - mažiau.',
+    ob3T:'Duomenys tik pas tave', ob3B:'Viskas saugoma šitame telefone. Nustatymuose pasidaryk atsarginį kodą - su juo viską atstatysi naujame telefone.',
     obNext:'Toliau', obDone:'Pradėti',
     a2hsTitle:'Įsidiek kaip programėlę',
     a2hsIos:'Safari: Dalintis → Add to Home Screen. Veiks be interneto, per visą ekraną.',
@@ -324,9 +324,9 @@ const I18N = {
     todayBadge:'TODAY', statWeekOf:'this week',
     goalTitle:'Goal', goalHint:'Enter the e1RM you are aiming for (estimated one-rep max). The card will show how much is left.',
     goalLeft:'{n} to go', goalReached:'reached',
-    ob1T:'How logging works', ob1B:'Pick a workout on the home screen. Grey numbers are what you did last time: repeating it? Just tap the check - nothing to type.',
-    ob2T:'Make it yours', ob2B:'On every exercise: the ⋯ menu swaps in an alternative, W builds warmup sets, +kg remembers a machine\'s starting weight.',
-    ob3T:'Your data stays yours', ob3B:'Everything lives on this phone only. In Settings, copy a backup code or turn on cloud sync - then losing the phone loses nothing.',
+    ob1T:'Grey = last time', ob1B:'The app shows what you lifted last time. Doing the same? Just tap the check - no typing.',
+    ob2T:'Type only what changed', ob2B:'Lifted more? Type the new weight. Green check - beat last time, red - below it.',
+    ob3T:'Your data stays with you', ob3B:'Everything lives on this phone. In Settings, copy a backup code - it restores everything on a new phone.',
     obNext:'Next', obDone:'Start',
     a2hsTitle:'Install as an app',
     a2hsIos:'Safari: Share → Add to Home Screen. Works offline, full screen.',
@@ -4165,6 +4165,29 @@ function openOnboarding(){
   V.ob = 0;
   renderOb();
 }
+/* looping mini-demo built from the REAL set-row markup, so what the intro
+   shows is pixel-for-pixel what the workout screen looks like */
+function obDemo(step){
+  const u = unitL();
+  if(step===2) return `<div class="obdemo ob3">
+      <span class="obkey">${ACT_ICONS.copy}</span>
+      <span class="obcode">DVD1.eyJ0Ijoi…</span>
+    </div>`;
+  const up = S.unit==='lb' ? '45' : '42.5'; /* one realistic plate jump in the display unit */
+  const hdr = `<div class="setgrid nod hdr" style="margin-top:2px"><div>${t('woSet')}</div><div>${t('woPrev')}</div><div>${u}</div><div>${t('woReps')}</div><div>${ACT_ICONS.check}</div></div>`;
+  if(step===0) return `<div class="obdemo ob1">${hdr}
+    <div class="setgrid nod">
+      <span class="setnum">1</span><div class="prev">40 ${u} × 10</div>
+      <span class="obin">40</span><span class="obin">10</span>
+      <div class="checkbtn obchk">${ACT_ICONS.check}<span class="obtap"></span></div>
+    </div></div>`;
+  return `<div class="obdemo ob2">${hdr}
+    <div class="setgrid nod">
+      <span class="setnum">1</span><div class="prev">40 ${u} × 10</div>
+      <span class="obin"><i class="obtype">${up}</i></span><span class="obin">10</span>
+      <div class="checkbtn obchk2">${ACT_ICONS.check}<span class="obtap tap2"></span></div>
+    </div></div>`;
+}
 function renderOb(){
   const steps = [['ob1T','ob1B'],['ob2T','ob2B'],['ob3T','ob3B']];
   const i = V.ob||0;
@@ -4172,6 +4195,7 @@ function renderOb(){
   const dots = steps.map((_,j)=>`<span class="obdot${j===i?' on':''}"></span>`).join('');
   const lastStep = i === steps.length-1;
   openModal(`<h3>${t(tt)}<button class="x" onclick="closeModal()">✕</button></h3>
+    ${obDemo(i)}
     <div style="font-size:15px;line-height:1.6;color:var(--text);margin:0 2px 18px">${t(bb)}</div>
     <div style="display:flex;justify-content:center;gap:6px;margin-bottom:16px">${dots}</div>
     <button class="btn primary" onclick="${lastStep?'closeModal()':'V.ob++; renderOb()'}">${lastStep?t('obDone'):t('obNext')}</button>`);
