@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.25.3'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.26.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -359,6 +359,7 @@ function defaultState(){
            folders:[{ id:fid, name:'Upper / Lower', open:true, pinned:true }],
            customEx:[], templates:seedTemplates(fid), history:[], weights:[], active:null,
            trackedLifts:[], deloads:[], mainFolder:null,
+           mbase:{}, /* machine starting weight per exercise key, kg; 0 = switched off on purpose */
            plates:{ kg:PLATE_DEF.kg.slice(), lb:PLATE_DEF.lb.slice() } };
 }
 /* validate + migrate a raw state object; returns null if unusable */
@@ -398,6 +399,12 @@ function hydrate(s){
      || !s.lastActive.act || !Array.isArray(s.lastActive.act.exercises)) s.lastActive = null;
   if(!s.plates || !Array.isArray(s.plates.kg) || !Array.isArray(s.plates.lb)){
     s.plates = { kg:PLATE_DEF.kg.slice(), lb:PLATE_DEF.lb.slice() };
+  }
+  /* machine base memory: keep only sane key -> kg entries (0 = explicitly off) */
+  if(!s.mbase || typeof s.mbase!=='object' || Array.isArray(s.mbase)) s.mbase = {};
+  for(const k in s.mbase){
+    const v = s.mbase[k];
+    if(typeof v!=='number' || isNaN(v) || v<0 || v>500) delete s.mbase[k];
   }
   return Object.assign(defaultState(), s);
 }
@@ -496,7 +503,7 @@ function u2kg(v){ if(v==null||isNaN(v)) return v; return S.unit==='lb' ? v/LB_PE
 /* format a kg value in display unit; withUnit appends the label */
 function wu(kg, withUnit){ const n = fmtW(kg2u(kg)); return withUnit ? n+' '+unitL() : n; }
 
-function fmtSet(s, k){
+function fmtSet(s, k, mb){
   const tm = isTimeEx(k), bw = isBwEx(k);
   const p = s.warm ? 'W ' : s.drop ? 'D ' : s.fail ? 'F ' : '';
   if(tm) return p + (s.weight ? wu(s.weight)+'·' : '') + s.reps + 's';
@@ -504,6 +511,9 @@ function fmtSet(s, k){
     const add = s.weight ? (s.weight>0?'+':'') + wu(s.weight) + ' ' : '';
     return p + add + '×' + s.reps;
   }
+  /* machine with a starting weight: the log holds the added plates only - the
+     "+" marks it, exactly like added load on dips/pull-ups (stats count totals) */
+  if(mb>0) return p + '+' + wu(s.weight) + '×' + s.reps;
   return p + wu(s.weight) + '×' + s.reps;
 }
 
@@ -903,6 +913,28 @@ function tplCounts(){
 
 /* ======================= WORKOUT ======================= */
 function latestBw(){ return S.weights.length ? S.weights[0].kg : null; }
+/* machine starting weight for an exercise KEY - the base belongs to the machine,
+   not the template slot, so it follows the exercise everywhere (alternatives,
+   session additions, other templates). Priority: the remembered per-machine value
+   (0 = switched off on purpose), then the template slot, then the newest history
+   entry that logged a base for this machine. */
+function resolveBase(k, tplBase){
+  const m = (S.mbase||{})[k];
+  if(typeof m==='number') return m>0 ? m : 0;
+  if(typeof tplBase==='number' && tplBase>0) return tplBase;
+  for(const h of S.history){
+    if(h.arch) continue;
+    for(const e of h.exercises) if(e.k===k && e.mb>0) return e.mb;
+  }
+  return 0;
+}
+/* ghost weight rescaled to TODAY's base: history stores plates-only relative to
+   the base of ITS session, so when the base changed (or old entries logged the
+   full load with no base) the shown/prefilled value keeps the same total. */
+function ghostW(ex, g){
+  const d = ((ex.last && ex.last.mb) || 0) - (ex.base || 0);
+  return d ? Math.max(0, g.weight + d) : g.weight;
+}
 function newSet(extra){ return Object.assign({ w:'', r:'', warm:false, drop:false, fail:false, done:false, cls:'' }, extra||{}); }
 function buildActiveEx(k, name, sets, reps, ss, tplId, alts, pnote, rt, x2, teId, base){
   const last = lastForExercise(k, name, tplId);
@@ -913,7 +945,8 @@ function buildActiveEx(k, name, sets, reps, ss, tplId, alts, pnote, rt, x2, teId
   if(typeof rt==='number' && rt>=15) ex.rt = Math.min(1800, Math.round(rt));
   if(x2) ex.x2 = true; /* pair of dumbbells: inputs are one-hand, totals count both */
   if(teId) ex.teId = teId; /* which template slot this card belongs to - survives duplicate keys */
-  if(typeof base==='number' && base>0) ex.base = Math.min(500, base); /* machine starting weight, kg */
+  const rb = resolveBase(k, base); /* machine starting weight, kg - per machine, not per slot */
+  if(rb>0) ex.base = Math.min(500, rb);
   if(isBwEx(k)){
     /* body weight prefilled from the latest log (or last session), kept separate from the logged load */
     ex.bw = latestBw() != null ? latestBw() : (last && last.bw != null ? last.bw : null);
@@ -925,10 +958,11 @@ function buildActiveEx(k, name, sets, reps, ss, tplId, alts, pnote, rt, x2, teId
 function swapExercise(xi, toKey){
   const ex = S.active.exercises[xi];
   if(!ex || toKey===ex.k) return;
-  ex.stash[ex.k] = { name:ex.name, note:ex.note, last:ex.last, sets:ex.sets, bw:ex.bw };
+  ex.stash[ex.k] = { name:ex.name, note:ex.note, last:ex.last, sets:ex.sets, bw:ex.bw, base:ex.base };
   if(ex.stash[toKey]){
     const v = ex.stash[toKey];
     ex.name=v.name; ex.note=v.note; ex.last=v.last; ex.sets=v.sets; ex.bw=v.bw;
+    if(v.base>0) ex.base = v.base; else delete ex.base;
     delete ex.stash[toKey];
   }else{
     ex.name = exName(toKey);
@@ -936,6 +970,10 @@ function swapExercise(xi, toKey){
     ex.last = lastForExercise(toKey, ex.name, ex.tplId);
     ex.sets = Array.from({length:ex.targetSets}, ()=>newSet());
     ex.bw = isBwEx(toKey) ? (latestBw()!=null?latestBw():(ex.last&&ex.last.bw!=null?ex.last.bw:null)) : undefined;
+    /* each machine keeps its own starting weight - never inherit the old variant's */
+    const te = tplEntryFor(ex);
+    const b = resolveBase(toKey, (te && te.k===toKey) ? te.base : 0);
+    if(b>0) ex.base = b; else delete ex.base;
   }
   ex.k = toKey;
   if(toKey!==ex.baseK && !ex.alts.includes(toKey)) ex.alts.push(toKey);
@@ -1046,7 +1084,7 @@ function lastForExercise(k, name, tplId){
     for(const h of S.history){
       if(h.arch || h.dl || h.tplId!==tplId) continue;
       for(const e of h.exercises){
-        if(match(e)) return { date:h.date, sets:e.sets, note:e.note||'', bw:e.bw, order:e.order||0, sameTpl:true };
+        if(match(e)) return { date:h.date, sets:e.sets, note:e.note||'', bw:e.bw, mb:e.mb||0, order:e.order||0, sameTpl:true };
       }
     }
   }
@@ -1054,7 +1092,7 @@ function lastForExercise(k, name, tplId){
   for(const h of S.history){
     if(h.arch || h.dl) continue;
     for(const e of h.exercises){
-      if(match(e)) return { date:h.date, sets:e.sets, note:e.note||'', bw:e.bw, order:e.order||0, sameTpl:false };
+      if(match(e)) return { date:h.date, sets:e.sets, note:e.note||'', bw:e.bw, mb:e.mb||0, order:e.order||0, sameTpl:false };
     }
   }
   return null;
@@ -1202,7 +1240,7 @@ function htmlWorkout(){
     const approx = ex.last && !ex.last.sameTpl ? '~' : ''; /* values borrowed from another workout */
     const rows = ex.sets.map((s,si)=>{
       const g = ghostFor(ex,si);
-      const prevTxt = g ? approx + ghostText(g, tm, bw) : '—';
+      const prevTxt = g ? approx + ghostText({ weight:ghostW(ex,g), reps:g.reps }, tm, bw) : '—';
       if(!s.warm && !s.drop) workNum++;
       const label = s.warm ? 'W' : s.drop ? 'D' : s.fail ? 'F' : String(workNum);
       const chkCls = (s.done ? (s.cls==='loss' ? 'loss' : 'done') : '')
@@ -1211,7 +1249,7 @@ function htmlWorkout(){
       const rowBtn = s.drop
         ? `<button class="dropbtn del" onclick="removeDrop(${xi},${si})">✕</button>`
         : `<button class="dropbtn" onclick="addDrop(${xi},${si})">D+</button>`;
-      const wph = g ? wu(dl && !s.warm ? dlW(g.weight) : g.weight) : (bw ? '+' : unitL());
+      const wph = g ? wu(dl && !s.warm ? dlW(ghostW(ex,g)) : ghostW(ex,g)) : (bw ? '+' : unitL());
       const isCur = si === firstNotDone;                          /* the set to do now */
       const isLocked = firstNotDone!==-1 && !s.done && !isCur;    /* later sets: ✓ waits its turn */
       return `<div class="setrow-wrap ${s.done?'done':''} ${s.drop?'droprow':''} ${isLocked?'locked':''}">
@@ -1296,8 +1334,13 @@ function saveBase(xi){
   const v = parseNum(($('#base-in')||{}).value);
   const kg = (!isNaN(v) && v>0) ? Math.min(500, Math.round(u2kg(v)*10)/10) : 0;
   if(kg) ex.base = kg; else delete ex.base;
+  /* remembered per MACHINE (0 = switched off on purpose - history stops suggesting it) */
+  if(!S.mbase) S.mbase = {};
+  S.mbase[ex.k] = kg;
+  /* the template slot mirrors it only while it points at this same exercise -
+     saving while performing an alternative must not touch the planned machine */
   const te = tplEntryFor(ex);
-  if(te){ if(kg) te.base = kg; else delete te.base; }
+  if(te && te.k===ex.k){ if(kg) te.base = kg; else delete te.base; }
   save(); closeModal(); render(); scheduleCloudSync();
 }
 
@@ -1515,7 +1558,7 @@ function autoWarmup(xi){
     const s = ex.sets[i];
     if(s.warm || s.drop) continue;
     w = parseNum(s.w);
-    if(isNaN(w)){ const g = ghostFor(ex,i); if(g) w = kg2u(dlForTpl(S.active.tplId) ? dlW(g.weight) : g.weight); }
+    if(isNaN(w)){ const g = ghostFor(ex,i); if(g) w = kg2u(dlForTpl(S.active.tplId) ? dlW(ghostW(ex,g)) : ghostW(ex,g)); }
     break;
   }
   if(isNaN(w) || w<=0){ toast(t('warmNeedW')); return; }
@@ -1622,7 +1665,7 @@ function toggleSet(xi,si){
   const tm = isTimeEx(ex.k), bw = isBwEx(ex.k);
   const dl = dlForTpl(S.active.tplId);
   let w = parseNum(s.w), r = parseNum(s.r);  /* w is in the display unit */
-  if(isNaN(w) && g) w = kg2u(dl && !s.warm ? dlW(g.weight) : g.weight);
+  if(isNaN(w) && g) w = kg2u(dl && !s.warm ? dlW(ghostW(ex,g)) : ghostW(ex,g));
   if(isNaN(r) && g) r = g.reps;
   if(isNaN(w) && (tm || bw)) w = 0;          /* weight optional for time & bodyweight */
   if(isNaN(w) || isNaN(r) || Math.abs(w)>2000 || r<1 || r>5000){ toast(t('woEmptyVals')); return; }
@@ -1630,9 +1673,13 @@ function toggleSet(xi,si){
   const wkg = u2kg(w);
   s.w = fmtW(w); s.r = String(Math.round(r)); s.done = true;
   const real = realPrev(ex,si);              /* kg */
+  /* compare TOTAL loads: when the machine base changed between sessions the
+     logged plates-only numbers live on different scales */
+  const mbd = ((ex.last && ex.last.mb) || 0) - (ex.base || 0);
+  const rw = real ? real.weight + mbd : 0;
   if(!real || s.warm || s.drop || dl) s.cls = 'none'; /* no win/loss judgment on a deload */
-  else if(wkg>real.weight || (wkg===real.weight && r>real.reps)) s.cls='win';
-  else if(wkg===real.weight && r===real.reps) s.cls='even';
+  else if(wkg>rw || (wkg===rw && r>real.reps)) s.cls='win';
+  else if(wkg===rw && r===real.reps) s.cls='even';
   else s.cls='loss';
   updateExDone(ex);
   /* out-of-order training: on an exercise's first set it floats (with its whole
@@ -1911,8 +1958,10 @@ function stepWeight(d){
   }
   let cur = parseNum(stepEl.value);
   if(isNaN(cur)){
+    /* start from the value the placeholder is showing (deload-scaled, base-adjusted) */
     const g = ghostFor(ex, si);
-    cur = g ? kg2u(g.weight) : 0;
+    const dl = dlForTpl(S.active.tplId);
+    cur = g ? kg2u(dl && !ex.sets[si].warm ? dlW(ghostW(ex,g)) : ghostW(ex,g)) : 0;
   }
   cur = Math.round((cur + d) * 100) / 100;
   if(!isBwEx(ex.k) && cur < 0) cur = 0; /* assisted bodyweight may go negative */
@@ -2571,7 +2620,7 @@ function htmlExDetail(){
     for(const e of w.exercises){
       if(matches(e)){
         rows.push(`<div class="exl"><span class="n">${fmtDate(w.date)}${w.dl?` <span class="dlchip">${t('dlBadge')}</span>`:''} <span style="opacity:.6">· ${esc(w.name)}</span></span>
-          <span class="s">${e.sets.map(s=>`<span class="tok">${fmtSet(s, k)}</span>`).join(' ')}</span></div>`);
+          <span class="s">${e.sets.map(s=>`<span class="tok">${fmtSet(s, k, e.mb)}</span>`).join(' ')}</span></div>`);
       }
     }
   }
@@ -3158,7 +3207,7 @@ function histRowHtml(w){
   if(open){
     detail = `<div class="histdetail">` + w.exercises.map(e=>
       `<div class="exl"><span class="n">${esc(e.name)}${e.note?` <em style="opacity:.8">- ${esc(e.note)}</em>`:''}</span>
-       <span class="s">${e.sets.map(s=>`<span class="tok">${fmtSet(s, e.k)}</span>`).join(' ')}</span></div>`).join('') +
+       <span class="s">${e.sets.map(s=>`<span class="tok">${fmtSet(s, e.k, e.mb)}</span>`).join(' ')}</span></div>`).join('') +
       `<div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
         <span style="color:var(--ghost);font-size:13px">${t('histVolume')}: ${Math.round(kg2u(vol))} ${unitL()}${w.dur?' · '+fmtTime(w.dur):''}</span>
         <div class="rowacts" style="margin-left:auto">
@@ -3232,7 +3281,8 @@ function histEditBody(id){
         <button class="dropbtn del" onclick="delHistSet('${id}',${ei},${si})">✕</button>
       </div>`;
     }).join('');
-    return `<div class="card"><div class="exname">${esc(e.name)}</div>${rows}</div>`;
+    const mbTag = e.mb>0 ? ` <span style="font-size:12px;font-weight:600;color:var(--dim)">(+${wu(e.mb,true)})</span>` : '';
+    return `<div class="card"><div class="exname">${esc(e.name)}${mbTag}</div>${rows}</div>`;
   }).join('');
 }
 function editHistSet(id,ei,si,f,v){
@@ -3334,7 +3384,7 @@ function openPlates(xi){
       const s = ex.sets[i];
       if(!s.done){
         w = parseNum(s.w); /* already in display unit */
-        if(isNaN(w)){ const g = ghostFor(ex,i); if(g) w = kg2u(g.weight); }
+        if(isNaN(w)){ const g = ghostFor(ex,i); if(g) w = kg2u(ghostW(ex,g)); }
         break;
       }
     }
@@ -3516,7 +3566,7 @@ function bakPayload(){
   return { t:'bak', s:{ lang:S.lang, unit:S.unit, theme:S.theme, keepAwake:S.keepAwake, plates:S.plates,
     restTarget:S.restTarget, restSound:S.restSound,
     folders:S.folders, customEx:S.customEx, templates:S.templates, history:S.history, weights:S.weights,
-    trackedLifts:S.trackedLifts, deloads:S.deloads, mainFolder:S.mainFolder } };
+    trackedLifts:S.trackedLifts, deloads:S.deloads, mainFolder:S.mainFolder, mbase:S.mbase } };
 }
 function copyBackup(){
   S.lastBackup = Date.now();
@@ -3647,6 +3697,7 @@ function doImport(){
     d.s.folders.forEach(f=>{ if(typeof f.pinned==='undefined') f.pinned=true; });
     if(!Array.isArray(d.s.trackedLifts)) delete d.s.trackedLifts; /* keep the [] default */
     if(!Array.isArray(d.s.deloads)) delete d.s.deloads;
+    if(!d.s.mbase || typeof d.s.mbase!=='object' || Array.isArray(d.s.mbase)) delete d.s.mbase;
     if(typeof d.s.mainFolder!=='string') delete d.s.mainFolder;
     if(typeof d.s.restTarget!=='number' || !(d.s.restTarget>=15 && d.s.restTarget<=1800)) delete d.s.restTarget;
     if(typeof d.s.restSound!=='boolean') delete d.s.restSound;
