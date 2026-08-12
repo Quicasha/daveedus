@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '1.26.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '1.26.1'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -97,6 +97,7 @@ const I18N = {
     platesRem:'{n} {u} pusėj netelpa iš standartinių svarelių', platesEmpty:'Tuščias grifas',
     platesAvail:'Kokie svareliai yra salėje',
     superset:'Superset',
+    dropTog:'Drop setai',
     codeBad:'Neteisingas kodas', copy:'Kopijuoti', copied:'Nukopijuota ✓',
     daySets:'setai', dayReps:'kart.', daySec:'sek.', repsRangeTog:'nuo-iki',
     exSearch:'Ieškoti pratimo...', exCreate:'+ Sukurti savo pratimą',
@@ -238,6 +239,7 @@ const I18N = {
     platesRem:"{n} {u} per side doesn't fit standard plates", platesEmpty:'Empty bar',
     platesAvail:'Plates available at the gym',
     superset:'Superset',
+    dropTog:'Drop sets',
     codeBad:'Invalid code', copy:'Copy', copied:'Copied ✓',
     daySets:'sets', dayReps:'reps', daySec:'sec', repsRangeTog:'range',
     exSearch:'Search exercises...', exCreate:'+ Create your own exercise',
@@ -1046,6 +1048,7 @@ function openExMenu(xi){
     <div class="swaplist">
       ${item(ex.k!==ex.baseK?'on':'', ACT_ICONS.swap, t('swapTitle'), `openSwapMenu(${xi})`)}
       ${bw?'':item('', ACT_ICONS.plates, t('plates'), `openPlates(${xi})`)}
+      ${item(ex.dropUi?'on':'', 'D+', t('dropTog'), `toggleDropUi(${xi})`)}
       ${notLast?item(ex.ss?'on':'', ACT_ICONS.link, t('superset'), `toggleWoSS(${xi})`):''}
       ${item('danger', ACT_ICONS.x, t('woDelExBtn'), `removeWorkoutEx(${xi})`)}
     </div>`);
@@ -1246,9 +1249,11 @@ function htmlWorkout(){
       const chkCls = (s.done ? (s.cls==='loss' ? 'loss' : 'done') : '')
                    + (V.lastDone===xi+'-'+si ? ' pop' : '');
       const restHere = S.active.rest && S.active.rest.key===xi+'-'+si;
+      /* D+ hidden by default (small target, easy to fat-finger) - the exercise menu
+         turns it on per block; an existing drop row always keeps its remove button */
       const rowBtn = s.drop
         ? `<button class="dropbtn del" onclick="removeDrop(${xi},${si})">✕</button>`
-        : `<button class="dropbtn" onclick="addDrop(${xi},${si})">D+</button>`;
+        : (ex.dropUi ? `<button class="dropbtn" onclick="addDrop(${xi},${si})">D+</button>` : '<div></div>');
       const wph = g ? wu(dl && !s.warm ? dlW(ghostW(ex,g)) : ghostW(ex,g)) : (bw ? '+' : unitL());
       const isCur = si === firstNotDone;                          /* the set to do now */
       const isLocked = firstNotDone!==-1 && !s.done && !isCur;    /* later sets: ✓ waits its turn */
@@ -1587,6 +1592,13 @@ function shiftRestKey(xi, fromSi, delta){
   const [rx, rs] = r.key.split('-').map(Number);
   if(rx!==xi) return;
   if(rs >= fromSi) r.key = xi+'-'+(rs+delta);
+}
+/* show/hide the D+ buttons for this exercise block (session-only flag) */
+function toggleDropUi(xi){
+  const ex = S.active.exercises[xi];
+  if(!ex) return;
+  ex.dropUi = !ex.dropUi;
+  save(); render();
 }
 function addDrop(xi,si){
   const ex = S.active.exercises[xi];
