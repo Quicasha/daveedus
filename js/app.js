@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.1.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.1.1'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -162,9 +162,9 @@ const I18N = {
     goalTitle:'Tikslas', goalHint:'Įvesk siekiamą e1RM (apskaičiuotą vieno karto maksimumą). Kortelė rodys, kiek liko.',
     goalLeft:'liko {n}', goalReached:'pasiekta',
     obpT:'Pirma - atvirai', obpB:'Kuris čia tu?',
-    obp_skinny:'Džiūsna', obp_fluffy:'Pilvukas', obp_liar:'Meluoju sau',
-    obpi_skinny:'džiūsna', obpi_fluffy:'pilvukas', obpi_liar:'meluoji sau',
-    obwT:'Pirma diena', obwB:'Gal tu ir {p} - kol kas. Nuo dabar tai tik atskaitos taškas: kiekvienas užfiksuotas setas tolina tave nuo jo. Kelias į geresnę versiją prasideda čia.',
+    obp_skinny:'Džiūsna', obp_fluffy:'Storulis', obp_liar:'Meluoju sau',
+    obpi_skinny:'džiūsna', obpi_fluffy:'storuli', obpi_liar:'melagi',
+    obwT:'Pirma diena', obwB:'Na ką, {p}. Užtruko, bet šiandien pagaliau sugalvojai lipt į naują lygį. Nuo dabar kiekvienas užfiksuotas setas - naujojo tavęs įrodymas. Sveikas atvykęs.',
     ob1T:'Atsimena praeitą kartą', ob1B:'Pilki skaičiai - tavo praeita treniruotė. Kartoji tą patį? Tiesiog paspausk varnelę, nieko vesti nereikia.',
     ob2T:'Pakėlei daugiau? Įrašyk', ob2B:'Vedi tik pokytį. Žalia varnelė - įveikei praeitą kartą, raudona - šįkart ne.',
     ob4T:'Užimta? Keisk', ob4B:'⋯ meniu - alternatyvos: vienas tap ir darai kitą variantą, nereikia laukti. Kiekvieno varianto progresas skaičiuojamas atskirai.',
@@ -331,9 +331,9 @@ const I18N = {
     goalTitle:'Goal', goalHint:'Enter the e1RM you are aiming for (estimated one-rep max). The card will show how much is left.',
     goalLeft:'{n} to go', goalReached:'reached',
     obpT:'First - be honest', obpB:'Which one is you?',
-    obp_skinny:'Skinny', obp_fluffy:'Fluffy', obp_liar:'Lying to myself',
-    obpi_skinny:'skinny', obpi_fluffy:'fluffy', obpi_liar:'lying to yourself',
-    obwT:'Day one', obwB:'Maybe you are {p} - for now. From here that is just a starting point: every set you log moves you further from it. The road to a better you starts here.',
+    obp_skinny:'Skinny bitch', obp_fluffy:'Fatso', obp_liar:'Lying to myself',
+    obpi_skinny:'skinny bitch', obpi_fluffy:'fatso', obpi_liar:'liar',
+    obwT:'Day one', obwB:'So, {p}. Took you long enough - today you finally decided to level up. From here on every set you log is evidence of the new you. Welcome aboard.',
     ob1T:'It remembers last time', ob1B:'The grey numbers are your previous session. Doing it again? Just tap the check - nothing to type.',
     ob2T:'Went heavier? Type it in', ob2B:'Only the change needs typing. Green check - you beat last time. Red - not this time.',
     ob4T:'Bench taken? Swap it', ob4B:'Every exercise keeps alternatives in the ⋯ menu: one tap swaps in the next option, no waiting around. Each variant tracks its own progress.',
