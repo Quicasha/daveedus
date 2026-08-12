@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.0.4'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.1.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {
@@ -161,11 +161,15 @@ const I18N = {
     todayBadge:'ŠIANDIEN', statWeekOf:'šią savaitę',
     goalTitle:'Tikslas', goalHint:'Įvesk siekiamą e1RM (apskaičiuotą vieno karto maksimumą). Kortelė rodys, kiek liko.',
     goalLeft:'liko {n}', goalReached:'pasiekta',
-    ob1T:'Pilka = praeitas kartas', ob1B:'Programa pati parodo, ką kėlei praeitą kartą. Darai tą patį? Spausk tik varnelę - skaičių vesti nereikia.',
-    ob2T:'Rašyk tik pokytį', ob2B:'Pakėlei daugiau? Įrašyk naują svorį. Žalia varnelė - geriau nei praeitą kartą, raudona - mažiau.',
-    ob4T:'Užimta? Pakeisk', ob4B:'⋯ meniu turi alternatyvas: vienas tap ir darai kitą variantą, nelauki eilėje. Kiekvieno varianto progresas skaičiuojamas atskirai - skaičiai nesimaišo.',
-    ob5T:'W sudeda apšilimą', ob5B:'Spausk W - apšilimo setai susidėlioja patys pagal tavo darbinį svorį. Į rekordus jie nesiskaito.',
-    ob3T:'Duomenys tik pas tave', ob3B:'Viskas saugoma šitame telefone. Nustatymuose pasidaryk atsarginį kodą - su juo viską atstatysi naujame telefone.',
+    obpT:'Pirma - atvirai', obpB:'Kuris čia tu?',
+    obp_skinny:'Džiūsna', obp_fluffy:'Pilvukas', obp_liar:'Meluoju sau',
+    obpi_skinny:'džiūsna', obpi_fluffy:'pilvukas', obpi_liar:'meluoji sau',
+    obwT:'Pirma diena', obwB:'Gal tu ir {p} - kol kas. Nuo dabar tai tik atskaitos taškas: kiekvienas užfiksuotas setas tolina tave nuo jo. Kelias į geresnę versiją prasideda čia.',
+    ob1T:'Atsimena praeitą kartą', ob1B:'Pilki skaičiai - tavo praeita treniruotė. Kartoji tą patį? Tiesiog paspausk varnelę, nieko vesti nereikia.',
+    ob2T:'Pakėlei daugiau? Įrašyk', ob2B:'Vedi tik pokytį. Žalia varnelė - įveikei praeitą kartą, raudona - šįkart ne.',
+    ob4T:'Užimta? Keisk', ob4B:'⋯ meniu - alternatyvos: vienas tap ir darai kitą variantą, nereikia laukti. Kiekvieno varianto progresas skaičiuojamas atskirai.',
+    ob5T:'Apšilimas vienu tap', ob5B:'Spausk W - apšilimo setai susidėlioja pagal tavo darbinį svorį. Į rekordus jie nesiskaito.',
+    ob3T:'Tavo duomenys - tavo telefone', ob3B:'Viskas saugoma tik šitame telefone. Nustatymuose pasidaryk atsarginį kodą - jis viską grąžins naujame.',
     obNext:'Toliau', obDone:'Pradėti',
     a2hsTitle:'Įsidiek kaip programėlę',
     a2hsIos:'Safari: Dalintis → Add to Home Screen. Veiks be interneto, per visą ekraną.',
@@ -326,11 +330,15 @@ const I18N = {
     todayBadge:'TODAY', statWeekOf:'this week',
     goalTitle:'Goal', goalHint:'Enter the e1RM you are aiming for (estimated one-rep max). The card will show how much is left.',
     goalLeft:'{n} to go', goalReached:'reached',
-    ob1T:'Grey = last time', ob1B:'The app shows what you lifted last time. Doing the same? Just tap the check - no typing.',
-    ob2T:'Type only what changed', ob2B:'Lifted more? Type the new weight. Green check - beat last time, red - below it.',
-    ob4T:'Taken? Swap it', ob4B:'The ⋯ menu holds alternatives: one tap and you do the other variant instead of waiting. Each variant keeps its own progress - numbers never mix.',
-    ob5T:'W builds the warmup', ob5B:'Tap W - warmup sets build themselves from your working weight. They never count toward records.',
-    ob3T:'Your data stays with you', ob3B:'Everything lives on this phone. In Settings, copy a backup code - it restores everything on a new phone.',
+    obpT:'First - be honest', obpB:'Which one is you?',
+    obp_skinny:'Skinny', obp_fluffy:'Fluffy', obp_liar:'Lying to myself',
+    obpi_skinny:'skinny', obpi_fluffy:'fluffy', obpi_liar:'lying to yourself',
+    obwT:'Day one', obwB:'Maybe you are {p} - for now. From here that is just a starting point: every set you log moves you further from it. The road to a better you starts here.',
+    ob1T:'It remembers last time', ob1B:'The grey numbers are your previous session. Doing it again? Just tap the check - nothing to type.',
+    ob2T:'Went heavier? Type it in', ob2B:'Only the change needs typing. Green check - you beat last time. Red - not this time.',
+    ob4T:'Bench taken? Swap it', ob4B:'Every exercise keeps alternatives in the ⋯ menu: one tap swaps in the next option, no waiting around. Each variant tracks its own progress.',
+    ob5T:'Warmup in one tap', ob5B:'Tap W and a warmup ramp builds itself from your working weight. Warmups stay out of your records.',
+    ob3T:'Your data, your phone', ob3B:'Everything lives on this phone. Grab a backup code in Settings - it brings it all back on a new one.',
     obNext:'Next', obDone:'Start',
     a2hsTitle:'Install as an app',
     a2hsIos:'Safari: Share → Add to Home Screen. Works offline, full screen.',
@@ -4174,6 +4182,7 @@ function openOnboarding(){
    shows is pixel-for-pixel what the workout screen looks like */
 function obDemo(step){
   const u = unitL();
+  if(step==='w') return `<div class="obdemo obw"><span class="obwm">Daveedus</span></div>`;
   if(step===4) return `<div class="obdemo ob3">
       <span class="obkey">${ACT_ICONS.copy}</span>
       <span class="obcode">DVD1.eyJ0Ijoi…</span>
@@ -4217,15 +4226,28 @@ function obDemo(step){
     </div></div>`;
 }
 function renderOb(){
-  const steps = [['ob1T','ob1B'],['ob2T','ob2B'],['ob4T','ob4B'],['ob5T','ob5B'],['ob3T','ob3B']];
   const i = V.ob||0;
-  const [tt, bb] = steps[i];
-  const dots = steps.map((_,j)=>`<span class="obdot${j===i?' on':''}"></span>`).join('');
-  const lastStep = i === steps.length-1;
+  const N = 7;
+  const dots = Array.from({length:N},(_,j)=>`<span class="obdot${j===i?' on':''}"></span>`).join('');
+  const dotRow = `<div style="display:flex;justify-content:center;gap:6px;margin-bottom:16px">${dots}</div>`;
+  /* step 0: pick who you are today - the welcome card talks back in those words */
+  if(i===0){
+    openModal(`<h3>${t('obpT')}<button class="x" onclick="closeModal()">✕</button></h3>
+      <div class="obbody">${t('obpB')}</div>
+      <div>${['skinny','fluffy','liar'].map(k=>
+        `<button class="btn" onclick="V.obP='${k}';V.ob=1;renderOb()">${t('obp_'+k)}</button>`).join('')}</div>
+      ${dotRow}`);
+    return;
+  }
+  const steps = [null,
+    ['obwT','obwB','w'], ['ob1T','ob1B',0], ['ob2T','ob2B',1],
+    ['ob4T','ob4B',2], ['ob5T','ob5B',3], ['ob3T','ob3B',4]];
+  const [tt, bb, dm] = steps[i];
+  const lastStep = i === N-1;
   openModal(`<h3>${t(tt)}<button class="x" onclick="closeModal()">✕</button></h3>
-    ${obDemo(i)}
-    <div style="font-size:15px;line-height:1.6;color:var(--text);margin:0 2px 18px">${t(bb)}</div>
-    <div style="display:flex;justify-content:center;gap:6px;margin-bottom:16px">${dots}</div>
+    ${obDemo(dm)}
+    <div class="obbody">${t(bb, {p:t('obpi_'+(V.obP||'skinny'))})}</div>
+    ${dotRow}
     <button class="btn primary" onclick="${lastStep?'closeModal()':'V.ob++; renderOb()'}">${lastStep?t('obDone'):t('obNext')}</button>`);
 }
 
