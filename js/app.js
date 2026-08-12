@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.0.2'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.0.3'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 const I18N = {

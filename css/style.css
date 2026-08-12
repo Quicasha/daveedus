@@ -735,6 +735,8 @@ button:focus-visible, .chip:focus-visible, .switch:focus-visible{
   display:flex; align-items:center; justify-content:center;
   font-family:var(--display); font-size:17px; font-weight:650; color:var(--ghost);
   font-variant-numeric:tabular-nums;}
+/* the demo set number is a span, not a button - center it like the real one */
+.obdemo .setnum{display:flex; align-items:center; justify-content:center;}
 .obdemo .checkbtn{position:relative;}
 /* the "finger": a soft dot that lands on the check button */
 .obtap{position:absolute; inset:0; margin:auto; width:26px; height:26px; border-radius:50%;
