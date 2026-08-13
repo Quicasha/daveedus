@@ -33,6 +33,13 @@ function normReps(v, max){
   }
   return String(lo);
 }
+/* session volume in kg: work sets only (warmups excluded), external load with
+   x2 pairs doubled and the machine base added - THE one volume formula; the
+   finish summary, history rows and every chart must all agree on it */
+function woVolume(exs){
+  return exs.reduce((a,e)=>a+e.sets.filter(s=>!s.warm)
+    .reduce((b,s)=>b+(s.weight*(e.x2?2:1)+(e.mb||0))*s.reps,0),0);
+}
 function fmtTime(sec){
   sec = Math.max(0, Math.floor(sec));
   const h = Math.floor(sec/3600), m = Math.floor(sec%3600/60), s = sec%60;

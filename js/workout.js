@@ -127,9 +127,10 @@ function addAltExercise(xi){
   openPicker(info=>{
     const ex = S.active.exercises[xi];
     if(!ex){ closeModal(); return; }
-    /* remember this alternative on the template exercise too, so it stays an option */
-    const tpl = S.templates.find(t=>t.id===S.active.tplId);
-    if(tpl){ const te = tpl.ex.find(e=>e.k===ex.baseK); if(te){ if(!te.alts) te.alts=[]; if(info.id!==te.k && !te.alts.includes(info.id)) te.alts.push(info.id); } }
+    /* remember this alternative on the template exercise too, so it stays an option;
+       tplEntryFor disambiguates duplicate slots of the same lift via teId */
+    const te = tplEntryFor(ex);
+    if(te){ if(!te.alts) te.alts=[]; if(info.id!==te.k && !te.alts.includes(info.id)) te.alts.push(info.id); }
     closeModal();
     swapExercise(xi, info.id);
   });
@@ -157,7 +158,7 @@ function onBwInput(xi,v){
   const ex = S.active.exercises[xi];
   const n = parseNum(v);
   ex.bw = isNaN(n) ? null : u2kg(n);
-  save();
+  saveSoon();
 }
 /* quick ±0.1 (display unit) stepper for the body-weight field; updates in place, no full re-render */
 function stepBw(xi,d){
@@ -168,7 +169,7 @@ function stepBw(xi,d){
   ex.bw = u2kg(v);
   const inp = document.getElementById('bw-'+xi);
   if(inp) inp.value = fmtW(v);
-  save();
+  saveSoon();
 }
 /* previous-session text for a ghost set, per exercise type */
 function ghostText(g, tm, bw){
@@ -331,8 +332,9 @@ function waveVerdict(k, wv){
 /* fill this session's empty working sets with the week's prescription */
 function applyWave(xi){
   const ex = S.active.exercises[xi];
+  if(!ex) return;
   const wv = S.waves[ex.k];
-  if(!ex || !wv) return;
+  if(!wv) return;
   const wt = waveTarget(wv);
   ex.sets.forEach(s=>{
     if(s.done || s.warm || s.drop) return;
@@ -483,7 +485,7 @@ function htmlWorkout(){
     </div>`;
     const tm = isTimeEx(ex.k), bw = isBwEx(ex.k);
     const firstNotDone = ex.sets.findIndex(s=>!s.done); /* -1 = all done */
-    const wcol = bw ? t('woAddCol') : (tm ? unitL() : unitL());
+    const wcol = bw ? t('woAddCol') : unitL();
     /* pair-of-dumbbells toggle lives right in the column header - one tap, no menus */
     const equip = (exInfo(ex.k)||{}).e;
     const x2chip = (!bw && !tm && equip==='dumbbell')
@@ -805,8 +807,8 @@ function dismissRest(){
   if(S.active) S.active.rest = null;
   save(); render();
 }
-function onSetInput(xi,si,f,v){ S.active.exercises[xi].sets[si][f]=v; save(); }
-function onNoteInput(xi,v){ S.active.exercises[xi].note=v; save(); }
+function onSetInput(xi,si,f,v){ S.active.exercises[xi].sets[si][f]=v; saveSoon(); }
+function onNoteInput(xi,v){ S.active.exercises[xi].note=v; saveSoon(); }
 /* toggle the note field between "this workout only" and a permanent note kept on the template */
 function toggleNoteMode(xi){ const ex=S.active.exercises[xi]; ex.notePerm=!ex.notePerm; save(); render(); }
 function setPnote(xi,v){
@@ -814,7 +816,7 @@ function setPnote(xi,v){
   ex.pnote = v;
   const te = tplEntryFor(ex);
   if(te) te.pnote = v;
-  save();
+  saveSoon();
 }
 /* tap the set number to cycle its type: number -> W (warmup) -> F (failure) -> number */
 function toggleWarm(xi,si){
@@ -839,6 +841,9 @@ function autoWarmup(xi){
     if(S.active.rest && Number(S.active.rest.key.split('-')[0])===xi) S.active.rest = null;
     updateExDone(ex); save(); render(); return;
   }
+  /* sets already logged? prepending warmups now would block the next working
+     set (sets complete strictly in order) - too late for a ramp */
+  if(ex.sets.some(s=>s.done)){ toast(t('warmLate')); return; }
   /* target = the first working set's weight (typed, or the ghost from last time) */
   let w = NaN;
   for(let i=0;i<ex.sets.length;i++){
@@ -1078,8 +1083,10 @@ function finishWorkout(){
   const exercises = [];
   S.active.exercises.forEach(ex=>{
     if(ex.ghost) return; /* untouched suggestions never reach history */
-    const variants = [{ k:ex.k, name:ex.name, note:ex.note, sets:ex.sets, bw:ex.bw }];
-    for(const sk in ex.stash){ const v=ex.stash[sk]; variants.push({ k:sk, name:v.name, note:v.note, sets:v.sets, bw:v.bw }); }
+    /* base travels per VARIANT - a stashed machine keeps its own starting weight,
+       not whatever machine the slot happened to end the session on */
+    const variants = [{ k:ex.k, name:ex.name, note:ex.note, sets:ex.sets, bw:ex.bw, base:ex.base }];
+    for(const sk in ex.stash){ const v=ex.stash[sk]; variants.push({ k:sk, name:v.name, note:v.note, sets:v.sets, bw:v.bw, base:v.base }); }
     variants.forEach(v=>{
       const done = v.sets.filter(s=>s.done).map(s=>({ weight:u2kg(parseNum(s.w)), reps:parseNum(s.r), warm:!!s.warm, drop:!!s.drop, fail:!!s.fail }));
       if(!done.length) return;
@@ -1088,7 +1095,7 @@ function finishWorkout(){
       if(isBwEx(v.k) && v.bw!=null) o.bw = v.bw;
       if(ex.x2 && (exInfo(v.k)||{}).e==='dumbbell') o.x2 = 1; /* weights are per hand */
       if(ex.adhoc) o.adhoc = 1; /* standalone addition - ghosts next time even if the key overlaps the template */
-      if(ex.base > 0) o.mb = ex.base; /* machine base: logged weights are added-only, totals include this */
+      if(v.base > 0) o.mb = v.base; /* machine base: logged weights are added-only, totals include this */
       exercises.push(o);
     });
   });
@@ -1118,16 +1125,18 @@ function finishWorkout(){
     }
   }
   const dur = Math.round((Date.now()-new Date(S.active.startedAt).getTime())/1000);
-  const vol = exercises.reduce((a,e)=>a+e.sets.filter(s=>!s.warm).reduce((b,s)=>b+(s.weight*(e.x2?2:1)+(e.mb||0))*s.reps,0),0);
+  const vol = woVolume(exercises);
   const entry = {
     id:uid(), tplId:S.active.tplId, name:S.active.name, date:new Date().toISOString(),
     dur, exercises
   };
+  let dlUndo = null; /* what this finish changed on the deload record - Continue rolls it back */
   if(isDl){
     entry.dl = 1; /* deload session: out of records/PRs/ghosts, badged in history */
     const d = dlActive();
-    if(d && !d.done.includes(entry.tplId)) d.done.push(entry.tplId);
-    if(d && !dlRemaining(d).length){ d.e = Date.now(); toast(t('dlDone')); }
+    dlUndo = { tplId:null, closed:0 };
+    if(d && !d.done.includes(entry.tplId)){ d.done.push(entry.tplId); dlUndo.tplId = entry.tplId; }
+    if(d && !dlRemaining(d).length){ d.e = Date.now(); dlUndo.closed = 1; toast(t('dlDone')); }
   }
   /* exercises the user ADDED (or woke from a ghost) but never logged a set on:
      keep them as suggestions so they still ghost next session - only untouched
@@ -1168,7 +1177,7 @@ function finishWorkout(){
   }
   /* keep the finished session resurrectable - "Continue" on the newest history
      row undoes an accidental Finish with sets and elapsed time intact */
-  S.lastActive = { id:entry.id, act:S.active, waved:waveSnaps };
+  S.lastActive = { id:entry.id, act:S.active, waved:waveSnaps, ...(dlUndo?{dl:dlUndo}:{}) };
   S.active = null;
   save();
   scheduleCloudSync();
@@ -1296,7 +1305,7 @@ function stepWeight(d){
     cur = Math.max(1, Math.round(cur + (d<0?-1:1)));
     stepEl.value = String(cur);
     ex.sets[si].r = String(cur);
-    save();
+    saveSoon();
     return;
   }
   let cur = parseNum(stepEl.value);
@@ -1310,7 +1319,7 @@ function stepWeight(d){
   if(!isBwEx(ex.k) && cur < 0) cur = 0; /* assisted bodyweight may go negative */
   stepEl.value = fmtW(cur);
   ex.sets[si].w = fmtW(cur);
-  save();
+  saveSoon();
 }
 
 /* ============== elapsed + rest tick (no full re-render) ============== */

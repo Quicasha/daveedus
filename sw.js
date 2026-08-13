@@ -1,5 +1,5 @@
 /* Daveedus service worker - offline-first app shell */
-const CACHE = 'daveedus-v2.8.0';
+const CACHE = 'daveedus-v2.9.0';
 const ASSETS = [
   './', './index.html', './css/style.css',
   './js/exercises.js', './js/i18n.js', './js/util.js', './js/state.js',
@@ -53,7 +53,7 @@ self.addEventListener('fetch', e => {
           caches.open(CACHE).then(c => c.put(e.request, clone));
         }
         return resp;
-      }).catch(() => cached);
+      }).catch(() => cached || Response.error()); /* never respondWith(undefined) - a controlled network error instead of a SW TypeError */
       return cached || fresh;
     })
   );

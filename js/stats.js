@@ -135,7 +135,7 @@ function aggBuckets(buckets){
     for(let bi=0; bi<buckets.length; bi++){
       if(d>=buckets[bi].s && d<buckets[bi].e){
         wk[bi].v++;
-        vol[bi].v += h.exercises.reduce((a,ex)=>a+ex.sets.filter(x=>!x.warm).reduce((b,x)=>b+(x.weight*(ex.x2?2:1)+(ex.mb||0))*x.reps,0),0);
+        vol[bi].v += woVolume(h.exercises);
         break;
       }
     }
@@ -182,10 +182,10 @@ function histSummaryHtml(){
     const ts = new Date(h.date).getTime();
     if(ts>=now-7*D){
       c7++;
-      v7 += h.exercises.reduce((a,ex)=>a+ex.sets.filter(x=>!x.warm).reduce((b,x)=>b+x.weight*x.reps,0),0);
+      v7 += woVolume(h.exercises);
     }else if(ts>=now-14*D){
       cP++;
-      vP += h.exercises.reduce((a,ex)=>a+ex.sets.filter(x=>!x.warm).reduce((b,x)=>b+x.weight*x.reps,0),0);
+      vP += woVolume(h.exercises);
     }
     const d = new Date(h.date); d.setHours(0,0,0,0);
     days.add(d.getTime());
@@ -297,7 +297,10 @@ function e1rmSeries(k){
       if(!work.length) continue;
       const add = (isBwEx(e.k) ? (e.bw||0) : 0) + (e.mb||0);
       const mul = e.x2 ? 2 : 1;
-      pts.push({ ts:new Date(w.date).getTime(), v:Math.max(...work.map(s=>(s.weight*mul+add)*(1+s.reps/30))) });
+      const v = Math.max(...work.map(s=>(s.weight*mul+add)*(1+s.reps/30)));
+      /* v=0 happens on bodyweight lifts logged before any body weight existed -
+         an artifact, not form; letting it in fabricates trends and ETAs */
+      if(v > 0) pts.push({ ts:new Date(w.date).getTime(), v });
     }
   }
   return pts;
@@ -306,7 +309,9 @@ function e1rmSeries(k){
    rising means the training is working, flat/falling is the honest deload signal.
    Purely computed from history, never asks the user anything. */
 function trendFor(k){
-  const rec = e1rmSeries(k).slice(-6).map(p=>p.v);
+  /* CURRENT-FORM window only: after a layoff the pre-break sessions must not
+     mix into the direction call (they would fake a 'down' and mute the watch) */
+  const rec = recentSeries(k).slice(-6).map(p=>p.v);
   if(rec.length < 4) return null; /* too little data to call a direction */
   const half = Math.floor(rec.length/2);
   const a = rec.slice(0,half).reduce((x,y)=>x+y,0)/half;
@@ -320,7 +325,7 @@ function trendFor(k){
    lands within three years - anything else would be a guess, so show nothing */
 function etaFor(k, goalKg){
   if(trendFor(k) !== 'up') return null; /* the date and the trend arrow must agree */
-  const pts = e1rmSeries(k).slice(-10);
+  const pts = recentSeries(k).slice(-10);
   if(pts.length < 4) return null;
   const n = pts.length;
   const mx = pts.reduce((a,p)=>a+p.ts,0)/n, my = pts.reduce((a,p)=>a+p.v,0)/n;
@@ -383,11 +388,14 @@ function trackedHtml(){
       `<span class="tkdelta ${delta>0?'up':'down'}">${delta>0?'▲':'▼'} ${tm?Math.abs(delta)+' s':wu(Math.abs(delta),true)} · ${t('trackDelta30')}</span>`;
     const tr = trendFor(k);
     const trHtml = tr ? `<span class="tktrend ${tr}" title="${t('trend_'+tr)}">${tr==='up'?'↗':tr==='down'?'↘':'→'}</span>` : '';
-    /* goal line: target e1RM vs the all-time best e1RM */
+    /* goal line: target e1RM vs the CURRENT-FORM best - the bar and the ETA on
+       the same row must agree on what "now" means; all-time is only the
+       fallback when there is no recent data at all */
     const goal = (S.goals||{})[k];
     let goalHtml = '';
     if(goal>0 && !tm){
-      const cur = exStats(k, name).e1rm;
+      const rp = recentSeries(k);
+      const cur = rp.length ? Math.max(...rp.map(p=>p.v)) : exStats(k, name).e1rm;
       const pct = Math.min(100, Math.round(cur/goal*100));
       const done = cur >= goal;
       /* honest projection: only shows when the trend really climbs (see etaFor) */

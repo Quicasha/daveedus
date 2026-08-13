@@ -618,6 +618,16 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
   -webkit-appearance:none; font-variant-numeric:tabular-nums;}
 .bwmodal .bwminput:focus{outline:none; box-shadow:0 0 0 2px var(--accent);}
 .bwmodal .bwmu{color:var(--dim); font-weight:700; font-size:15px;}
+/* quiet context under the logger: median line, trend spark, recent entries */
+.bwminfo{margin-top:16px; border-top:1px solid var(--line); padding-top:12px;}
+.bwmmed{display:flex; align-items:baseline; gap:8px; font-size:13px; color:var(--dim); margin:0 2px 8px;}
+.bwmmed b{color:var(--text); font-weight:750; font-variant-numeric:tabular-nums;}
+.bwmspark{opacity:.85; margin-bottom:6px;}
+.bwmspark svg.spark{width:100%; height:48px;}
+.bwmlist{max-height:168px; overflow-y:auto; -webkit-overflow-scrolling:touch;}
+.bwmrow{display:flex; gap:8px; padding:5px 2px; align-items:center; font-size:14px;}
+.bwmrow .d{color:var(--dim); flex:1;}
+.bwmrow .w{font-weight:700; font-variant-numeric:tabular-nums;}
 
 /* superset connector between linked exercise cards */
 .ssline{display:flex; align-items:center; justify-content:center; gap:6px;

@@ -76,10 +76,19 @@ function defaultState(){
            onboarded:0, a2hsOff:0, /* one-time first-launch intro / install-hint dismissal */
            plates:{ kg:PLATE_DEF.kg.slice(), lb:PLATE_DEF.lb.slice() } };
 }
-/* validate + migrate a raw state object; returns null if unusable */
+/* validate + migrate a raw state object; returns null if unusable.
+   REPAIR, never reject: one malformed field must not cost the whole blob
+   (a corrupt templates entry used to wipe intact history) - every field
+   falls back to its own default instead. */
 function hydrate(s){
-  if(!s || !Array.isArray(s.templates)) return null;
+  if(!s || typeof s!=='object' || Array.isArray(s)) return null;
   try{ delete s.__proto__; }catch(e){} /* harden against crafted import codes */
+  if(!Array.isArray(s.templates)) s.templates = [];
+  if(!Array.isArray(s.history)) s.history = [];
+  s.history = s.history.filter(w=>w && typeof w==='object' && Array.isArray(w.exercises)
+    && w.exercises.every(e=>e && Array.isArray(e.sets)));
+  if(!Array.isArray(s.customEx)) s.customEx = [];
+  s.customEx = s.customEx.filter(x=>x && typeof x.id==='string' && typeof x.n==='string');
   /* migration: older data had no program folders */
   if(!Array.isArray(s.folders)) s.folders = [];
   if(!s.mig13 && !s.folders.length && s.templates.length){
@@ -146,13 +155,17 @@ function hydrate(s){
 }
 let LS_OK = false; /* did localStorage contain valid data at boot? */
 function load(){
+  let raw = null;
   try{
-    const raw = localStorage.getItem(LS_KEY);
+    raw = localStorage.getItem(LS_KEY);
     if(raw){
       const s = hydrate(JSON.parse(raw));
       if(s){ LS_OK = true; return s; }
     }
   }catch(e){}
+  /* unusable blob: never destroy it silently - park it under a side key so the
+     data survives the defaults being saved over the main key */
+  if(raw){ try{ localStorage.setItem(LS_KEY+'.bad', raw); }catch(e){} }
   return defaultState();
 }
 let S = load();
@@ -195,21 +208,31 @@ async function idbGet(){
     return v;
   }catch(e){ return null; }
 }
-let idbTimer = null;
+let idbTimer = null, lsTimer = null;
 function save(){
+  S.ts = Date.now(); /* boot compares the two copies by this stamp and keeps the newer */
   const json = JSON.stringify(S);
+  clearTimeout(lsTimer); lsTimer = null; /* a pending debounced write is covered by this one */
   try{
     localStorage.setItem(LS_KEY, json);
   }catch(e){
-    /* quota exceeded - clear any legacy extras and retry once */
-    try{
-      Object.keys(localStorage).filter(k=>k.startsWith(SNAP_PREFIX)).forEach(k=>localStorage.removeItem(k));
-      localStorage.setItem(LS_KEY, json);
-    }catch(e2){ toast(t('saveError')); }
+    /* quota exceeded - localStorage keeps its stale copy, so flush the fresh
+       state to the IndexedDB mirror NOW; boot will prefer the newer copy */
+    toast(t('saveError'));
+    idbSet(json);
   }
   clearTimeout(idbTimer);
   idbTimer = setTimeout(()=>idbSet(json), 800);
 }
+/* debounced save for per-keystroke paths (weight/reps/note typing): S is already
+   mutated, only the O(full history) serialize+write waits until typing settles.
+   Backgrounding the app flushes immediately, so nothing is lost on switch-away. */
+function saveSoon(){
+  clearTimeout(lsTimer);
+  lsTimer = setTimeout(()=>{ lsTimer = null; save(); }, 400);
+}
+window.addEventListener('pagehide', ()=>{ if(lsTimer) save(); });
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden' && lsTimer) save(); });
 /* view state (not persisted) */
 const V = { screen:'home', editTpl:null, viewFolder:null, exDetail:null, expanded:null,
             pickerCb:null, pickerQ:'', pickerG:'all', exQ:'', exG:'mine',

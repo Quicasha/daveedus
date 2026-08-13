@@ -5,7 +5,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.8.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.9.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 /* UI strings. One flat dictionary - the app is English-only by design. */
@@ -25,6 +25,7 @@ const T = {
   woAltBack:'Back to', altLabel:'alt.', altAdd:'Alternative',
   woOrderHint:'Order done', woPrevOrderHint:'Last time you did it in this order',
   warmBtn:'Warmup sets', warmNeedW:'Enter your working weight first', warmTooLight:'Weight too light for a warmup ramp',
+  warmLate:'Warmups go before the working sets - some are already done',
   woNoteSess:'Note (this workout)…', woNotePerm:'Permanent note…', woNotePermToggle:'Permanent note',
   woEmptyVals:'Enter weight and reps',
   woFinishEmpty:'No completed sets. Discard workout?',
@@ -94,7 +95,7 @@ const T = {
   metricW:'Weight', metricVol:'Volume', metric1RM:'~1RM',
   exMine:'Mine', exMineEmpty:'Exercises you have done will appear here. Browse “All” for now.',
   saveDone:'Save',
-  bw:'Body weight', bwLog:'Log',
+  bw:'Body weight', bwLog:'Log', bwMed7:'7-day median',
   plates:'Plate calculator', platesBar:'Bar', platesSide:'Per side',
   platesRem:"{n} {u} per side doesn't fit standard plates", platesEmpty:'Empty bar',
   platesAvail:'Plates available at the gym',

@@ -165,7 +165,11 @@ function applyBak(d){
   if(typeof d.s.restSound!=='boolean') delete d.s.restSound;
   if(!SKIN_META[d.s.skin]) delete d.s.skin;
   const gh = { ghRepo:S.ghRepo, ghToken:S.ghToken, ghLast:S.ghLast, ghDirty:S.ghDirty };
-  S = Object.assign(defaultState(), d.s, { active:null, onboarded:1 }, gh);
+  /* funnel the payload through hydrate() like every other data source - it
+     repairs/validates every field, so a malformed backup cannot brick the app */
+  const next = hydrate(Object.assign({}, d.s, { active:null, onboarded:1 }, gh));
+  if(!next){ toast(t('codeBad')); return; }
+  S = next;
   save(); scheduleCloudSync(); applyTheme(); closeModal();
   go('home');
   toast(t('bakDone'));
@@ -282,9 +286,7 @@ function updateGhStatus(){
   if(S.ghLast){
     const d = new Date(S.ghLast);
     const today = new Date().toDateString()===d.toDateString();
-    el.textContent = t('ghLastSync')+' '+(today
-      ? d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})
-      : fmtDate(d.toISOString()));
+    el.textContent = t('ghLastSync')+' '+(today ? fmtClock(S.ghLast) : fmtDate(d.toISOString()));
     el.style.color = 'var(--green)';
   }else{ el.textContent = t('ghNever'); el.style.color = 'var(--dim)'; }
 }

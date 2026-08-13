@@ -62,16 +62,19 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   /* backdrop tap closes AND re-renders - modal edits (history, targets, base
      weight) must show on the screen behind no matter how the sheet is dismissed */
   $('#modal').addEventListener('click', e=>{ if(e.target.id==='modal'){ closeModal(); render(); } });
-  /* localStorage empty or corrupt? try the IndexedDB mirror before showing defaults */
-  if(!LS_OK){
-    try{
-      const raw = await idbGet();
-      if(raw){
-        const s = hydrate(typeof raw==='string' ? JSON.parse(raw) : raw);
-        if(s){ S = s; save(); applyTheme(); toast(t('protRecovered')); }
+  /* IndexedDB mirror: recovers when localStorage is empty/corrupt, and wins
+     whenever it is NEWER - e.g. quota failures left localStorage stale while
+     the mirror kept receiving fresh state */
+  try{
+    const raw = await idbGet();
+    if(raw){
+      const s = hydrate(typeof raw==='string' ? JSON.parse(raw) : raw);
+      if(s && (!LS_OK || (s.ts||0) > (S.ts||0))){
+        S = s; save(); applyTheme();
+        if(!LS_OK) toast(t('protRecovered'));
       }
-    }catch(e){}
-  }
+    }
+  }catch(e){}
   /* ask the browser to protect our storage from eviction */
   if(navigator.storage && navigator.storage.persist){
     navigator.storage.persist().catch(()=>{});

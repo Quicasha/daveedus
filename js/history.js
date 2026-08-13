@@ -126,7 +126,7 @@ function dlDividerHtml(d, c){
 }
 function histRowHtml(w){
   const nsets = w.exercises.reduce((a,e)=>a+e.sets.length,0);
-  const vol = w.exercises.reduce((a,e)=>a+e.sets.filter(s=>!s.warm).reduce((b,s)=>b+(s.weight*(e.x2?2:1)+(e.mb||0))*s.reps,0),0);
+  const vol = woVolume(w.exercises);
   const open = V.expanded===w.id;
   let detail = '';
   if(open){
@@ -165,6 +165,16 @@ function continueWorkout(){
      advanced (or auto-ended) it - the snapshot was taken pre-advance */
   for(const snap of (S.lastActive.waved||[])){
     if(snap && snap.k && snap.prev) S.waves[snap.k] = snap.prev;
+  }
+  /* deload bookkeeping rolls back too - resuming must bring the DELOAD pass
+     (banner, scaled ghosts, dl tagging) back exactly as it was */
+  const du = S.lastActive.dl;
+  if(du){
+    const d = S.deloads[S.deloads.length-1];
+    if(d){
+      if(du.closed) d.e = 0;
+      if(du.tplId){ const i = d.done.indexOf(du.tplId); if(i>=0) d.done.splice(i,1); }
+    }
   }
   S.lastActive = null;
   save(); scheduleCloudSync();
@@ -251,9 +261,29 @@ function logWeight(n){
   return true;
 }
 /* quick body-weight logging modal (opened from the home stat card or History):
-   prefilled with the last logged weight, adjustable ±0.1 with the ▾/▴ buttons */
-function openBwModal(){
+   prefilled with the last logged weight, adjustable ±0.1 with the ▾/▴ buttons.
+   Below the logger sits quiet context - 7-day median, a small trend line and
+   the recent entries (scrollable) - entering the weight stays the main act. */
+function openBwModal(noFocus){
   const last = S.weights.length ? kg2u(S.weights[0].kg) : null;
+  let info = '';
+  if(S.weights.length){
+    const cut = Date.now() - 7*864e5;
+    const w7 = S.weights.filter(x=>new Date(x.date).getTime() >= cut)
+      .map(x=>kg2u(x.kg)).sort((a,b)=>a-b);
+    const med = w7.length ? (w7.length%2 ? w7[(w7.length-1)/2] : (w7[w7.length/2-1]+w7[w7.length/2])/2) : null;
+    const spark = sparkSVG(S.weights.slice(0,20).reverse().map(x=>kg2u(x.kg)));
+    const rows = S.weights.map(x=>`<div class="bwmrow">
+        <span class="d">${fmtDate(x.date)}</span>
+        <span class="w">${wu(x.kg,true)}</span>
+        <button class="dropbtn del" style="min-height:28px" onclick="delWeightModal('${x.id}')">✕</button>
+      </div>`).join('');
+    info = `<div class="bwminfo">
+      ${med!=null?`<div class="bwmmed"><span>${t('bwMed7')}</span><b>${fmtW(Math.round(med*10)/10)} ${unitL()}</b></div>`:''}
+      ${spark?`<div class="bwmspark">${spark}</div>`:''}
+      <div class="bwmlist">${rows}</div>
+    </div>`;
+  }
   openModal(`<h3>${t('bwEnter')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div class="bwmodal">
       <button class="bwmstep" onclick="stepBwModal(-0.1)" aria-label="-0.1">▾</button>
@@ -262,8 +292,19 @@ function openBwModal(){
       <span class="bwmu">${unitL()}</span>
       <button class="bwmstep" onclick="stepBwModal(0.1)" aria-label="+0.1">▴</button>
     </div>
-    <button class="btn primary" onclick="saveBwModal()">${ACT_ICONS.check} ${t('bwLog')}</button>`);
-  setTimeout(()=>{ const i=$('#bwm-input'); if(i) i.focus(); }, 60);
+    <button class="btn primary" onclick="saveBwModal()">${ACT_ICONS.check} ${t('bwLog')}</button>
+    ${info}`);
+  if(!noFocus) setTimeout(()=>{ const i=$('#bwm-input'); if(i) i.focus(); }, 60);
+}
+/* delete from inside the sheet: the list refreshes in place, keyboard stays down */
+function delWeightModal(id){
+  const i = S.weights.findIndex(x=>x.id===id);
+  if(i<0) return;
+  const entry = S.weights[i];
+  S.weights.splice(i,1);
+  save(); render();
+  openBwModal(true);
+  undoToast(t('bwDelDone'), ()=>{ S.weights.splice(i,0,entry); openBwModal(true); });
 }
 function stepBwModal(d){
   const inp = $('#bwm-input');
