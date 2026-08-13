@@ -132,11 +132,11 @@ function obDemo(step){
   /* body weight: the home stat row - the tap lands on the third tile and the
      dash becomes a weight, so people learn the tile is a button at all */
   if(step===6){
-    const bwv = S.unit==='lb' ? '203.9' : '92.4';
+    const bwv = S.unit==='lb' ? '149.1' : '67.6';
     return `<div class="obdemo ob7">
       <div class="statrow" style="margin:0">
-        <div class="stat"><div class="v">2</div><div class="l">${t('statWeek')}</div></div>
-        <div class="stat"><div class="v">57</div><div class="l">${t('statTotal')}</div></div>
+        <div class="stat"><div class="v">7</div><div class="l">${t('statWeek')}</div></div>
+        <div class="stat"><div class="v">67</div><div class="l">${t('statTotal')}</div></div>
         <div class="stat obbwtile"><div class="v"><span class="obbw1">—</span><span class="obbw2">${bwv}</span></div>
           <div class="l">${t('bw').toLowerCase()}, ${u}</div><span class="obtap tap7"></span></div>
       </div></div>`;

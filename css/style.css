@@ -1072,7 +1072,7 @@ button:focus-visible, .chip:focus-visible, .switch:focus-visible{
 .ob7 .obbwtile{position:relative;}
 .ob7 .obbwtile .v{position:relative;}
 .ob7 .obbw1{animation:ob-n1 5s ease infinite;}
-.ob7 .obbw2{position:absolute; left:50%; transform:translateX(-50%); opacity:0;
+.ob7 .obbw2{position:absolute; left:0; opacity:0; /* left-aligned like every real tile value */
   animation:ob-n2 5s ease infinite; color:var(--accent-soft);}
 .obtap.tap7{animation-name:ob-tap4; animation-duration:5s;}
 /* step 3: the backup code line */
