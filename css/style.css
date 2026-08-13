@@ -499,7 +499,8 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 /* segmented button group (full-width variant; matches the compact .seg look) */
 .segmented{display:flex; gap:4px; background:var(--input); border-radius:10px; padding:3px;}
 .segmented .seg{flex:1; min-height:40px; border:none; border-radius:8px; background:transparent;
-  color:var(--dim); font-size:14px; font-weight:600;}
+  color:var(--dim); font-size:14px; font-weight:600;
+  display:flex; align-items:center; justify-content:center; text-align:center; padding:0 6px;}
 .segmented .seg.on{background:var(--card); color:var(--text); font-weight:700; box-shadow:0 1px 4px rgba(0,0,0,.15);}
 .segmented .seg:active{opacity:.7;}
 .numfield{display:flex; align-items:center; background:var(--input); border:none; border-radius:10px; overflow:hidden;}
