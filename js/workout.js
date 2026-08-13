@@ -291,11 +291,40 @@ function ghostFor(ex, si){
 /* ===== 4-week wave (the stage after linear progress stalls) =====
    Fixed weekly prescription off a base weight: A base x5, B +step x4,
    C +2 steps x3, D base x6 - then the next round starts one step higher.
-   State lives in S.waves[k] = { base kg, step kg, idx 0-3 } and advances
-   once per finished session that logged working sets on that lift. */
+   State lives in S.waves[k] = { base, step (kg), idx 0-3, startBest (e1RM kg
+   at start), started (ts), rounds } and advances once per finished session
+   that logged working sets on that lift.
+
+   The wave ENDS ITSELF (wave blocks are 3-6 weeks in practice, never open-
+   ended - and 5/3/1-style cycling progresses only until the milestone is
+   hit or missed): at each round wrap it checks
+   - WIN: a session during the wave beat the pre-wave all-time e1RM best
+     (week D's base x6 is exactly that attempt) -> back to normal progression;
+   - FLAT: 3 full rounds without a new best -> stop, deload or change the lift. */
 function waveTarget(wv){
   const p = [[0,5],[1,4],[2,3],[0,6]][wv.idx];
   return { w: Math.round((wv.base + p[0]*wv.step)*100)/100, r: p[1] };
+}
+/* week-A start suggestion: ~85.5% of the best recent e1RM, rounded to the
+   plate step - a five with a rep or two in reserve (5 @ 1-2 RIR sits around
+   80-86% 1RM in every load chart), which week D turns into a six = the
+   new-best attempt. Needs a few sessions of data to dare an answer. */
+function waveRecommend(k){
+  const pts = e1rmSeries(k).slice(-5);
+  if(pts.length < 3) return 0;
+  const best = Math.max(...pts.map(p=>p.v));
+  const stepU = S.unit==='lb' ? 5 : 2.5;
+  const u = Math.round(kg2u(best*0.855)/stepU)*stepU;
+  return u > 0 ? u2kg(u) : 0;
+}
+/* end-of-round verdict: 'win' (new best during the wave), 'flat' (3 rounds
+   without one), or null = keep going. startBest 0 = unknown, never auto-wins. */
+function waveVerdict(k, wv){
+  if(wv.startBest > 0){
+    const since = e1rmSeries(k).filter(p=>p.ts >= (wv.started||0));
+    if(since.length && Math.max(...since.map(p=>p.v)) > wv.startBest*1.005) return 'win';
+  }
+  return (wv.rounds||0) >= 3 ? 'flat' : null;
 }
 /* fill this session's empty working sets with the week's prescription */
 function applyWave(xi){
@@ -328,16 +357,22 @@ function openWaveModal(k){
   let dp = 0;
   for(const tp of S.templates){ const e = tp.ex.find(x=>x.k===k && x.dp); if(e){ dp = e.dp; break; } }
   V.waveStep = wv ? wv.step : (dp || dpSteps()[1]);
-  const base = wv ? wv.base : lastTopW(k);
+  /* prefill: an active wave shows its own base; a new one auto-fills the
+     e1RM-derived suggestion and falls back to the last top set */
+  const rec = wv ? 0 : waveRecommend(k);
+  const base = wv ? wv.base : (rec || lastTopW(k));
+  const recLine = rec ? `<div style="font-size:12px;color:var(--accent-soft);font-weight:600;margin:6px 2px 0">${t('waveRecFrom',{w:wu(rec,true)})}</div>` : '';
   openModal(`<h3>${esc(exName(k))}<button class="x" onclick="closeModal()">✕</button></h3>
-    <div class="pvsub" style="margin-bottom:10px">${t('waveTitle')}${wv?` · W${wv.idx+1}`:''}</div>
-    <div style="font-size:13px;color:var(--dim);line-height:1.5;margin:0 2px 14px">${t('waveHint')}</div>
+    <div class="pvsub" style="margin-bottom:10px">${t('waveTitle')}${wv?` · W${wv.idx+1} · R${(wv.rounds||0)+1}`:''}</div>
+    <div style="font-size:13px;color:var(--dim);line-height:1.5;margin:0 2px 10px">${t('waveHint')}</div>
+    <div style="font-size:12px;color:var(--ghost);line-height:1.5;margin:0 2px 14px">${t('waveEndHint')}</div>
     <div class="ctlrow">
       <span class="clbl wide">${t('waveBase')}</span>
       <input id="wave-base" type="text" inputmode="decimal" class="nameinput" style="width:110px;text-align:center;font-weight:700"
         value="${base?esc(fmtW(kg2u(base))):''}" placeholder="0" onfocus="this.select()">
       <span style="font-weight:700;color:var(--dim)">${unitL()}</span>
     </div>
+    ${recLine}
     <div class="ctlrow" id="wave-steps"></div>
     <button class="btn primary" style="margin-top:14px" onclick="saveWave('${k}')">${ACT_ICONS.check} ${wv?t('saveDone'):t('waveStart')}</button>
     ${wv?`<button class="btn danger" onclick="stopWave('${k}')">${t('waveStop')}</button>`:''}`);
@@ -356,7 +391,16 @@ function saveWave(k){
   const kg = (!isNaN(v) && v>0) ? Math.min(500, Math.round(u2kg(v)*100)/100) : 0;
   if(!kg){ toast(t('warmNeedW')); return; }
   const prev = S.waves[k];
-  S.waves[k] = { base:kg, step:Math.round(V.waveStep*1000)/1000, idx: prev ? prev.idx : 0 };
+  /* pre-wave best e1RM is the bar the auto-end measures against; editing an
+     active wave keeps its history (start point, finished rounds) intact */
+  const series = e1rmSeries(k);
+  S.waves[k] = {
+    base:kg, step:Math.round(V.waveStep*1000)/1000,
+    idx: prev ? prev.idx : 0,
+    startBest: prev ? prev.startBest : (series.length ? Math.max(...series.map(p=>p.v)) : 0),
+    started: prev ? prev.started : Date.now(),
+    rounds: prev ? (prev.rounds||0) : 0
+  };
   delete S.stallSnooze[k];
   save(); closeModal(); render(); scheduleCloudSync();
   toast(t('waveOn'));
@@ -1087,34 +1131,46 @@ function finishWorkout(){
     .filter(ex=>ex.adhoc && !ex.ghost && !ex.sets.some(s=>s.done))
     .map(ex=>({ k:ex.k, n:ex.name, s:ex.targetSets, r:ex.targetReps, ...(isX2(ex)?{x2:1}:{}), ...(ex.base>0?{mb:ex.base}:{}) }));
   if(sug.length) entry.sug = sug;
-  /* advance any wave whose lift logged working sets (once per lift, never on deload);
-     after week D the round wraps and the base climbs one step */
-  const wrapped = [];
-  const advanced = new Set(); /* also remembered on lastActive so Continue can roll the wave back */
+  S.history.unshift(entry);
+  /* advance any wave whose lift logged working sets (once per lift, never on a
+     deload) - AFTER the entry lands in history, so the fresh session counts
+     toward the verdict. After week D the round wraps and the wave judges
+     itself: new best during the wave = job done, 3 dry rounds = stop. */
+  const wrapped = [], ended = [];
+  const advanced = new Set();
+  const waveSnaps = []; /* pre-advance snapshots - Continue restores them verbatim, even auto-ended waves */
   if(!isDl){
     for(const e of exercises){
       const wv = S.waves[e.k];
       if(!wv || advanced.has(e.k)) continue;
       if(!e.sets.some(s=>!s.warm && !s.drop)) continue;
       advanced.add(e.k);
+      waveSnaps.push({ k:e.k, prev:Object.assign({}, wv) });
       wv.idx++;
       if(wv.idx > 3){
         wv.idx = 0;
-        wv.base = Math.round((wv.base + wv.step)*100)/100;
-        wrapped.push({ k:e.k, base:wv.base });
+        wv.rounds = (wv.rounds||0) + 1;
+        const verdict = waveVerdict(e.k, wv);
+        if(verdict){
+          delete S.waves[e.k];
+          ended.push({ k:e.k, verdict });
+        }else{
+          wv.base = Math.round((wv.base + wv.step)*100)/100;
+          wrapped.push({ k:e.k, base:wv.base });
+        }
       }
     }
   }
-  S.history.unshift(entry);
   /* keep the finished session resurrectable - "Continue" on the newest history
      row undoes an accidental Finish with sets and elapsed time intact */
-  S.lastActive = { id:entry.id, act:S.active, waved:[...advanced] };
+  S.lastActive = { id:entry.id, act:S.active, waved:waveSnaps };
   S.active = null;
   save();
   scheduleCloudSync();
   go('home');
   showSummary(dur, vol, exercises.reduce((a,e)=>a+e.sets.length,0), prs);
-  if(wrapped.length) toast(t('waveNextRound',{n:exName(wrapped[0].k), w:wu(wrapped[0].base,true)}));
+  if(ended.length) toast(t(ended[0].verdict==='win'?'waveWin':'waveFlat', {n:exName(ended[0].k)}));
+  else if(wrapped.length) toast(t('waveNextRound',{n:exName(wrapped[0].k), w:wu(wrapped[0].base,true)}));
 }
 function showSummary(dur, vol, setsDone, prs){
   const prHtml = prs.length ? `<h2 class="sec" style="margin-top:14px">${t('sumPRs')}</h2>` +

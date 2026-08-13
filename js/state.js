@@ -127,13 +127,17 @@ function hydrate(s){
     const v = s.goals[k];
     if(typeof v!=='number' || isNaN(v) || v<=0 || v>1000) delete s.goals[k];
   }
-  /* 4-week waves: key -> { base kg, step kg, idx 0-3 } */
+  /* 4-week waves: key -> { base kg, step kg, idx 0-3, startBest, started, rounds } */
   if(!s.waves || typeof s.waves!=='object' || Array.isArray(s.waves)) s.waves = {};
   for(const k in s.waves){
     const w = s.waves[k];
     if(!w || typeof w.base!=='number' || !(w.base>0 && w.base<=500)
         || typeof w.step!=='number' || !(w.step>=0.5 && w.step<=10)
-        || ![0,1,2,3].includes(w.idx)) delete s.waves[k];
+        || ![0,1,2,3].includes(w.idx)){ delete s.waves[k]; continue; }
+    /* auto-end bookkeeping: fill sane defaults for waves saved before v2.7 */
+    if(typeof w.startBest!=='number' || w.startBest<0) w.startBest = 0;
+    if(typeof w.started!=='number' || w.started<0) w.started = 0;
+    if(typeof w.rounds!=='number' || w.rounds<0) w.rounds = 0;
   }
   if(!s.stallSnooze || typeof s.stallSnooze!=='object' || Array.isArray(s.stallSnooze)) s.stallSnooze = {};
   if(typeof s.dlEvery!=='number' || !(s.dlEvery>=0 && s.dlEvery<=16)) s.dlEvery = 0;

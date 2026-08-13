@@ -5,7 +5,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.6.1'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.7.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 /* UI strings. One flat dictionary - the app is English-only by design. */
@@ -172,6 +172,10 @@ const T = {
   stallGo:'Set up wave',
   waveTitle:'4-week wave', waveMode:'Wave mode',
   waveHint:'Week A: base ×5 · B: +step ×4 · C: +2 steps ×3 · D: base ×6, then a new round starts one step higher. The chip on the workout card fills each session’s weights.',
+  waveEndHint:'The wave ends by itself: a new e1RM best during a round means it did its job; 3 rounds without one means it is time to deload or change the approach.',
+  waveRecFrom:'Suggested start: {w} · ≈86% of your recent best e1RM - a five with a rep or two in reserve. Week D turns it into a six: the new-best attempt.',
+  waveWin:'{n}: wave done - new best set. Back to normal progression.',
+  waveFlat:'{n}: 3 rounds without a new best. Deload or change the approach.',
   waveBase:'Week-A weight', waveStep:'Step',
   waveStart:'Start wave', waveStop:'Stop wave',
   waveOn:'Wave started', waveOff:'Wave stopped',
