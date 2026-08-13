@@ -126,6 +126,14 @@ function obDemo(step){
       <span class="obkey">${ACT_ICONS.copy}</span>
       <span class="obcode">DVD1.eyJ0Ijoi…</span>
     </div>`;
+  /* programs: a pinned split card - the tap lands on the star, TODAY lights up */
+  if(step===5) return `<div class="obdemo ob6">
+    <div class="splitcard" style="margin:0">
+      <div class="sphead" style="cursor:default"><span class="sphn">Upper / Lower ›</span>
+        <button class="mainbtn obstar">${ACT_ICONS.star}<span class="obtap tap6"></span></button></div>
+      <div class="sprow next" style="cursor:default"><span class="spn">Upper A</span><span class="nextchip obtoday">${t('todayBadge')}</span></div>
+      <div class="sprow" style="cursor:default"><span class="spn">Lower A</span></div>
+    </div></div>`;
   /* swap: tap the ... menu, the exercise name crossfades to its alternative */
   if(step===2) return `<div class="obdemo ob4">
     <div class="exhead" style="margin:2px 0">
@@ -166,7 +174,7 @@ function obDemo(step){
 }
 function renderOb(){
   const i = V.ob||0;
-  const N = 8;
+  const N = 9;
   const dots = Array.from({length:N},(_,j)=>`<span class="obdot${j===i?' on':''}"></span>`).join('');
   const dotRow = `<div style="display:flex;justify-content:center;gap:6px;margin-bottom:16px">${dots}</div>`;
   /* step 0: units, theme and skin - every pick applies INSTANTLY, so the sheet
@@ -206,7 +214,7 @@ function renderOb(){
   }
   const steps = [null, null,
     ['obwT','obwB','w'], ['ob1T','ob1B',0], ['ob2T','ob2B',1],
-    ['ob4T','ob4B',2], ['ob5T','ob5B',3], ['ob3T','ob3B',4]];
+    ['ob4T','ob4B',2], ['ob5T','ob5B',3], ['ob6T','ob6B',5], ['ob3T','ob3B',4]];
   const [tt, bb, dm] = steps[i];
   const lastStep = i === N-1;
   openModal(`<h3>${t(tt)}<button class="x" onclick="closeModal()">✕</button></h3>

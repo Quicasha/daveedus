@@ -116,6 +116,124 @@
   --card-shadow:0 1px 2px rgba(20,17,5,.05);
 }
 
+/* ---- OLD MONEY: serif display, mahogany-green night, brass; cream daylight ---- */
+:root[data-skin="old"]{
+  --display:Georgia, 'Times New Roman', serif;
+  --bg:#0a0d0a; --card:#131712; --input:#1d221b; --line:#2e352b;
+  --text:#f1eddf; --dim:#a5a58c; --ghost:#6c6c58;
+  --edge:rgba(214,188,124,.12);
+  --accent:#bfa15c; --accent-soft:#d6bc7c; --on-accent:#181204;
+  --accent-bg:rgba(191,161,92,.13);
+  --glow:rgba(191,161,92,.14);
+  --atmo:linear-gradient(180deg, #11140e 0%, #0a0d0a 380px);
+  --topbar-bg:rgba(15,18,14,.86); --tabbar-bg:rgba(13,16,12,.88);
+  --green:#2ecf87; --green-bg:rgba(46,207,135,.13);
+  --red:#ff453a; --red-bg:rgba(255,69,58,.13);
+  --orange:#ff9f0a;
+  --shadow:0 10px 34px rgba(4,6,3,.75);
+  --card-shadow:none;
+}
+:root[data-skin="old"][data-theme="light"]{
+  --bg:#f4f0e5; --card:#fcfaf3; --input:#ebe6d6; --line:#dcd5bf;
+  --text:#211d12; --dim:#7d7860; --ghost:#b0a98d;
+  --edge:#e2dcc8;
+  --accent:#3a5a40; --accent-soft:#3a5a40; --on-accent:#fff;
+  --accent-bg:rgba(58,90,64,.10);
+  --glow:rgba(58,90,64,.12);
+  --atmo:linear-gradient(180deg, #ece7d7 0%, #f4f0e5 380px);
+  --topbar-bg:rgba(246,242,231,.86); --tabbar-bg:rgba(246,242,231,.88);
+  --green:#0ca678; --green-bg:rgba(12,166,120,.11);
+  --red:#e02d22; --red-bg:rgba(224,45,34,.10);
+  --orange:#b45309;
+  --shadow:0 10px 34px rgba(45,38,18,.14);
+  --card-shadow:0 1px 2px rgba(40,34,15,.05);
+}
+
+/* ---- ZAZA ENJOYER: purple haze, kush green, everything soft and unhurried ---- */
+:root[data-skin="zaza"]{
+  --bg:#0a0712; --card:#151024; --input:#1f1833; --line:#332a4e;
+  --text:#f0edf8; --dim:#a79ac2; --ghost:#6c5f8c;
+  --edge:rgba(134,239,172,.09);
+  --accent:#4ade80; --accent-soft:#86efac; --on-accent:#05200f;
+  --accent-bg:rgba(74,222,128,.12);
+  --glow:rgba(74,222,128,.16);
+  --atmo:linear-gradient(180deg, #150c28 0%, #0a0712 380px);
+  --topbar-bg:rgba(17,11,30,.86); --tabbar-bg:rgba(15,10,26,.88);
+  --green:#2ecf87; --green-bg:rgba(46,207,135,.13);
+  --red:#ff453a; --red-bg:rgba(255,69,58,.13);
+  --orange:#ff9f0a;
+  --shadow:0 10px 34px rgba(8,3,20,.75);
+  --card-shadow:none;
+}
+:root[data-skin="zaza"][data-theme="light"]{
+  --bg:#f0f2ec; --card:#ffffff; --input:#e6ebe0; --line:#d9e0d2;
+  --text:#131b10; --dim:#6f7f68; --ghost:#a6b39e;
+  --edge:#e0e6d9;
+  --accent:#16a34a; --accent-soft:#15803d; --on-accent:#fff;
+  --accent-bg:rgba(22,163,74,.10);
+  --glow:rgba(22,163,74,.12);
+  --atmo:linear-gradient(180deg, #e9ede2 0%, #f0f2ec 380px);
+  --topbar-bg:rgba(242,244,238,.86); --tabbar-bg:rgba(242,244,238,.88);
+  --green:#0ca678; --green-bg:rgba(12,166,120,.11);
+  --red:#ff3b30; --red-bg:rgba(255,59,48,.10);
+  --orange:#ff9500;
+  --shadow:0 10px 34px rgba(20,35,15,.14);
+  --card-shadow:0 1px 2px rgba(15,25,10,.05);
+}
+
+/* ---- STIMMED OUT: pre-workout at 2 AM - acid lime on void black, no patience ---- */
+:root[data-skin="stim"]{
+  --bg:#030304; --card:#0f0f11; --input:#19191c; --line:#2b2b30;
+  --text:#f4f5ef; --dim:#9fa19a; --ghost:#616359;
+  --edge:rgba(200,241,53,.10);
+  --accent:#c8f135; --accent-soft:#e2ff70; --on-accent:#131600;
+  --accent-bg:rgba(200,241,53,.11);
+  --glow:rgba(200,241,53,.16);
+  --atmo:linear-gradient(180deg, #0b0d05 0%, #030304 380px);
+  --topbar-bg:rgba(9,10,6,.86); --tabbar-bg:rgba(8,9,5,.88);
+  --green:#2ecf87; --green-bg:rgba(46,207,135,.13);
+  --red:#ff453a; --red-bg:rgba(255,69,58,.13);
+  --orange:#ff9f0a;
+  --shadow:0 10px 34px rgba(0,0,0,.8);
+  --card-shadow:none;
+}
+:root[data-skin="stim"][data-theme="light"]{
+  --bg:#f7f8f2; --card:#ffffff; --input:#ebeee0; --line:#dde2cd;
+  --text:#151806; --dim:#73785f; --ghost:#adb394;
+  --edge:#e4e8d4;
+  --accent:#4d7c0f; --accent-soft:#3f6212; --on-accent:#fff;
+  --accent-bg:rgba(77,124,15,.10);
+  --glow:rgba(77,124,15,.12);
+  --atmo:linear-gradient(180deg, #f0f2e4 0%, #f7f8f2 380px);
+  --topbar-bg:rgba(248,249,243,.86); --tabbar-bg:rgba(248,249,243,.88);
+  --green:#0ca678; --green-bg:rgba(12,166,120,.11);
+  --red:#ff3b30; --red-bg:rgba(255,59,48,.10);
+  --orange:#ff9500;
+  --shadow:0 10px 34px rgba(25,30,5,.14);
+  --card-shadow:0 1px 2px rgba(20,24,4,.05);
+}
+
+/* ---- per-skin personality (beyond color): shape, type, tempo ---- */
+/* Old Money: engraved stationery - tighter corners, spaced small caps */
+:root[data-skin="old"] .card, :root[data-skin="old"] .tplbtn, :root[data-skin="old"] .stat,
+:root[data-skin="old"] .splitcard, :root[data-skin="old"] .btn{border-radius:8px;}
+:root[data-skin="old"] .btn.primary{border-radius:8px;}
+:root[data-skin="old"] h2.sec{letter-spacing:2.2px;}
+:root[data-skin="old"] #topbar h1{letter-spacing:.2px;}
+/* Zaza: everything rounder, pulses at half speed - no rush */
+:root[data-skin="zaza"] .card, :root[data-skin="zaza"] .tplbtn, :root[data-skin="zaza"] .stat,
+:root[data-skin="zaza"] .splitcard{border-radius:22px;}
+:root[data-skin="zaza"] .btn{border-radius:20px;}
+:root[data-skin="zaza"] .tbdot, :root[data-skin="zaza"] .pulse{animation-duration:2.6s;}
+:root[data-skin="zaza"] #topbar h1{text-transform:lowercase; letter-spacing:-.5px;}
+/* Stimmed Out: sharp corners, double-speed pulses, italic caps shouting */
+:root[data-skin="stim"] .card, :root[data-skin="stim"] .tplbtn, :root[data-skin="stim"] .stat,
+:root[data-skin="stim"] .splitcard, :root[data-skin="stim"] .btn{border-radius:6px;}
+:root[data-skin="stim"] .btn.primary{border-radius:6px;}
+:root[data-skin="stim"] .tbdot, :root[data-skin="stim"] .pulse{animation-duration:.55s;}
+:root[data-skin="stim"] .checkbtn.pop{animation-duration:.2s;}
+:root[data-skin="stim"] #topbar h1{text-transform:uppercase; font-style:italic; letter-spacing:.6px;}
+
 /* ============ base ============ */
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action:manipulation;}
 html,body{margin:0; padding:0; background:var(--bg); color:var(--text);
@@ -879,6 +997,15 @@ button:focus-visible, .chip:focus-visible, .switch:focus-visible{
 @keyframes ob-wrow {0%,30%{max-height:0; opacity:0; margin-top:0;} 38%,88%{max-height:46px; opacity:1; margin-top:8px;} 96%,100%{max-height:0; opacity:0; margin-top:0;}}
 @keyframes ob-wrow2{0%,36%{max-height:0; opacity:0; margin-top:0;} 44%,88%{max-height:46px; opacity:1; margin-top:8px;} 96%,100%{max-height:0; opacity:0; margin-top:0;}}
 @keyframes ob-wrow3{0%,42%{max-height:0; opacity:0; margin-top:0;} 50%,88%{max-height:46px; opacity:1; margin-top:8px;} 96%,100%{max-height:0; opacity:0; margin-top:0;}}
+/* programs step: the tap lands on the star, it lights up and TODAY follows */
+.ob6 .splitcard{pointer-events:none;}
+.ob6 .obstar{position:relative; color:var(--ghost); animation:ob-star 5s ease infinite;}
+.ob6 .obstar svg{animation:ob-starfill 5s ease infinite;}
+.obtap.tap6{animation-name:ob-tap4; animation-duration:5s;}
+.ob6 .obtoday{opacity:0; animation:ob-today 5s ease infinite;}
+@keyframes ob-star{0%,34%{color:var(--ghost);} 42%,92%{color:var(--orange);} 100%{color:var(--ghost);}}
+@keyframes ob-starfill{0%,34%{fill:transparent;} 42%,92%{fill:currentColor;} 100%{fill:transparent;}}
+@keyframes ob-today{0%,44%{opacity:0;} 54%,92%{opacity:1;} 100%{opacity:0;}}
 /* step 3: the backup code line */
 .obdemo.ob3{display:flex; align-items:center; gap:10px; padding:14px;}
 .ob3 .obkey{display:flex; color:var(--accent-soft);}

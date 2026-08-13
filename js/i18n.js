@@ -5,7 +5,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.3.3'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.4.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 /* UI strings. One flat dictionary - the app is English-only by design. */
@@ -109,6 +109,7 @@ const T = {
   histDel:'Delete this workout from history?', histSets:'sets', histVolume:'volume',
   setTheme:'Theme', themeAuto:'Auto', themeDark:'Dark', themeLight:'Light',
   setStyle:'Style', skin_ice:'Ice Cold', skin_villain:'Villain Arc', skin_batman:"I'm Batman",
+  skin_old:'Old Money', skin_zaza:'Zaza Enjoyer', skin_stim:'Stimmed Out',
   setAwake:'Keep screen awake',
   setRestSnd:'Rest sound signal',
   setRestHint:'Set a rest target per exercise when editing a workout. When time is up, the bar flashes and beeps - on silent mode the signal is visual only.',
@@ -169,6 +170,7 @@ const T = {
   ob2T:'Went heavier? Type it in', ob2B:'Only the change needs typing. Green check - you beat last time. Red - not this time.',
   ob4T:'Bench taken? Swap it', ob4B:'Every exercise keeps alternatives in the ⋯ menu: one tap swaps in the next option, no waiting around. Each variant tracks its own progress.',
   ob5T:'Warmup in one tap', ob5B:'Tap W and a warmup ramp builds itself from your working weight. Warmups stay out of your records.',
+  ob6T:'Pin it, star it', ob6B:'Pinned programs sit on your home screen. The star marks your MAIN program - TODAY, the week counter and deloads follow only the starred one.',
   ob3T:'Your data, your phone', ob3B:'Everything lives on this phone. Grab a backup code in Settings - it brings it all back on a new one.',
   obNext:'Next', obDone:'Start',
   a2hsTitle:'Install as an app',

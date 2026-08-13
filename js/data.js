@@ -161,7 +161,7 @@ function applyBak(d){
   if(typeof d.s.mainFolder!=='string') delete d.s.mainFolder;
   if(typeof d.s.restTarget!=='number' || !(d.s.restTarget>=15 && d.s.restTarget<=1800)) delete d.s.restTarget;
   if(typeof d.s.restSound!=='boolean') delete d.s.restSound;
-  if(!['ice','villain','batman'].includes(d.s.skin)) delete d.s.skin;
+  if(!SKIN_META[d.s.skin]) delete d.s.skin;
   const gh = { ghRepo:S.ghRepo, ghToken:S.ghToken, ghLast:S.ghLast, ghDirty:S.ghDirty };
   S = Object.assign(defaultState(), d.s, { active:null, onboarded:1 }, gh);
   save(); scheduleCloudSync(); applyTheme(); closeModal();

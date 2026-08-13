@@ -83,14 +83,20 @@ const mediaDark = window.matchMedia('(prefers-color-scheme: dark)');
 const SKIN_META = { /* status-bar color per skin+mode, matches each --atmo top tone */
   ice:     { dark:'#0a1220', light:'#eef2f8' },
   villain: { dark:'#130826', light:'#f2eef8' },
-  batman:  { dark:'#0e0d0b', light:'#f3f2ef' }
+  batman:  { dark:'#0e0d0b', light:'#f3f2ef' },
+  old:     { dark:'#11140e', light:'#f4f0e5' },
+  zaza:    { dark:'#150c28', light:'#f0f2ec' },
+  stim:    { dark:'#0b0d05', light:'#f7f8f2' }
 };
 /* fixed swatch colors for the skin pickers (dark palette bg + accent) - a new
    skin only needs entries here, in SKIN_META and a CSS token block */
 const SKIN_PREVIEW = {
   ice:     { bg:'#05070c', accent:'#38bdf8' },
   villain: { bg:'#08050e', accent:'#a855f7' },
-  batman:  { bg:'#050505', accent:'#f0b429' }
+  batman:  { bg:'#050505', accent:'#f0b429' },
+  old:     { bg:'#0a0d0a', accent:'#bfa15c' },
+  zaza:    { bg:'#0a0712', accent:'#4ade80' },
+  stim:    { bg:'#030304', accent:'#c8f135' }
 };
 function applyTheme(){
   const mode = S.theme==='auto' ? (mediaDark.matches?'dark':'light') : S.theme;

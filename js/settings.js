@@ -79,7 +79,7 @@ function setSkin(k){ S.skin=k; save(); applyTheme(); render(); scheduleCloudSync
 /* one skin row per entry: swatch (bg + accent dot), name, check on the active one.
    `act` is the onclick body - the pickers differ only in what happens after the tap. */
 function skinRowsHtml(act){
-  return ['ice','villain','batman'].map(k=>{
+  return Object.keys(SKIN_PREVIEW).map(k=>{
     const sw = SKIN_PREVIEW[k];
     return `<button class="swapitem ${(S.skin||'ice')===k?'on':''}" onclick="${act.replace(/KEY/g,k)}">
       <span class="skinsw" style="background:${sw.bg}"><i style="background:${sw.accent}"></i></span>

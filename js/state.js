@@ -103,7 +103,7 @@ function hydrate(s){
   if(typeof s.mainFolder!=='string') s.mainFolder = null;
   if(typeof s.restTarget!=='number' || !(s.restTarget>=15 && s.restTarget<=1800)) s.restTarget = 120;
   if(typeof s.restSound!=='boolean') s.restSound = true;
-  if(!['ice','villain','batman'].includes(s.skin)) s.skin = 'ice';
+  if(!SKIN_META[s.skin]) s.skin = 'ice'; /* util.js loads first; SKIN_META is the skin registry */
   if(typeof s.ghRepo!=='string') s.ghRepo = '';
   if(typeof s.ghToken!=='string') s.ghToken = '';
   if(typeof s.ghLast!=='number') s.ghLast = 0;
