@@ -5,7 +5,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.6.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.6.1'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 /* UI strings. One flat dictionary - the app is English-only by design. */
@@ -66,7 +66,8 @@ const T = {
   hs7w:'workouts · 7 d', hs7v:'volume · 7 d', hsGap:'avg gap',
   rhythmTitle:'Rhythm',
   trackedTitle:'Tracked lifts', trackAdd:'+ Track a lift',
-  trackedEmpty:'Pick the lifts whose progress you want to see here - e.g. bench and squat.',
+  trackedEmpty:'Pick the lifts whose progress you want to see here - e.g. bench and squat. Tracked lifts get the trend arrow, a goal target and the stall watch.',
+  trackedSub:'Trend, goal and stall watch follow ONLY the lifts tracked here.',
   trackedDup:'This lift is already tracked',
   trackDelta30:'in 30 d',
   prTitle:'Recent records', prEmpty:'Records will show up after a few workouts.',
@@ -167,7 +168,7 @@ const T = {
   goalTitle:'Goal', goalHint:'Enter the e1RM you are aiming for (estimated one-rep max). The card will show how much is left.',
   goalLeft:'{n} to go', goalReached:'reached',
   goalEta:'at this pace ~{d}',
-  stallTitle:'{n} looks stalled', stallSub:'{c} sessions without a new best. A 4-week wave breaks it: reps drop, weight climbs.',
+  stallTitle:'{n} looks stalled', stallSub:'{c} sessions without a new best. A 4-week wave breaks it: reps drop, weight climbs. Only your tracked lifts are watched like this.',
   stallGo:'Set up wave',
   waveTitle:'4-week wave', waveMode:'Wave mode',
   waveHint:'Week A: base ×5 · B: +step ×4 · C: +2 steps ×3 · D: base ×6, then a new round starts one step higher. The chip on the workout card fills each session’s weights.',

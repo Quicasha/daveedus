@@ -348,7 +348,10 @@ function stallInfo(k){
 }
 function trackedHtml(){
   let h = `<h2 class="sec">${t('trackedTitle')}</h2>`;
-  if(!S.trackedLifts.length)
+  /* say plainly what tracking buys - the stall watch especially must not feel random */
+  if(S.trackedLifts.length)
+    h += `<div style="color:var(--ghost);font-size:12px;line-height:1.5;margin:-2px 6px 8px">${t('trackedSub')}</div>`;
+  else
     h += `<div class="empty" style="padding:16px 20px 6px">${t('trackedEmpty')}</div>`;
   h += S.trackedLifts.map(k=>{
     const info = exInfo(k);
