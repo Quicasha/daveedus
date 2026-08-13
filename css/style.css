@@ -1067,6 +1067,14 @@ button:focus-visible, .chip:focus-visible, .switch:focus-visible{
 @keyframes ob-star{0%,34%{color:var(--ghost);} 42%,92%{color:var(--orange);} 100%{color:var(--ghost);}}
 @keyframes ob-starfill{0%,34%{fill:transparent;} 42%,92%{fill:currentColor;} 100%{fill:transparent;}}
 @keyframes ob-today{0%,44%{opacity:0;} 54%,92%{opacity:1;} 100%{opacity:0;}}
+/* body-weight step: the tap lands on the third home tile, the dash becomes a weight */
+.ob7 .stat{pointer-events:none;}
+.ob7 .obbwtile{position:relative;}
+.ob7 .obbwtile .v{position:relative;}
+.ob7 .obbw1{animation:ob-n1 5s ease infinite;}
+.ob7 .obbw2{position:absolute; left:50%; transform:translateX(-50%); opacity:0;
+  animation:ob-n2 5s ease infinite; color:var(--accent-soft);}
+.obtap.tap7{animation-name:ob-tap4; animation-duration:5s;}
 /* step 3: the backup code line */
 .obdemo.ob3{display:flex; align-items:center; gap:10px; padding:14px;}
 .ob3 .obkey{display:flex; color:var(--accent-soft);}

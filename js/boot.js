@@ -129,6 +129,18 @@ function obDemo(step){
       <span class="obkey">${ACT_ICONS.copy}</span>
       <span class="obcode">DVD1.eyJ0Ijoi…</span>
     </div>`;
+  /* body weight: the home stat row - the tap lands on the third tile and the
+     dash becomes a weight, so people learn the tile is a button at all */
+  if(step===6){
+    const bwv = S.unit==='lb' ? '203.9' : '92.4';
+    return `<div class="obdemo ob7">
+      <div class="statrow" style="margin:0">
+        <div class="stat"><div class="v">2</div><div class="l">${t('statWeek')}</div></div>
+        <div class="stat"><div class="v">57</div><div class="l">${t('statTotal')}</div></div>
+        <div class="stat obbwtile"><div class="v"><span class="obbw1">—</span><span class="obbw2">${bwv}</span></div>
+          <div class="l">${t('bw').toLowerCase()}, ${u}</div><span class="obtap tap7"></span></div>
+      </div></div>`;
+  }
   /* programs: a pinned split card - the tap lands on the star, TODAY lights up */
   if(step===5) return `<div class="obdemo ob6">
     <div class="splitcard" style="margin:0">
@@ -177,7 +189,7 @@ function obDemo(step){
 }
 function renderOb(){
   const i = V.ob||0;
-  const N = 9;
+  const N = 10;
   const dots = Array.from({length:N},(_,j)=>`<span class="obdot${j===i?' on':''}"></span>`).join('');
   const dotRow = `<div style="display:flex;justify-content:center;gap:6px;margin-bottom:16px">${dots}</div>`;
   /* step 0: units, theme and skin - every pick applies INSTANTLY, so the sheet
@@ -217,7 +229,7 @@ function renderOb(){
   }
   const steps = [null, null,
     ['obwT','obwB','w'], ['ob1T','ob1B',0], ['ob2T','ob2B',1],
-    ['ob4T','ob4B',2], ['ob5T','ob5B',3], ['ob6T','ob6B',5], ['ob3T','ob3B',4]];
+    ['ob4T','ob4B',2], ['ob5T','ob5B',3], ['ob6T','ob6B',5], ['obBwT','obBwB',6], ['ob3T','ob3B',4]];
   const [tt, bb, dm] = steps[i];
   const lastStep = i === N-1;
   openModal(`<h3>${t(tt)}<button class="x" onclick="closeModal()">✕</button></h3>

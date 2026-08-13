@@ -5,7 +5,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.9.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.9.1'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 /* UI strings. One flat dictionary - the app is English-only by design. */
@@ -191,6 +191,7 @@ const T = {
   ob4T:'Bench taken? Swap it', ob4B:'Every exercise keeps alternatives in the ⋯ menu: one tap swaps in the next option, no waiting around. Each variant tracks its own progress.',
   ob5T:'Warmup in one tap', ob5B:'Tap W and a warmup ramp builds itself from your working weight. Warmups stay out of your records.',
   ob6T:'Pin it, star it', ob6B:'Pinned programs sit on your home screen. The star marks your MAIN program - TODAY, the week counter and deloads follow only the starred one.',
+  obBwT:'The scale tile is a button', obBwB:'Third tile on the home screen logs your body weight - tap, type, done. Underneath it keeps a 7-day median and a trend line, and pull-ups or dips count that weight into your records.',
   ob3T:'Your data, your phone', ob3B:'Everything lives on this phone. Grab a backup code in Settings - it brings it all back on a new one.',
   obNext:'Next', obDone:'Start',
   a2hsTitle:'Install as an app',
