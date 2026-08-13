@@ -169,7 +169,8 @@ function renderOb(){
   const N = 8;
   const dots = Array.from({length:N},(_,j)=>`<span class="obdot${j===i?' on':''}"></span>`).join('');
   const dotRow = `<div style="display:flex;justify-content:center;gap:6px;margin-bottom:16px">${dots}</div>`;
-  /* step 0: units - the one choice that changes every number the tour shows */
+  /* step 0: units, theme and skin - every pick applies INSTANTLY, so the sheet
+     itself is the live preview before Next is ever pressed */
   if(i===0){
     openModal(`<h3>Daveedus<button class="x" onclick="closeModal()">✕</button></h3>
       <div class="card">
@@ -179,6 +180,18 @@ function renderOb(){
             <button class="${(S.unit||'kg')==='kg'?'on':''}" onclick="S.unit='kg';save();renderOb()">kg</button>
             <button class="${S.unit==='lb'?'on':''}" onclick="S.unit='lb';save();renderOb()">lb</button>
           </div>
+        </div>
+        <div class="setline">
+          <span class="lb">${t('setTheme')}</span>
+          <div class="seg">
+            <button class="${S.theme!=='light'?'on':''}" onclick="S.theme='dark';save();applyTheme();renderOb()">${t('themeDark')}</button>
+            <button class="${S.theme==='light'?'on':''}" onclick="S.theme='light';save();applyTheme();renderOb()">${t('themeLight')}</button>
+          </div>
+        </div>
+        <div style="color:var(--dim);font-size:13px;margin:12px 0 8px">${t('setStyle')}</div>
+        <div class="segmented">
+          ${['ice','villain','batman'].map(k=>
+            `<button class="seg ${(S.skin||'ice')===k?'on':''}" onclick="S.skin='${k}';save();applyTheme();renderOb()">${t('skin_'+k)}</button>`).join('')}
         </div>
       </div>
       ${dotRow}

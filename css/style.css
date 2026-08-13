@@ -13,9 +13,14 @@
 :root{
   --display:'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
-/* Winter arc: night sky blue-black, steel panels, frost hairlines, ice accent.
-   The only warm things left on purpose: the warmup orange and the deload amber.
-   Ice surfaces carry DARK text (--on-accent) - mind that on solid-accent elements. */
+/* Three selectable skins (data-skin on <html>, "ice" = no attribute), each with
+   a dark and a light palette (data-theme). Order matters: skin blocks come after
+   the ice blocks, and each skin's light block carries higher specificity than its
+   dark base, so the cascade resolves skin+theme without JS help.
+   Shared rules: win/loss green-red never changes meaning; warmup orange and
+   deload amber stay warm in every skin; solid-accent surfaces read --on-accent. */
+
+/* ---- ICE COLD (default): night sky blue-black, steel, frost, ice accent ---- */
 :root, :root[data-theme="dark"]{
   --bg:#05070c; --card:#0d141f; --input:#16202c; --line:#253349;
   --text:#edf3fa; --dim:#92a5ba; --ghost:#5a6f86;
@@ -24,7 +29,7 @@
   --accent-bg:rgba(56,189,248,.13);
   --glow:rgba(56,189,248,.15);
   --atmo:linear-gradient(180deg, #0a1220 0%, #05070c 380px);
-  --topbar-bg:rgba(8,13,22,.86);
+  --topbar-bg:rgba(8,13,22,.86); --tabbar-bg:rgba(7,11,19,.88);
   --green:#2ecf87; --green-bg:rgba(46,207,135,.13);
   --red:#ff453a; --red-bg:rgba(255,69,58,.13);
   --orange:#ff9f0a;
@@ -39,12 +44,76 @@
   --accent-bg:rgba(3,105,161,.09);
   --glow:rgba(3,105,161,.10);
   --atmo:linear-gradient(180deg, #e7edf6 0%, #eef2f8 380px);
-  --topbar-bg:rgba(240,244,250,.86);
+  --topbar-bg:rgba(240,244,250,.86); --tabbar-bg:rgba(240,244,250,.88);
   --green:#0ca678; --green-bg:rgba(12,166,120,.11);
   --red:#ff3b30; --red-bg:rgba(255,59,48,.10);
   --orange:#ff9500;
   --shadow:0 10px 34px rgba(15,30,55,.16);
   --card-shadow:0 1px 2px rgba(14,17,22,.05);
+}
+
+/* ---- VILLAIN ARC: purple-black night, electric violet, a little unhinged ---- */
+:root[data-skin="villain"]{
+  --bg:#08050e; --card:#140d20; --input:#1e142e; --line:#332349;
+  --text:#f3edfb; --dim:#a795bf; --ghost:#6b5a88;
+  --edge:rgba(196,150,255,.10);
+  --accent:#a855f7; --accent-soft:#c9a2ff; --on-accent:#150526;
+  --accent-bg:rgba(168,85,247,.14);
+  --glow:rgba(168,85,247,.20);
+  --atmo:linear-gradient(180deg, #130826 0%, #08050e 380px);
+  --topbar-bg:rgba(16,9,28,.86); --tabbar-bg:rgba(14,8,24,.88);
+  --green:#2ecf87; --green-bg:rgba(46,207,135,.13);
+  --red:#ff453a; --red-bg:rgba(255,69,58,.13);
+  --orange:#ff9f0a;
+  --shadow:0 10px 34px rgba(8,2,20,.75);
+  --card-shadow:none;
+}
+:root[data-skin="villain"][data-theme="light"]{
+  --bg:#f2eef8; --card:#ffffff; --input:#ebe4f4; --line:#e0d6ee;
+  --text:#170b2b; --dim:#77689a; --ghost:#ab9cc8;
+  --edge:#e7ddf2;
+  --accent:#7c3aed; --accent-soft:#7c3aed; --on-accent:#fff;
+  --accent-bg:rgba(124,58,237,.10);
+  --glow:rgba(124,58,237,.12);
+  --atmo:linear-gradient(180deg, #ece4f6 0%, #f2eef8 380px);
+  --topbar-bg:rgba(243,238,250,.86); --tabbar-bg:rgba(243,238,250,.88);
+  --green:#0ca678; --green-bg:rgba(12,166,120,.11);
+  --red:#ff3b30; --red-bg:rgba(255,59,48,.10);
+  --orange:#ff9500;
+  --shadow:0 10px 34px rgba(40,20,80,.16);
+  --card-shadow:0 1px 2px rgba(20,10,40,.05);
+}
+
+/* ---- I'M BATMAN: pure black, neutral graphite, Wayne gold ---- */
+:root[data-skin="batman"]{
+  --bg:#050505; --card:#111113; --input:#1b1b1e; --line:#2b2b2f;
+  --text:#f2f2f0; --dim:#9d9da4; --ghost:#616167;
+  --edge:rgba(255,255,255,.07);
+  --accent:#f0b429; --accent-soft:#ffd166; --on-accent:#1a1200;
+  --accent-bg:rgba(240,180,41,.12);
+  --glow:rgba(240,180,41,.15);
+  --atmo:linear-gradient(180deg, #0e0d0b 0%, #050505 380px);
+  --topbar-bg:rgba(12,12,12,.86); --tabbar-bg:rgba(10,10,10,.88);
+  --green:#30d158; --green-bg:rgba(48,209,88,.13);
+  --red:#ff453a; --red-bg:rgba(255,69,58,.13);
+  --orange:#ff9f0a;
+  --shadow:0 10px 34px rgba(0,0,0,.75);
+  --card-shadow:none;
+}
+:root[data-skin="batman"][data-theme="light"]{
+  --bg:#f3f2ef; --card:#ffffff; --input:#eceae4; --line:#e2dfd7;
+  --text:#141310; --dim:#7c7a72; --ghost:#b1aea4;
+  --edge:#e8e5dd;
+  --accent:#a16207; --accent-soft:#a16207; --on-accent:#fff;
+  --accent-bg:rgba(161,98,7,.10);
+  --glow:rgba(161,98,7,.12);
+  --atmo:linear-gradient(180deg, #ede9df 0%, #f3f2ef 380px);
+  --topbar-bg:rgba(245,243,238,.86); --tabbar-bg:rgba(245,243,238,.88);
+  --green:#0ca678; --green-bg:rgba(12,166,120,.11);
+  --red:#ff3b30; --red-bg:rgba(255,59,48,.10);
+  --orange:#ff9500;
+  --shadow:0 10px 34px rgba(30,25,10,.14);
+  --card-shadow:0 1px 2px rgba(20,17,5,.05);
 }
 
 /* ============ base ============ */
@@ -718,8 +787,7 @@ svg.spark{flex:none; width:130px; height:40px;}
 /* ============ tab bar ============ */
 #tabbar{position:fixed; left:0; right:0; bottom:0; z-index:30;
   border-top:.5px solid var(--line); padding-bottom:env(safe-area-inset-bottom);}
-:root[data-theme="dark"] #tabbar{background:rgba(7,11,19,.88); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px);}
-:root[data-theme="light"] #tabbar{background:rgba(240,244,250,.88); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px);}
+#tabbar{background:var(--tabbar-bg); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px);}
 #tabbar .inner{max-width:560px; margin:0 auto; display:flex;}
 #tabbar button{flex:1; background:none; border:none; color:var(--dim); padding:7px 0 9px;
   font-size:10px; font-weight:600; display:flex; flex-direction:column; align-items:center; gap:3px;}

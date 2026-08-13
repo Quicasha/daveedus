@@ -34,7 +34,7 @@ function shareTpl(id){
 /* full-data payload for backup codes AND cloud sync - the GitHub token itself is
    deliberately NOT here: backup codes get pasted around, the token must never travel */
 function bakPayload(){
-  return { t:'bak', s:{ unit:S.unit, theme:S.theme, keepAwake:S.keepAwake, plates:S.plates,
+  return { t:'bak', s:{ unit:S.unit, theme:S.theme, skin:S.skin, keepAwake:S.keepAwake, plates:S.plates,
     restTarget:S.restTarget, restSound:S.restSound,
     folders:S.folders, customEx:S.customEx, templates:S.templates, history:S.history, weights:S.weights,
     trackedLifts:S.trackedLifts, deloads:S.deloads, mainFolder:S.mainFolder, mbase:S.mbase,
@@ -161,6 +161,7 @@ function applyBak(d){
   if(typeof d.s.mainFolder!=='string') delete d.s.mainFolder;
   if(typeof d.s.restTarget!=='number' || !(d.s.restTarget>=15 && d.s.restTarget<=1800)) delete d.s.restTarget;
   if(typeof d.s.restSound!=='boolean') delete d.s.restSound;
+  if(!['ice','villain','batman'].includes(d.s.skin)) delete d.s.skin;
   const gh = { ghRepo:S.ghRepo, ghToken:S.ghToken, ghLast:S.ghLast, ghDirty:S.ghDirty };
   S = Object.assign(defaultState(), d.s, { active:null, onboarded:1 }, gh);
   save(); scheduleCloudSync(); applyTheme(); closeModal();

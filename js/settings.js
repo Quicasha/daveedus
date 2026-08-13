@@ -16,6 +16,11 @@ function htmlSettings(){
         <button class="${S.theme==='light'?'on':''}" onclick="setTheme('light')">${t('themeLight')}</button>
       </div>
     </div>
+    <div style="color:var(--dim);font-size:13px;margin:12px 0 8px">${t('setStyle')}</div>
+    <div class="segmented">
+      ${['ice','villain','batman'].map(k=>
+        `<button class="seg ${(S.skin||'ice')===k?'on':''}" onclick="setSkin('${k}')">${t('skin_'+k)}</button>`).join('')}
+    </div>
     <div class="setline">
       <span class="lb">${t('setUnit')}</span>
       <div class="seg">
@@ -71,6 +76,7 @@ function htmlSettings(){
   <div style="text-align:center;color:var(--ghost);font-size:12px;margin-top:24px">Daveedus v${APP_VER}</div>`;
 }
 function setTheme(m){ S.theme=m; save(); applyTheme(); render(); }
+function setSkin(k){ S.skin=k; save(); applyTheme(); render(); scheduleCloudSync(); }
 function toggleRestSound(){
   S.restSound = !S.restSound;
   save(); render();

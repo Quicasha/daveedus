@@ -75,13 +75,24 @@ function copyFallback(txt){
   ta.remove();
 }
 
-/* ======================= theme ======================= */
+/* ======================= theme + skin ======================= */
+/* Two independent axes: data-theme (dark/light, "auto" resolves here) and
+   data-skin (ice = no attribute / villain / batman). CSS owns the palettes;
+   this only stamps the attributes and keeps the browser-chrome color in step. */
 const mediaDark = window.matchMedia('(prefers-color-scheme: dark)');
+const SKIN_META = { /* status-bar color per skin+mode, matches each --atmo top tone */
+  ice:     { dark:'#0a1220', light:'#eef2f8' },
+  villain: { dark:'#130826', light:'#f2eef8' },
+  batman:  { dark:'#0e0d0b', light:'#f3f2ef' }
+};
 function applyTheme(){
   const mode = S.theme==='auto' ? (mediaDark.matches?'dark':'light') : S.theme;
-  document.documentElement.dataset.theme = mode;
+  const el = document.documentElement;
+  el.dataset.theme = mode;
+  const skin = SKIN_META[S.skin] ? S.skin : 'ice';
+  if(skin==='ice') delete el.dataset.skin; else el.dataset.skin = skin;
   const meta = $('#themecolor');
-  if(meta) meta.content = mode==='dark' ? '#0a1220' : '#eef2f8'; /* matches the topbar's blended tone */
+  if(meta) meta.content = SKIN_META[skin][mode];
 }
 mediaDark.addEventListener('change', ()=>{ if(S.theme==='auto') applyTheme(); });
 

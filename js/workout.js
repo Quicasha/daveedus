@@ -1024,7 +1024,11 @@ function confetti(){
   if(document.getElementById('confetti')) return;
   const box = document.createElement('div');
   box.id = 'confetti';
-  const cols = ['#38bdf8','#85d3ff','#eef6ff','#2ecf87','#5a8dff','#ffd166']; /* ice, moonlight, one gold */
+  const cols = { /* confetti wears the skin's colors */
+    ice:    ['#38bdf8','#85d3ff','#eef6ff','#2ecf87','#5a8dff','#ffd166'],
+    villain:['#a855f7','#c9a2ff','#f0abfc','#ede9fe','#7c3aed','#ff5d8f'],
+    batman: ['#f0b429','#ffd166','#fff7e0','#9d9da4','#d4a017','#fde68a']
+  }[SKIN_META[S.skin] ? S.skin : 'ice'];
   let html = '';
   for(let i=0;i<70;i++){
     const l = Math.random()*100, delay = Math.random()*0.5, dur = 1.6+Math.random()*1.2;
