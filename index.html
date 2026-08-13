@@ -27,7 +27,23 @@
   <button data-d="2.5">+2.5</button>
 </div>
 <div id="toast"></div>
+<!-- Classic scripts, order matters: data -> strings -> helpers -> state ->
+     render core -> screens -> import/export -> boot. Everything is global by
+     design (inline onclick handlers resolve against global scope). -->
 <script src="js/exercises.js"></script>
-<script src="js/app.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/util.js"></script>
+<script src="js/state.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/home.js"></script>
+<script src="js/deload.js"></script>
+<script src="js/workout.js"></script>
+<script src="js/program.js"></script>
+<script src="js/exercises-ui.js"></script>
+<script src="js/stats.js"></script>
+<script src="js/history.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/data.js"></script>
+<script src="js/boot.js"></script>
 </body>
 </html>

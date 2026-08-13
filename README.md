@@ -27,7 +27,7 @@ Takes half a minute. After that it runs full-screen and works fully offline.
 - **Progress** - training rhythm at a glance, weekly stats, muscle balance, per-exercise charts (weight / volume / est. 1RM), rep-specific PRs, tracked lifts with goal targets
 - **Deload** - one light pass over your program when you need it (pick the load, down to "same weight, half the sets"), kept out of your records; an optional calendar reminder nudges you every N weeks
 - **Share codes** - send a program to a friend as a short code; they paste it and have your exact routine
-- **kg / lb, English / Lithuanian, dark / light**
+- **kg / lb, dark / light**
 
 ## Your data
 
@@ -45,11 +45,26 @@ Updates install themselves the next time you open the app.
 
 Plain HTML, CSS and vanilla JavaScript - no frameworks, no build step, no dependencies. State lives in `localStorage`, mirrored to `IndexedDB` as a safety net; a service worker makes it offline-first and self-updating.
 
+The code is split into small per-domain scripts, loaded in dependency order (everything is global by design - inline handlers resolve against global scope):
+
 ```
-index.html              App shell
+index.html              App shell + script load order
 css/style.css           Styles, dark / light themes
-js/app.js               All logic - state, screens, timers, stats, sync, share codes
-js/exercises.js         Built-in exercise database
+js/exercises.js         Built-in exercise database (ids are permanent)
+js/i18n.js              App version + every user-facing string
+js/util.js              Formatting, unit conversion, DB lookups, theme
+js/state.js             The S state object: schema, validation, persistence
+js/ui.js                Render core: navigation, topbar, tab bar, modal
+js/home.js              Home screen (week plan, reminders, program cards)
+js/deload.js            Deload cycle logic + options sheet
+js/workout.js           The active session: logging, ghosts, rest, finish
+js/program.js           Programs and the template editor
+js/exercises-ui.js      Exercise picker, browser, custom form, detail view
+js/stats.js             Records, e1RM, PR feed, tracked lifts, charts
+js/history.js           History list, search, editing, body weight
+js/settings.js          Settings screen
+js/data.js              Share/backup codes, import, CSV, GitHub cloud sync
+js/boot.js              Startup, rest signal, wake lock, onboarding
 sw.js                   Service worker (offline cache + auto-update)
 manifest.webmanifest    PWA manifest
 icons/                  App icons
@@ -60,4 +75,4 @@ Weights are stored in kilograms and converted only for display, so switching uni
 
 **Run locally** - any static file server: `powershell -File serve.ps1`, then open `http://localhost:8317`.
 
-**Deploy** - push to `main`; GitHub Actions publishes to Pages. Bump `APP_VER` in `js/app.js` and `CACHE` in `sw.js` on every release so installed devices pick up the new files.
+**Deploy** - push to `main`; GitHub Actions publishes to Pages. Bump `APP_VER` in `js/i18n.js` and `CACHE` in `sw.js` on every release so installed devices pick up the new files.

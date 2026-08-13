@@ -1,7 +1,11 @@
 /* Daveedus service worker - offline-first app shell */
-const CACHE = 'daveedus-v2.1.3';
+const CACHE = 'daveedus-v2.2.0';
 const ASSETS = [
-  './', './index.html', './css/style.css', './js/app.js', './js/exercises.js',
+  './', './index.html', './css/style.css',
+  './js/exercises.js', './js/i18n.js', './js/util.js', './js/state.js',
+  './js/ui.js', './js/home.js', './js/deload.js', './js/workout.js',
+  './js/program.js', './js/exercises-ui.js', './js/stats.js', './js/history.js',
+  './js/settings.js', './js/data.js', './js/boot.js',
   './manifest.webmanifest',
   './fonts/archivo-latin.woff2', './fonts/archivo-latin-ext.woff2',
   './icons/favicon.png', './icons/pwa-icon.png', './icons/splash-icon.png',
