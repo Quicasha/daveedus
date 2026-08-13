@@ -5,7 +5,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.4.2'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.5.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 /* UI strings. One flat dictionary - the app is English-only by design. */
@@ -111,6 +111,7 @@ const T = {
   histSets:'sets', histVolume:'volume',
   setTheme:'Theme', themeAuto:'Auto', themeDark:'Dark', themeLight:'Light',
   setStyle:'Style', skin_ice:'Ice Cold', skin_zaza:'Zaza Enjoyer', skin_stim:'Stimmed Out',
+  skin_locked:'Locked In', skin_aero:'2007', skin_golden:'Golden Era', skin_princess:'Princess Treatment',
   setAwake:'Keep screen awake',
   setRestSnd:'Rest sound signal',
   setRestHint:'Set a rest target per exercise when editing a workout. When time is up, the bar flashes and beeps - on silent mode the signal is visual only.',

@@ -119,7 +119,157 @@
   --card-shadow:0 1px 2px rgba(20,24,4,.05);
 }
 
+/* ---- LOCKED IN: pure monochrome, no sky, no halo - nothing competes ---- */
+:root[data-skin="locked"]{
+  --bg:#000000; --card:#101010; --input:#1a1a1a; --line:#2a2a2a;
+  --text:#f5f5f5; --dim:#9a9a9a; --ghost:#5c5c5c;
+  --edge:rgba(255,255,255,.08);
+  --accent:#f5f5f5; --accent-soft:#d9d9d9; --on-accent:#000000;
+  --accent-bg:rgba(255,255,255,.08);
+  --glow:transparent;
+  --atmo:none;
+  --topbar-bg:rgba(8,8,8,.86); --tabbar-bg:rgba(6,6,6,.88);
+  --green:#2ecf87; --green-bg:rgba(46,207,135,.13);
+  --red:#ff453a; --red-bg:rgba(255,69,58,.13);
+  --orange:#ff9f0a;
+  --shadow:0 10px 34px rgba(0,0,0,.8);
+  --card-shadow:none;
+}
+:root[data-skin="locked"][data-theme="light"]{
+  --bg:#f5f5f5; --card:#ffffff; --input:#ececec; --line:#dedede;
+  --text:#111111; --dim:#767676; --ghost:#ababab;
+  --edge:#e4e4e4;
+  --accent:#111111; --accent-soft:#111111; --on-accent:#ffffff;
+  --accent-bg:rgba(0,0,0,.06);
+  --glow:transparent;
+  --atmo:none;
+  --topbar-bg:rgba(247,247,247,.86); --tabbar-bg:rgba(247,247,247,.88);
+  --green:#0ca678; --green-bg:rgba(12,166,120,.11);
+  --red:#ff3b30; --red-bg:rgba(255,59,48,.10);
+  --orange:#b45309;
+  --shadow:0 10px 34px rgba(0,0,0,.14);
+  --card-shadow:0 1px 2px rgba(0,0,0,.05);
+}
+
+/* ---- 2007: Frutiger Aero - glossy aqua, when nothing hurt yet ---- */
+:root[data-skin="aero"]{
+  --bg:#04141c; --card:#0c222e; --input:#143140; --line:#22485c;
+  --text:#e8f6fb; --dim:#8fb4c2; --ghost:#567a8a;
+  --edge:rgba(127,231,247,.10);
+  --accent:#22d3ee; --accent-soft:#7fe7f7; --on-accent:#062a33;
+  --accent-bg:rgba(34,211,238,.12);
+  --glow:rgba(34,211,238,.18);
+  --atmo:linear-gradient(180deg, #082633 0%, #04141c 380px);
+  --topbar-bg:rgba(7,30,41,.86); --tabbar-bg:rgba(6,26,36,.88);
+  --green:#2ecf87; --green-bg:rgba(46,207,135,.13);
+  --red:#ff453a; --red-bg:rgba(255,69,58,.13);
+  --orange:#ff9f0a;
+  --shadow:0 10px 34px rgba(1,10,15,.7);
+  --card-shadow:none;
+}
+:root[data-skin="aero"][data-theme="light"]{
+  --bg:#eaf4f8; --card:#ffffff; --input:#e3eef4; --line:#d3e4ec;
+  --text:#0d2b38; --dim:#5f7f8e; --ghost:#9fbdc9;
+  --edge:#dcebf2;
+  --accent:#0891b2; --accent-soft:#0e7490; --on-accent:#fff;
+  --accent-bg:rgba(8,145,178,.10);
+  --glow:rgba(8,145,178,.14);
+  --atmo:linear-gradient(180deg, #dff0f7 0%, #eaf4f8 380px);
+  --topbar-bg:rgba(238,246,250,.86); --tabbar-bg:rgba(238,246,250,.88);
+  --green:#0ca678; --green-bg:rgba(12,166,120,.11);
+  --red:#ff3b30; --red-bg:rgba(255,59,48,.10);
+  --orange:#ff9500;
+  --shadow:0 10px 34px rgba(10,40,55,.16);
+  --card-shadow:0 1px 2px rgba(10,35,50,.05);
+}
+
+/* ---- GOLDEN ERA: sepia iron, dusty amber light on old plates ---- */
+:root[data-skin="golden"]{
+  --bg:#120e08; --card:#1e1811; --input:#2a2317; --line:#3e3524;
+  --text:#f3e9d6; --dim:#b3a284; --ghost:#7a6c52;
+  --edge:rgba(240,192,96,.10);
+  --accent:#e0a32e; --accent-soft:#f0c060; --on-accent:#201200;
+  --accent-bg:rgba(224,163,46,.12);
+  --glow:rgba(224,163,46,.14);
+  --atmo:linear-gradient(180deg, #1c1610 0%, #120e08 380px);
+  --topbar-bg:rgba(24,19,12,.86); --tabbar-bg:rgba(21,17,11,.88);
+  --green:#2ecf87; --green-bg:rgba(46,207,135,.13);
+  --red:#ff453a; --red-bg:rgba(255,69,58,.13);
+  --orange:#ff9f0a;
+  --shadow:0 10px 34px rgba(8,6,2,.75);
+  --card-shadow:none;
+}
+:root[data-skin="golden"][data-theme="light"]{
+  --bg:#f1e9d8; --card:#faf5e9; --input:#e7dcc4; --line:#d8cbae;
+  --text:#241c0e; --dim:#82755b; --ghost:#b3a687;
+  --edge:#ddd2b8;
+  --accent:#92400e; --accent-soft:#92400e; --on-accent:#fff;
+  --accent-bg:rgba(146,64,14,.10);
+  --glow:rgba(146,64,14,.12);
+  --atmo:linear-gradient(180deg, #e9dfc9 0%, #f1e9d8 380px);
+  --topbar-bg:rgba(243,236,222,.86); --tabbar-bg:rgba(243,236,222,.88);
+  --green:#0ca678; --green-bg:rgba(12,166,120,.11);
+  --red:#e02d22; --red-bg:rgba(224,45,34,.10);
+  --orange:#b45309;
+  --shadow:0 10px 34px rgba(45,35,15,.14);
+  --card-shadow:0 1px 2px rgba(40,30,12,.05);
+}
+
+/* ---- PRINCESS TREATMENT: soft rose, easy on the eyes, royally cushioned ---- */
+:root[data-skin="princess"]{
+  --bg:#180d13; --card:#241521; --input:#31202c; --line:#47303e;
+  --text:#f8ecf2; --dim:#c39aae; --ghost:#836071;
+  --edge:rgba(255,182,213,.10);
+  --accent:#f28ab5; --accent-soft:#f7b1cd; --on-accent:#2c0f1d;
+  --accent-bg:rgba(242,138,181,.13);
+  --glow:rgba(242,138,181,.16);
+  --atmo:linear-gradient(180deg, #241019 0%, #180d13 380px);
+  --topbar-bg:rgba(30,15,23,.86); --tabbar-bg:rgba(26,13,20,.88);
+  --green:#2ecf87; --green-bg:rgba(46,207,135,.13);
+  --red:#ff453a; --red-bg:rgba(255,69,58,.13);
+  --orange:#ff9f0a;
+  --shadow:0 10px 34px rgba(15,4,10,.75);
+  --card-shadow:none;
+}
+:root[data-skin="princess"][data-theme="light"]{
+  --bg:#faf1f4; --card:#ffffff; --input:#f4e6ec; --line:#ecd9e2;
+  --text:#3b2230; --dim:#9b7386; --ghost:#c8a8b7;
+  --edge:#f0dfe7;
+  --accent:#db2777; --accent-soft:#b01e64; --on-accent:#fff;
+  --accent-bg:rgba(219,39,119,.08);
+  --glow:rgba(219,39,119,.10);
+  --atmo:linear-gradient(180deg, #f6e7ee 0%, #faf1f4 380px);
+  --topbar-bg:rgba(250,242,246,.86); --tabbar-bg:rgba(250,242,246,.88);
+  --green:#0ca678; --green-bg:rgba(12,166,120,.11);
+  --red:#e02d5a; --red-bg:rgba(224,45,90,.10);
+  --orange:#f59e0b;
+  --shadow:0 10px 34px rgba(90,30,60,.13);
+  --card-shadow:0 1px 2px rgba(80,25,55,.05);
+}
+
 /* ---- per-skin personality (beyond color): shape, type, tempo ---- */
+/* Locked In: tighter corners, stilled pulse - silence is the feature */
+:root[data-skin="locked"] .card, :root[data-skin="locked"] .tplbtn, :root[data-skin="locked"] .stat,
+:root[data-skin="locked"] .splitcard, :root[data-skin="locked"] .btn{border-radius:10px;}
+:root[data-skin="locked"] .btn.primary{border-radius:10px;}
+:root[data-skin="locked"] .tbdot, :root[data-skin="locked"] .pulse{animation:none; opacity:1;}
+/* 2007: bubbly corners and the Vista gloss on accent surfaces */
+:root[data-skin="aero"] .card, :root[data-skin="aero"] .tplbtn, :root[data-skin="aero"] .stat,
+:root[data-skin="aero"] .splitcard{border-radius:18px;}
+:root[data-skin="aero"] .btn{border-radius:18px;}
+:root[data-skin="aero"] .btn.primary, :root[data-skin="aero"] .chip.on, :root[data-skin="aero"] .sprow.next{
+  background:linear-gradient(180deg, rgba(255,255,255,.38), rgba(255,255,255,.06) 52%, rgba(255,255,255,0) 60%), var(--accent);}
+/* Golden Era: iron-plate caps, engraved section headers */
+:root[data-skin="golden"] #topbar h1{text-transform:uppercase; letter-spacing:1.6px;}
+:root[data-skin="golden"] h2.sec{letter-spacing:2px;}
+:root[data-skin="golden"] .card, :root[data-skin="golden"] .tplbtn, :root[data-skin="golden"] .stat,
+:root[data-skin="golden"] .splitcard{border-radius:10px;}
+/* Princess Treatment: royally round, gentle pulse, cushioned primary buttons */
+:root[data-skin="princess"] .card, :root[data-skin="princess"] .tplbtn, :root[data-skin="princess"] .stat,
+:root[data-skin="princess"] .splitcard{border-radius:18px;}
+:root[data-skin="princess"] .btn{border-radius:20px;}
+:root[data-skin="princess"] .tbdot, :root[data-skin="princess"] .pulse{animation-duration:2s;}
+:root[data-skin="princess"] .btn.primary{box-shadow:0 5px 16px var(--glow);}
 /* Zaza: everything rounder, pulses at half speed - no rush */
 :root[data-skin="zaza"] .card, :root[data-skin="zaza"] .tplbtn, :root[data-skin="zaza"] .stat,
 :root[data-skin="zaza"] .splitcard{border-radius:22px;}

@@ -1034,10 +1034,14 @@ function confetti(){
   if(document.getElementById('confetti')) return;
   const box = document.createElement('div');
   box.id = 'confetti';
-  const cols = { /* confetti wears the skin's colors */
-    ice:  ['#38bdf8','#85d3ff','#eef6ff','#2ecf87','#5a8dff','#ffd166'],
-    zaza: ['#4ade80','#86efac','#c9a2ff','#ede9fe','#a855f7','#bbf7d0'],
-    stim: ['#c8f135','#e2ff70','#fdffe0','#9fa19a','#a3e635','#fef08a']
+  const cols = { /* confetti wears the skin's colors - keep in sync with SKIN_META */
+    ice:      ['#38bdf8','#85d3ff','#eef6ff','#2ecf87','#5a8dff','#ffd166'],
+    zaza:     ['#4ade80','#86efac','#c9a2ff','#ede9fe','#a855f7','#bbf7d0'],
+    stim:     ['#c8f135','#e2ff70','#fdffe0','#9fa19a','#a3e635','#fef08a'],
+    locked:   ['#ffffff','#d9d9d9','#ababab','#f5f5f5','#7a7a7a','#4a4a4a'],
+    aero:     ['#22d3ee','#7fe7f7','#e0f7ff','#34d399','#38bdf8','#a5f3fc'],
+    golden:   ['#e0a32e','#f0c060','#fff3d6','#b3a284','#d97706','#fde68a'],
+    princess: ['#f28ab5','#f7b1cd','#ffe4ef','#db2777','#e9d5ff','#fbcfe8']
   }[SKIN_META[S.skin] ? S.skin : 'ice'];
   let html = '';
   for(let i=0;i<70;i++){

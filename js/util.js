@@ -97,18 +97,26 @@ function copyFallback(txt){
    this only stamps the attributes and keeps the browser-chrome color in step. */
 const mediaDark = window.matchMedia('(prefers-color-scheme: dark)');
 const SKIN_META = { /* status-bar color per skin+mode, matches each --atmo top tone */
-  ice:  { dark:'#0a1220', light:'#eef2f8' },
-  zaza: { dark:'#150c28', light:'#f0f2ec' },
-  stim: { dark:'#0b0d05', light:'#f7f8f2' }
+  ice:      { dark:'#0a1220', light:'#eef2f8' },
+  zaza:     { dark:'#150c28', light:'#f0f2ec' },
+  stim:     { dark:'#0b0d05', light:'#f7f8f2' },
+  locked:   { dark:'#000000', light:'#f5f5f5' },
+  aero:     { dark:'#082633', light:'#dff0f7' },
+  golden:   { dark:'#1c1610', light:'#e9dfc9' },
+  princess: { dark:'#241019', light:'#f6e7ee' }
 };
 /* fixed swatch colors for the skin pickers (dark palette bg + accent) - a new
-   skin only needs entries here, in SKIN_META and a CSS token block.
-   Retired skins (villain/batman/old, 2026-08-13) fall back to 'ice' via the
-   hydrate/applyBak validation - no migration code needed. */
+   skin only needs entries here, in SKIN_META, the confetti map and a CSS token
+   block. Retired skins (villain/batman/old, 2026-08-13) fall back to 'ice' via
+   the hydrate/applyBak validation - no migration code needed. */
 const SKIN_PREVIEW = {
-  ice:  { bg:'#05070c', accent:'#38bdf8' },
-  zaza: { bg:'#0a0712', accent:'#4ade80' },
-  stim: { bg:'#030304', accent:'#c8f135' }
+  ice:      { bg:'#05070c', accent:'#38bdf8' },
+  zaza:     { bg:'#0a0712', accent:'#4ade80' },
+  stim:     { bg:'#030304', accent:'#c8f135' },
+  locked:   { bg:'#000000', accent:'#f5f5f5' },
+  aero:     { bg:'#04141c', accent:'#22d3ee' },
+  golden:   { bg:'#120e08', accent:'#e0a32e' },
+  princess: { bg:'#faf1f4', accent:'#db2777' }
 };
 function applyTheme(){
   const mode = S.theme==='auto' ? (mediaDark.matches?'dark':'light') : S.theme;
