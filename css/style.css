@@ -215,20 +215,21 @@
   --card-shadow:0 1px 2px rgba(40,30,12,.05);
 }
 
-/* ---- PRINCESS TREATMENT: soft rose, easy on the eyes, royally cushioned ---- */
+/* ---- PRINCESS TREATMENT: soft rose, easy on the eyes, royally cushioned.
+        The dark mode is deep mulberry, not black - it must still READ pink ---- */
 :root[data-skin="princess"]{
-  --bg:#180d13; --card:#241521; --input:#31202c; --line:#47303e;
-  --text:#f8ecf2; --dim:#c39aae; --ghost:#836071;
-  --edge:rgba(255,182,213,.10);
+  --bg:#2b1620; --card:#3a2130; --input:#472a3b; --line:#5d3a4e;
+  --text:#fdeef5; --dim:#d3a4ba; --ghost:#99687e;
+  --edge:rgba(255,182,213,.14);
   --accent:#f28ab5; --accent-soft:#f7b1cd; --on-accent:#2c0f1d;
-  --accent-bg:rgba(242,138,181,.13);
-  --glow:rgba(242,138,181,.16);
-  --atmo:linear-gradient(180deg, #241019 0%, #180d13 380px);
-  --topbar-bg:rgba(30,15,23,.86); --tabbar-bg:rgba(26,13,20,.88);
-  --green:#2ecf87; --green-bg:rgba(46,207,135,.13);
-  --red:#ff453a; --red-bg:rgba(255,69,58,.13);
-  --orange:#ff9f0a;
-  --shadow:0 10px 34px rgba(15,4,10,.75);
+  --accent-bg:rgba(242,138,181,.16);
+  --glow:rgba(242,138,181,.20);
+  --atmo:linear-gradient(180deg, #3a1d2b 0%, #2b1620 380px);
+  --topbar-bg:rgba(46,23,34,.86); --tabbar-bg:rgba(40,20,30,.88);
+  --green:#2ecf87; --green-bg:rgba(46,207,135,.15);
+  --red:#ff5a50; --red-bg:rgba(255,90,80,.15);
+  --orange:#ffab2e;
+  --shadow:0 10px 34px rgba(25,8,16,.6);
   --card-shadow:none;
 }
 :root[data-skin="princess"][data-theme="light"]{

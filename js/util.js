@@ -103,7 +103,7 @@ const SKIN_META = { /* status-bar color per skin+mode, matches each --atmo top t
   locked:   { dark:'#000000', light:'#f5f5f5' },
   aero:     { dark:'#082633', light:'#dff0f7' },
   golden:   { dark:'#1c1610', light:'#e9dfc9' },
-  princess: { dark:'#241019', light:'#f6e7ee' }
+  princess: { dark:'#3a1d2b', light:'#f6e7ee' }
 };
 /* fixed swatch colors for the skin pickers (dark palette bg + accent) - a new
    skin only needs entries here, in SKIN_META, the confetti map and a CSS token
