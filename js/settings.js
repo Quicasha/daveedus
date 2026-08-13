@@ -9,6 +9,13 @@ function htmlSettings(){
   return `<div style="height:8px"></div>
   <div class="card">
     <div class="setline">
+      <span class="lb">${t('setUnit')}</span>
+      <div class="seg">
+        <button class="${(S.unit||'kg')==='kg'?'on':''}" onclick="setUnit('kg')">kg</button>
+        <button class="${S.unit==='lb'?'on':''}" onclick="setUnit('lb')">lb</button>
+      </div>
+    </div>
+    <div class="setline">
       <span class="lb">${t('setTheme')}</span>
       <div class="seg">
         <button class="${S.theme==='auto'?'on':''}" onclick="setTheme('auto')">${t('themeAuto')}</button>
@@ -16,17 +23,11 @@ function htmlSettings(){
         <button class="${S.theme==='light'?'on':''}" onclick="setTheme('light')">${t('themeLight')}</button>
       </div>
     </div>
+    <!-- the full-width Style row sits last so the two compact rows read as a pair -->
     <div style="color:var(--dim);font-size:13px;margin:12px 0 8px">${t('setStyle')}</div>
     <div class="segmented">
       ${['ice','villain','batman'].map(k=>
         `<button class="seg ${(S.skin||'ice')===k?'on':''}" onclick="setSkin('${k}')">${t('skin_'+k)}</button>`).join('')}
-    </div>
-    <div class="setline">
-      <span class="lb">${t('setUnit')}</span>
-      <div class="seg">
-        <button class="${(S.unit||'kg')==='kg'?'on':''}" onclick="setUnit('kg')">kg</button>
-        <button class="${S.unit==='lb'?'on':''}" onclick="setUnit('lb')">lb</button>
-      </div>
     </div>
   </div>
   <div class="card">
