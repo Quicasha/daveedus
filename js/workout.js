@@ -310,7 +310,9 @@ function waveTarget(wv){
    80-86% 1RM in every load chart), which week D turns into a six = the
    new-best attempt. Needs a few sessions of data to dare an answer. */
 function waveRecommend(k){
-  const pts = e1rmSeries(k).slice(-5);
+  /* current-form window only: after a cut or a long break the suggestion must
+     reflect what the lifter lifts NOW, not the pre-break peak */
+  const pts = recentSeries(k).slice(-5);
   if(pts.length < 3) return 0;
   const best = Math.max(...pts.map(p=>p.v));
   const stepU = S.unit==='lb' ? 5 : 2.5;
@@ -391,9 +393,10 @@ function saveWave(k){
   const kg = (!isNaN(v) && v>0) ? Math.min(500, Math.round(u2kg(v)*100)/100) : 0;
   if(!kg){ toast(t('warmNeedW')); return; }
   const prev = S.waves[k];
-  /* pre-wave best e1RM is the bar the auto-end measures against; editing an
-     active wave keeps its history (start point, finished rounds) intact */
-  const series = e1rmSeries(k);
+  /* the WIN bar is the CURRENT-FORM best (recent window), not the lifetime
+     record - during a cut or a comeback the wave should reward beating who
+     you are now. Editing an active wave keeps its history intact. */
+  const series = recentSeries(k);
   S.waves[k] = {
     base:kg, step:Math.round(V.waveStep*1000)/1000,
     idx: prev ? prev.idx : 0,

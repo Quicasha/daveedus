@@ -334,10 +334,21 @@ function etaFor(k, goalKg){
   if(ms > 3*365*864e5) return null;
   return new Date(Date.now() + ms);
 }
-/* stalled = 4+ recent sessions without beating the lift's best e1RM (0.25%
-   tolerance eats rounding noise); needs some history before it dares to speak */
+/* CURRENT FORM window: the last 12 sessions within 90 days. Progress logic
+   (stall watch, wave targets) anchors here, NOT to lifetime records - after a
+   cut, a layoff or a program change the old peak ages out and the detectors
+   recalibrate to what the lifter can actually do now. Records and the PR feed
+   stay all-time on purpose: that is what records are. */
+function recentSeries(k){
+  const cut = Date.now() - 90*864e5;
+  return e1rmSeries(k).filter(p=>p.ts >= cut).slice(-12);
+}
+/* stalled = flat trend AND 4+ sessions without beating the CURRENT-FORM best
+   (0.25% tolerance eats rounding noise). A falling trend stays silent - that
+   is a cut or life happening, and a wave does not fix a calorie deficit. */
 function stallInfo(k){
-  const pts = e1rmSeries(k);
+  if(trendFor(k) !== 'flat') return null;
+  const pts = recentSeries(k);
   if(pts.length < 6) return null;
   let best = 0, since = 0;
   for(const p of pts){
