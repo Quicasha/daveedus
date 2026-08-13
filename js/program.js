@@ -90,12 +90,18 @@ function renameFolder(id,v){
   save(); renderTopbar();
 }
 function delFolder(id){
-  const f = S.folders.find(x=>x.id===id);
-  if(!f || !confirm(t('folderDel',{n:f.name}))) return;
+  const i = S.folders.findIndex(x=>x.id===id);
+  if(i<0) return;
+  const f = S.folders[i];
+  const orphaned = S.templates.filter(tp=>tp.folderId===id).map(tp=>tp.id);
   S.templates.forEach(tp=>{ if(tp.folderId===id) tp.folderId=null; });
-  S.folders = S.folders.filter(x=>x.id!==id);
+  S.folders.splice(i,1);
   save();
   go('program');
+  undoToast(t('folderDelDone',{n:f.name}), ()=>{
+    S.folders.splice(i,0,f);
+    S.templates.forEach(tp=>{ if(orphaned.includes(tp.id)) tp.folderId = id; });
+  });
 }
 function shareFolder(id){
   const f = S.folders.find(x=>x.id===id);
@@ -123,10 +129,12 @@ function addTplTo(fid){
   openTpl(d.id);
 }
 function delTpl(id){
-  const d = S.templates.find(x=>x.id===id);
-  if(!d || !confirm(t('tplDel',{n:d.name}))) return;
-  S.templates = S.templates.filter(x=>x.id!==id);
+  const i = S.templates.findIndex(x=>x.id===id);
+  if(i<0) return;
+  const d = S.templates[i];
+  S.templates.splice(i,1);
   save(); render();
+  undoToast(t('tplDelDone',{n:d.name}), ()=>S.templates.splice(i,0,d));
 }
 function htmlTplEdit(){
   const d = S.templates.find(x=>x.id===V.editTpl);
@@ -369,8 +377,12 @@ function toggleSS(id,i){
 function delTplEx(id,i){
   const d = S.templates.find(x=>x.id===id);
   if(!d || !d.ex[i]) return;
-  if(!confirm(t('tplDelEx',{n:exName(d.ex[i].k)}))) return;
+  const e = d.ex[i];
   d.ex.splice(i,1);
   save(); render();
+  undoToast(t('woExRemoved',{n:exName(e.k,e.n)}), ()=>{
+    const dd = S.templates.find(x=>x.id===id);
+    if(dd) dd.ex.splice(Math.min(i, dd.ex.length), 0, e);
+  });
 }
 

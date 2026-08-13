@@ -172,11 +172,14 @@ function toggleArch(id){
   save(); render();
 }
 function delHist(id){
-  if(!confirm(t('histDel'))) return;
-  S.history = S.history.filter(w=>w.id!==id);
+  const i = S.history.findIndex(w=>w.id===id);
+  if(i<0) return;
+  const entry = S.history[i], lastAct = S.lastActive;
+  S.history.splice(i,1);
   if(S.lastActive && S.lastActive.id===id) S.lastActive = null;
   V.expanded = null;
   save(); render();
+  undoToast(t('histDelDone'), ()=>{ S.history.splice(i,0,entry); S.lastActive = lastAct; });
 }
 
 /* ---- history editing ---- */
@@ -271,9 +274,12 @@ function saveBwModal(){
   if(logWeight(parseNum(inp ? inp.value : ''))){ save(); scheduleCloudSync(); closeModal(); render(); }
 }
 function delWeight(id){
-  if(!confirm(t('bwDel'))) return;
-  S.weights = S.weights.filter(x=>x.id!==id);
+  const i = S.weights.findIndex(x=>x.id===id);
+  if(i<0) return;
+  const entry = S.weights[i];
+  S.weights.splice(i,1);
   save(); render();
+  undoToast(t('bwDelDone'), ()=>S.weights.splice(i,0,entry));
 }
 
 /* ---- plate calculator (works entirely in the display unit) ---- */

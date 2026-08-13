@@ -107,6 +107,7 @@ async function exportCSV(kind){
 }
 /* nag when there is real data but no recent backup (localStorage is fragile on iOS) */
 function needBackupReminder(){
+  if(ghOn()) return false; /* cloud sync already backs up every checkpoint - no nagging */
   if(S.history.length < 5) return false;
   const D = 24*3600*1000;
   return (Date.now()-(S.lastBackup||0) > 21*D) && (Date.now()-(S.bakSnooze||0) > 7*D);

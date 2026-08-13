@@ -1018,4 +1018,9 @@ button:focus-visible, .chip:focus-visible, .switch:focus-visible{
   bottom:calc(96px + env(safe-area-inset-bottom)); background:var(--card); color:var(--text);
   border:1px solid var(--edge); padding:12px 22px; border-radius:999px; font-weight:600; font-size:14px; opacity:0;
   pointer-events:none; transition:all .25s; z-index:70; white-space:nowrap; box-shadow:var(--shadow);}
+/* undo variant: tappable, with an inline accent button */
+#toast.undo{pointer-events:auto; padding-right:12px;}
+#toast.undo button{background:var(--accent-bg); color:var(--accent-soft); border:none;
+  border-radius:999px; min-height:32px; padding:0 14px; margin-left:12px;
+  font-weight:800; font-size:13px; cursor:pointer;}
 #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}

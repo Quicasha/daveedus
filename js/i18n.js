@@ -5,7 +5,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.4.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.4.1'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 /* UI strings. One flat dictionary - the app is English-only by design. */
@@ -20,7 +20,7 @@ const T = {
   woSwitchConfirm:'Another workout is in progress. Discard it and start a new one?',
   woSet:'Set', woPrev:'Previous', woReps:'reps',
   woAddSet:'+ Set', woRemoveSet:'− Set', woRemoveDone:'Set already completed',
-  woDelEx:'Remove exercise “{n}”?', woDelExBtn:'Remove exercise',
+  woDelExBtn:'Remove exercise',
   swapTitle:'Swap exercise', swapPlanned:'planned', swapAdd:'+ Add alternative',
   woAltBack:'Back to', altLabel:'alt.', altAdd:'Alternative',
   woOrderHint:'Order done', woPrevOrderHint:'Last time you did it in this order',
@@ -31,13 +31,13 @@ const T = {
   woFinishPart:'Not all sets completed. Finish and save?',
   restLabel:'Rest',
   tplNew:'+ New workout', tplImport:'Enter code', tplDefaultName:'New workout',
-  tplDel:'Delete workout “{n}”?', tplExCount:'{n} ex.',
-  tplName:'Workout name', tplAddEx:'+ Add exercise', tplDelEx:'Remove exercise “{n}”?',
+  tplExCount:'{n} ex.',
+  tplName:'Workout name', tplAddEx:'+ Add exercise',
   tplShare:'Workout code', tplShareHint:'Send this code to a friend - they enter it and get your workout.',
   tplImportTitle:'Enter code', tplImportHint:'Paste the received code here:',
   tplImportBtn:'Import', tplImported:'Workout “{n}” added ✓',
   folderNew:'+ New program', folderDefault:'New program', folderNone:'No program',
-  folderName:'Program name', folderDel:'Delete program “{n}”? Workouts will remain, just without the program.',
+  folderName:'Program name',
   folderShare:'Program code', folderShareHint:'Send this code to a friend - they get the whole program with all workouts.',
   folderImported:'Program “{n}” added ✓', tplFolder:'Program', deleteBtn:'Delete', nextBadge:'NEXT',
   progEmpty:'No programs yet - tap “+ New program” below and build your split.',
@@ -91,13 +91,15 @@ const T = {
   metricW:'Weight', metricVol:'Volume', metric1RM:'~1RM',
   exMine:'Mine', exMineEmpty:'Exercises you have done will appear here. Browse “All” for now.',
   saveDone:'Save',
-  bw:'Body weight', bwLog:'Log', bwDel:'Delete this entry?',
+  bw:'Body weight', bwLog:'Log',
   plates:'Plate calculator', platesBar:'Bar', platesSide:'Per side',
   platesRem:"{n} {u} per side doesn't fit standard plates", platesEmpty:'Empty bar',
   platesAvail:'Plates available at the gym',
   superset:'Superset',
   dropTog:'Drop sets',
   codeBad:'Invalid code', copy:'Copy', copied:'Copied ✓',
+  undoBtn:'Undo', histDelDone:'Workout deleted', bwDelDone:'Entry deleted',
+  woExRemoved:'{n} removed', tplDelDone:'Workout "{n}" deleted', folderDelDone:'Program "{n}" deleted',
   daySets:'sets', dayReps:'reps', daySec:'sec', repsRangeTog:'range',
   exSearch:'Search exercises...', exCreate:'+ Create your own exercise',
   exCreateTitle:'New exercise', exCreateName:'Name', exCreateGroup:'Muscle group',
@@ -106,7 +108,7 @@ const T = {
   exNoHistory:'No history for this exercise yet',
   chartTop:'top set ({u})', chartNoData:'No data',
   histEmpty:'No history yet. Pick a workout in the Workout tab.',
-  histDel:'Delete this workout from history?', histSets:'sets', histVolume:'volume',
+  histSets:'sets', histVolume:'volume',
   setTheme:'Theme', themeAuto:'Auto', themeDark:'Dark', themeLight:'Light',
   setStyle:'Style', skin_ice:'Ice Cold', skin_villain:'Villain Arc', skin_batman:"I'm Batman",
   skin_old:'Old Money', skin_zaza:'Zaza Enjoyer', skin_stim:'Stimmed Out',

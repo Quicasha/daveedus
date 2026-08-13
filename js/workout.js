@@ -720,12 +720,16 @@ function autoWarmup(xi){
   const step = S.unit==='lb' ? 5 : 2.5;
   const bar = plateBars()[0];
   const barbell = (exInfo(ex.k)||{}).e==='barbell';
+  /* machine base: the % ramp works on the TOTAL load (base + plates) - the set
+     stores plates only, so convert back after scaling. 0 plates = empty machine,
+     a perfectly valid first warmup on a heavy sled. */
+  const baseU = kg2u(ex.base||0);
   const ramp = [];
   if(barbell && w > bar) ramp.push({ w:bar, r:10 });
   [[0.4,6],[0.6,4],[0.8,2]].forEach(([p,r])=>{
-    let ww = Math.round(w*p/step)*step;
+    let ww = Math.round(((w+baseU)*p - baseU)/step)*step;
     if(barbell) ww = Math.max(ww, bar);
-    if(ww<=0 || ww>=w) return;
+    if(ww<0 || (ww===0 && !baseU) || ww>=w) return;
     if(ramp.length && ww<=ramp[ramp.length-1].w) return; /* keep the ramp strictly increasing */
     ramp.push({ w:ww, r });
   });
@@ -916,7 +920,8 @@ function toggleWoSS(xi){
 }
 function removeWorkoutEx(xi){
   const ex = S.active.exercises[xi];
-  if(!confirm(t('woDelEx',{n:ex.name}))) return;
+  if(!ex) return;
+  const rest = S.active.rest ? Object.assign({}, S.active.rest) : null;
   const r = S.active.rest;
   if(r){
     const [rx, rs] = r.key.split('-').map(Number);
@@ -925,6 +930,11 @@ function removeWorkoutEx(xi){
   }
   S.active.exercises.splice(xi,1);
   save(); render();
+  undoToast(t('woExRemoved',{n:ex.name}), ()=>{
+    if(!S.active) return; /* the session ended meanwhile - nothing to put it back into */
+    S.active.exercises.splice(xi,0,ex);
+    S.active.rest = rest;
+  });
 }
 function finishWorkout(){
   if(!S.active) return;

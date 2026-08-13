@@ -58,9 +58,25 @@ function daysAgoStr(iso){
 function toast(msg){
   const el = $('#toast');
   el.textContent = msg;
+  el.classList.remove('undo');
   el.classList.add('show');
   clearTimeout(toast._t);
-  toast._t = setTimeout(()=>el.classList.remove('show'), 2200);
+  toast._t = setTimeout(()=>el.classList.remove('show','undo'), 2200);
+}
+/* destructive actions apply immediately and offer a single-slot Undo for a few
+   seconds instead of an "Are you sure?" dialog - restore() must fully reverse
+   the deletion (the caller captured whatever it needs beforehand) */
+function undoToast(msg, restore){
+  const el = $('#toast');
+  el.innerHTML = `${esc(msg)}<button id="undo-btn">${t('undoBtn')}</button>`;
+  el.classList.add('show','undo');
+  $('#undo-btn').onclick = ()=>{
+    el.classList.remove('show','undo');
+    clearTimeout(toast._t);
+    restore(); save(); render();
+  };
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>el.classList.remove('show','undo'), 5000);
 }
 function copyText(txt){
   if(navigator.clipboard && navigator.clipboard.writeText){
