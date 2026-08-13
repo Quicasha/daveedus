@@ -189,10 +189,7 @@ function renderOb(){
           </div>
         </div>
         <div style="color:var(--dim);font-size:13px;margin:12px 0 8px">${t('setStyle')}</div>
-        <div class="segmented">
-          ${['ice','villain','batman'].map(k=>
-            `<button class="seg ${(S.skin||'ice')===k?'on':''}" onclick="S.skin='${k}';save();applyTheme();renderOb()">${t('skin_'+k)}</button>`).join('')}
-        </div>
+        <div class="swaplist">${skinRowsHtml("S.skin='KEY';save();applyTheme();renderOb()")}</div>
       </div>
       ${dotRow}
       <button class="btn primary" onclick="V.ob=1;renderOb()">${t('obNext')}</button>`);

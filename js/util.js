@@ -85,6 +85,13 @@ const SKIN_META = { /* status-bar color per skin+mode, matches each --atmo top t
   villain: { dark:'#130826', light:'#f2eef8' },
   batman:  { dark:'#0e0d0b', light:'#f3f2ef' }
 };
+/* fixed swatch colors for the skin pickers (dark palette bg + accent) - a new
+   skin only needs entries here, in SKIN_META and a CSS token block */
+const SKIN_PREVIEW = {
+  ice:     { bg:'#05070c', accent:'#38bdf8' },
+  villain: { bg:'#08050e', accent:'#a855f7' },
+  batman:  { bg:'#050505', accent:'#f0b429' }
+};
 function applyTheme(){
   const mode = S.theme==='auto' ? (mediaDark.matches?'dark':'light') : S.theme;
   const el = document.documentElement;

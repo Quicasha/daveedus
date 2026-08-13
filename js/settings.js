@@ -23,11 +23,9 @@ function htmlSettings(){
         <button class="${S.theme==='light'?'on':''}" onclick="setTheme('light')">${t('themeLight')}</button>
       </div>
     </div>
-    <!-- the full-width Style row sits last so the two compact rows read as a pair -->
-    <div style="color:var(--dim);font-size:13px;margin:12px 0 8px">${t('setStyle')}</div>
-    <div class="segmented">
-      ${['ice','villain','batman'].map(k=>
-        `<button class="seg ${(S.skin||'ice')===k?'on':''}" onclick="setSkin('${k}')">${t('skin_'+k)}</button>`).join('')}
+    <div class="setline">
+      <span class="lb">${t('setStyle')}</span>
+      <button class="btn small" onclick="openSkinPicker()">${t('skin_'+(S.skin||'ice'))} ›</button>
     </div>
   </div>
   <div class="card">
@@ -78,6 +76,23 @@ function htmlSettings(){
 }
 function setTheme(m){ S.theme=m; save(); applyTheme(); render(); }
 function setSkin(k){ S.skin=k; save(); applyTheme(); render(); scheduleCloudSync(); }
+/* one skin row per entry: swatch (bg + accent dot), name, check on the active one.
+   `act` is the onclick body - the pickers differ only in what happens after the tap. */
+function skinRowsHtml(act){
+  return ['ice','villain','batman'].map(k=>{
+    const sw = SKIN_PREVIEW[k];
+    return `<button class="swapitem ${(S.skin||'ice')===k?'on':''}" onclick="${act.replace(/KEY/g,k)}">
+      <span class="skinsw" style="background:${sw.bg}"><i style="background:${sw.accent}"></i></span>
+      <span class="sn">${t('skin_'+k)}</span>
+      ${(S.skin||'ice')===k?`<span class="chk">${ACT_ICONS.check}</span>`:''}
+    </button>`;
+  }).join('');
+}
+/* the sheet stays open while you tap around - the app behind it IS the preview */
+function openSkinPicker(){
+  openModal(`<h3>${t('setStyle')}<button class="x" onclick="closeModal()">✕</button></h3>
+    <div class="swaplist">${skinRowsHtml("setSkin('KEY');openSkinPicker()")}</div>`);
+}
 function toggleRestSound(){
   S.restSound = !S.restSound;
   save(); render();
