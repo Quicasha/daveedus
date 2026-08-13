@@ -5,7 +5,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.5.1'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.6.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 /* UI strings. One flat dictionary - the app is English-only by design. */
@@ -79,12 +79,14 @@ const T = {
   dlLeft:'{n} workouts left', dlSub:'records paused · tap to end',
   dlWoBar:'DELOAD - suggested weights {p}%', dlWoBarVol:'half sets',
   dlBadge:'DELOAD', dlCycles:'Full cycles since deload',
-  dlmHow:'One light pass per workout. Sets do not count toward records and the counters restart. Once every workout is done the deload ends by itself - or end it early by tapping the orange banner on Home.',
+  dlmHow:'A deload is one deliberately light pass over every workout below - fatigue drops, technique stays. During the pass the suggested weights scale down, sets stay out of records and PRs, and the cycle counters restart. When every workout has had its light session the deload ends on its own; the orange banner on Home ends it early.',
+  dlmScope:'Covers all {c} workouts of “{n}”.',
+  dlmScopeStar:'That is your starred program - to deload a different one, move the star on the home screen first.',
   dlmW:'Suggested weights',
-  dlmWHint:'50-60% is the strength classic. 70% is gentler. 90% keeps near-working weights: pick “Half” sets then and stay far from failure.',
+  dlmWHint:'50-60% is the classic strength deload: everything feels light and fast, you practice bar speed. 70-80% is a gentler cut - 80% also works well as a second week back after time off. 90-100% keep the weights heavy and cut the WORK instead: pick “Half” sets and stay far from failure. 100% means every suggested weight stays exactly as it was.',
   dlmSets:'Sets',
   dlmSetsAll:'All', dlmSetsHalf:'Half',
-  dlmSetsHint:'“Half” plans half the sets. Athletes most often deload by cutting volume 30-50%.',
+  dlmSetsHint:'“Half” plans half of every exercise’s sets (at least one). Cutting volume 30-50% while keeping some load on the bar is how most lifters actually deload.',
   dlmLight:'Light exercises (< {n}) are only trimmed to 80% - isolation work needs little reduction.',
   dlmStart:'Start deload',
   histMore:'Show more', bwLogNew:'+ Log weight',
@@ -164,6 +166,16 @@ const T = {
   todayBadge:'TODAY', statWeekOf:'this week',
   goalTitle:'Goal', goalHint:'Enter the e1RM you are aiming for (estimated one-rep max). The card will show how much is left.',
   goalLeft:'{n} to go', goalReached:'reached',
+  goalEta:'at this pace ~{d}',
+  stallTitle:'{n} looks stalled', stallSub:'{c} sessions without a new best. A 4-week wave breaks it: reps drop, weight climbs.',
+  stallGo:'Set up wave',
+  waveTitle:'4-week wave', waveMode:'Wave mode',
+  waveHint:'Week A: base ×5 · B: +step ×4 · C: +2 steps ×3 · D: base ×6, then a new round starts one step higher. The chip on the workout card fills each session’s weights.',
+  waveBase:'Week-A weight', waveStep:'Step',
+  waveStart:'Start wave', waveStop:'Stop wave',
+  waveOn:'Wave started', waveOff:'Wave stopped',
+  waveChipHint:'This week’s wave target - tap to fill the sets',
+  waveNextRound:'{n}: new wave round, base {w}',
   obpT:'First - be honest', obpB:'Which one is you?',
   obp_skinny:'Skinny bitch', obp_fluffy:'Fatso', obp_liar:'Lying to myself',
   obpi_skinny:'skinny bitch', obpi_fluffy:'fatso', obpi_liar:'liar',

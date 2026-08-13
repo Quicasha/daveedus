@@ -148,6 +148,7 @@ function openExMenu(xi){
       ${item(ex.k!==ex.baseK?'on':'', ACT_ICONS.swap, t('swapTitle'), `openSwapMenu(${xi})`)}
       ${bw?'':item('', ACT_ICONS.plates, t('plates'), `openPlates(${xi})`)}
       ${item(ex.dropUi?'on':'', 'D+', t('dropTog'), `toggleDropUi(${xi})`)}
+      ${isTimeEx(ex.k)?'':item(S.waves[ex.k]?'on':'', '∿', t('waveMode'), `openWaveModal('${esc(ex.k)}')`)}
       ${notLast?item(ex.ss?'on':'', ACT_ICONS.link, t('superset'), `toggleWoSS(${xi})`):''}
       ${item('danger', ACT_ICONS.x, t('woDelExBtn'), `removeWorkoutEx(${xi})`)}
     </div>`);
@@ -287,10 +288,90 @@ function ghostFor(ex, si){
   let wi = 0; for(let i=0;i<si;i++) if(!ex.sets[i].warm && !ex.sets[i].drop) wi++;
   return prevWork[wi] || null;
 }
+/* ===== 4-week wave (the stage after linear progress stalls) =====
+   Fixed weekly prescription off a base weight: A base x5, B +step x4,
+   C +2 steps x3, D base x6 - then the next round starts one step higher.
+   State lives in S.waves[k] = { base kg, step kg, idx 0-3 } and advances
+   once per finished session that logged working sets on that lift. */
+function waveTarget(wv){
+  const p = [[0,5],[1,4],[2,3],[0,6]][wv.idx];
+  return { w: Math.round((wv.base + p[0]*wv.step)*100)/100, r: p[1] };
+}
+/* fill this session's empty working sets with the week's prescription */
+function applyWave(xi){
+  const ex = S.active.exercises[xi];
+  const wv = S.waves[ex.k];
+  if(!ex || !wv) return;
+  const wt = waveTarget(wv);
+  ex.sets.forEach(s=>{
+    if(s.done || s.warm || s.drop) return;
+    if(!s.w) s.w = fmtW(kg2u(wt.w));
+    if(!s.r) s.r = String(wt.r);
+  });
+  save(); render();
+}
+/* top working-set weight of the lift's latest session (same scale the user types) */
+function lastTopW(k){
+  for(const h of S.history){
+    if(h.arch || h.dl) continue;
+    for(const e of h.exercises){
+      if(e.k!==k) continue;
+      const work = e.sets.filter(s=>!s.warm && !s.drop);
+      if(work.length) return Math.max(...work.map(s=>s.weight));
+    }
+  }
+  return 0;
+}
+function openWaveModal(k){
+  const wv = S.waves[k];
+  /* step defaults to the lift's progression step from any template, else one plate pair */
+  let dp = 0;
+  for(const tp of S.templates){ const e = tp.ex.find(x=>x.k===k && x.dp); if(e){ dp = e.dp; break; } }
+  V.waveStep = wv ? wv.step : (dp || dpSteps()[1]);
+  const base = wv ? wv.base : lastTopW(k);
+  openModal(`<h3>${esc(exName(k))}<button class="x" onclick="closeModal()">✕</button></h3>
+    <div class="pvsub" style="margin-bottom:10px">${t('waveTitle')}${wv?` · W${wv.idx+1}`:''}</div>
+    <div style="font-size:13px;color:var(--dim);line-height:1.5;margin:0 2px 14px">${t('waveHint')}</div>
+    <div class="ctlrow">
+      <span class="clbl wide">${t('waveBase')}</span>
+      <input id="wave-base" type="text" inputmode="decimal" class="nameinput" style="width:110px;text-align:center;font-weight:700"
+        value="${base?esc(fmtW(kg2u(base))):''}" placeholder="0" onfocus="this.select()">
+      <span style="font-weight:700;color:var(--dim)">${unitL()}</span>
+    </div>
+    <div class="ctlrow" id="wave-steps"></div>
+    <button class="btn primary" style="margin-top:14px" onclick="saveWave('${k}')">${ACT_ICONS.check} ${wv?t('saveDone'):t('waveStart')}</button>
+    ${wv?`<button class="btn danger" onclick="stopWave('${k}')">${t('waveStop')}</button>`:''}`);
+  renderWaveSteps();
+  setTimeout(()=>{ const i=$('#wave-base'); if(i && !wv) i.focus(); }, 60);
+}
+function renderWaveSteps(){
+  const el = $('#wave-steps');
+  if(!el) return;
+  el.innerHTML = `<span class="clbl wide">${t('waveStep')}</span>` +
+    dpSteps().map(v=>`<button class="rangetog ${Math.abs(V.waveStep-v)<.01?'acc':''}"
+      onclick="V.waveStep=${v}; renderWaveSteps()">+${fmtW(kg2u(v))}</button>`).join('');
+}
+function saveWave(k){
+  const v = parseNum(($('#wave-base')||{}).value);
+  const kg = (!isNaN(v) && v>0) ? Math.min(500, Math.round(u2kg(v)*100)/100) : 0;
+  if(!kg){ toast(t('warmNeedW')); return; }
+  const prev = S.waves[k];
+  S.waves[k] = { base:kg, step:Math.round(V.waveStep*1000)/1000, idx: prev ? prev.idx : 0 };
+  delete S.stallSnooze[k];
+  save(); closeModal(); render(); scheduleCloudSync();
+  toast(t('waveOn'));
+}
+function stopWave(k){
+  delete S.waves[k];
+  save(); closeModal(); render(); scheduleCloudSync();
+  toast(t('waveOff'));
+}
+
 /* ===== double progression (opt-in per exercise): when LAST session's working
    sets all reached the top of the rep range, offer +step on today's weights ===== */
 function dpDue(ex){
   if(!ex.dp || isTimeEx(ex.k)) return false;
+  if(S.waves[ex.k]) return false;                          /* the wave owns this lift now */
   if(dlForTpl(S.active && S.active.tplId)) return false;   /* not on a deload pass */
   if(ex.sets.some(s=>s.done || s.w)) return false;         /* already lifting / typed */
   if(!ex.last || !ex.last.sameTpl) return false;           /* borrowed values don't count */
@@ -421,6 +502,8 @@ function htmlWorkout(){
       <div class="exhead">
         <div class="exname" onclick="openExDetailByKey('${esc(ex.k)}')">${esc(ex.name)}</div>
         ${statusBadge}
+        ${(!tm && !dl && S.waves[ex.k] && !exFullyDone(ex))?(w=>{const wt=waveTarget(w);
+          return `<button class="dpchip" onclick="applyWave(${xi})" title="${t('waveChipHint')}">W${w.idx+1} ${fmtW(kg2u(wt.w))}×${wt.r}</button>`;})(S.waves[ex.k]):''}
         ${dpDue(ex)?`<button class="dpchip" onclick="applyDp(${xi})" title="${t('dpChipHint')}">+${fmtW(kg2u(ex.dp))}</button>`:''}
         <div class="extarget" onclick="openTargetEdit(${xi})">${ex.targetSets}×${ex.targetReps}${tm?'s':''}</div>
         ${ex.adhoc?`<button class="minibtn pinex" onclick="pinToTpl(${xi})" aria-label="${t('pinExLabel')}">${ACT_ICONS.pin}</button>`:''}
@@ -1004,15 +1087,34 @@ function finishWorkout(){
     .filter(ex=>ex.adhoc && !ex.ghost && !ex.sets.some(s=>s.done))
     .map(ex=>({ k:ex.k, n:ex.name, s:ex.targetSets, r:ex.targetReps, ...(isX2(ex)?{x2:1}:{}), ...(ex.base>0?{mb:ex.base}:{}) }));
   if(sug.length) entry.sug = sug;
+  /* advance any wave whose lift logged working sets (once per lift, never on deload);
+     after week D the round wraps and the base climbs one step */
+  const wrapped = [];
+  const advanced = new Set(); /* also remembered on lastActive so Continue can roll the wave back */
+  if(!isDl){
+    for(const e of exercises){
+      const wv = S.waves[e.k];
+      if(!wv || advanced.has(e.k)) continue;
+      if(!e.sets.some(s=>!s.warm && !s.drop)) continue;
+      advanced.add(e.k);
+      wv.idx++;
+      if(wv.idx > 3){
+        wv.idx = 0;
+        wv.base = Math.round((wv.base + wv.step)*100)/100;
+        wrapped.push({ k:e.k, base:wv.base });
+      }
+    }
+  }
   S.history.unshift(entry);
   /* keep the finished session resurrectable - "Continue" on the newest history
      row undoes an accidental Finish with sets and elapsed time intact */
-  S.lastActive = { id:entry.id, act:S.active };
+  S.lastActive = { id:entry.id, act:S.active, waved:[...advanced] };
   S.active = null;
   save();
   scheduleCloudSync();
   go('home');
   showSummary(dur, vol, exercises.reduce((a,e)=>a+e.sets.length,0), prs);
+  if(wrapped.length) toast(t('waveNextRound',{n:exName(wrapped[0].k), w:wu(wrapped[0].base,true)}));
 }
 function showSummary(dur, vol, setsDone, prs){
   const prHtml = prs.length ? `<h2 class="sec" style="margin-top:14px">${t('sumPRs')}</h2>` +

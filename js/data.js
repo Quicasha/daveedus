@@ -38,7 +38,7 @@ function bakPayload(){
     restTarget:S.restTarget, restSound:S.restSound,
     folders:S.folders, customEx:S.customEx, templates:S.templates, history:S.history, weights:S.weights,
     trackedLifts:S.trackedLifts, deloads:S.deloads, mainFolder:S.mainFolder, mbase:S.mbase,
-    goals:S.goals, dlEvery:S.dlEvery } };
+    goals:S.goals, dlEvery:S.dlEvery, waves:S.waves } };
 }
 function copyBackup(){
   S.lastBackup = Date.now();
@@ -158,6 +158,7 @@ function applyBak(d){
   if(!Array.isArray(d.s.deloads)) delete d.s.deloads;
   if(!d.s.mbase || typeof d.s.mbase!=='object' || Array.isArray(d.s.mbase)) delete d.s.mbase;
   if(!d.s.goals || typeof d.s.goals!=='object' || Array.isArray(d.s.goals)) delete d.s.goals;
+  if(!d.s.waves || typeof d.s.waves!=='object' || Array.isArray(d.s.waves)) delete d.s.waves;
   if(typeof d.s.dlEvery!=='number') delete d.s.dlEvery;
   if(typeof d.s.mainFolder!=='string') delete d.s.mainFolder;
   if(typeof d.s.restTarget!=='number' || !(d.s.restTarget>=15 && d.s.restTarget<=1800)) delete d.s.restTarget;

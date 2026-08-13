@@ -70,6 +70,8 @@ function defaultState(){
            trackedLifts:[], deloads:[], mainFolder:null,
            mbase:{}, /* machine starting weight per exercise key, kg; 0 = switched off on purpose */
            goals:{}, /* tracked-lift targets per exercise key: e1RM in kg */
+           waves:{}, /* 4-week wave per exercise key: { base (week-A kg), step (kg), idx 0-3 } */
+           stallSnooze:{}, /* per-key ts until which the home stall nudge stays hidden */
            dlEvery:0, dlSnooze:0, /* calendar deload reminder: every N weeks; snoozed-until ts */
            onboarded:0, a2hsOff:0, /* one-time first-launch intro / install-hint dismissal */
            plates:{ kg:PLATE_DEF.kg.slice(), lb:PLATE_DEF.lb.slice() } };
@@ -125,6 +127,15 @@ function hydrate(s){
     const v = s.goals[k];
     if(typeof v!=='number' || isNaN(v) || v<=0 || v>1000) delete s.goals[k];
   }
+  /* 4-week waves: key -> { base kg, step kg, idx 0-3 } */
+  if(!s.waves || typeof s.waves!=='object' || Array.isArray(s.waves)) s.waves = {};
+  for(const k in s.waves){
+    const w = s.waves[k];
+    if(!w || typeof w.base!=='number' || !(w.base>0 && w.base<=500)
+        || typeof w.step!=='number' || !(w.step>=0.5 && w.step<=10)
+        || ![0,1,2,3].includes(w.idx)) delete s.waves[k];
+  }
+  if(!s.stallSnooze || typeof s.stallSnooze!=='object' || Array.isArray(s.stallSnooze)) s.stallSnooze = {};
   if(typeof s.dlEvery!=='number' || !(s.dlEvery>=0 && s.dlEvery<=16)) s.dlEvery = 0;
   if(typeof s.dlSnooze!=='number') s.dlSnooze = 0;
   return Object.assign(defaultState(), s);

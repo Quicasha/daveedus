@@ -306,7 +306,9 @@ function chartSVG(k, name, tplName, metric){
     : metric==='1rm' ? t('metric1RM')+' ('+unitL()+')'
     : bwKind ? t('woAddCol')+' ('+unitL()+')'
     : t('chartTop',{u:unitL()});
-  return lineChartSVG(pts, label, tm?'s':unitL());
+  /* the lift's e1RM goal draws as a dashed line on the ~1RM chart */
+  const goal = (!tm && metric==='1rm') ? (S.goals||{})[k] : 0;
+  return lineChartSVG(pts, label, tm?'s':unitL(), goal ? Math.round(kg2u(goal)*10)/10 : 0);
 }
 /* tap on a chart point -> exact value with date (+ body weight at the time, if known) */
 function chartTap(i){
@@ -315,13 +317,15 @@ function chartTap(i){
   toast(fmtDate(d.d)+' · '+fmtW(d.w)+' '+(window.__chartUnit||'')
         + (d.bw!=null ? ' · '+t('woBwCol')+' '+wu(d.bw,true) : ''));
 }
-/* generic line chart: pts = [{d:dateIso, w:number}] chronological */
-function lineChartSVG(pts, label, unit){
+/* generic line chart: pts = [{d:dateIso, w:number}] chronological;
+   goal (optional, display unit) adds a dashed target line the scale makes room for */
+function lineChartSVG(pts, label, unit, goal){
   if(!pts.length) return `<div class="empty">${t('chartNoData')}</div>`;
   const data = pts.slice(-24);
   window.__chartData = data; window.__chartUnit = unit||'';
   const W=360, H=210, padL=44, padR=14, padT=18, padB=30;
   let min = Math.min(...data.map(p=>p.w)), max = Math.max(...data.map(p=>p.w));
+  if(goal) max = Math.max(max, goal);
   if(min===max){ min-=5; max+=5; }
   const span = max-min;
   min -= span*0.12; max += span*0.12;
@@ -341,8 +345,11 @@ function lineChartSVG(pts, label, unit){
     (data.length<=10 ? `<text x="${X(i)}" y="${Y(p.w)-9}" fill="var(--text)" font-size="11" font-weight="700" text-anchor="middle">${fmtW(p.w)}</text>` : '')
   ).join('');
   const d0 = fmtDate(data[0].d), d1 = fmtDate(data[data.length-1].d);
+  const goalLine = goal ? `<line x1="${padL}" y1="${Y(goal)}" x2="${W-padR}" y2="${Y(goal)}"
+      stroke="var(--accent-soft)" stroke-width="1.5" stroke-dasharray="6 5" opacity=".75"/>
+    <text x="${padL+2}" y="${Y(goal)-5}" fill="var(--accent-soft)" font-size="10" font-weight="700">${t('goalTitle').toUpperCase()} ${fmtW(goal)}</text>` : '';
   return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-    ${grid}${labels}
+    ${grid}${labels}${goalLine}
     <polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>
     ${dots}
     <text x="${padL}" y="${H-8}" fill="var(--dim)" font-size="11">${d0}</text>

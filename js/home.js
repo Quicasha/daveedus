@@ -86,6 +86,20 @@ function htmlHome(){
           onclick="event.stopPropagation();S.dlSnooze=Date.now()+7*864e5; save(); render()">✕</button></div>`;
     }
   }
+  /* stall nudge: the first tracked lift that stopped setting e1RM bests -
+     one card at a time, snoozable, silent for lifts already on a wave */
+  if(!dl){
+    const sk = S.trackedLifts.find(k=>!S.waves[k] && (S.stallSnooze[k]||0) < Date.now() && stallInfo(k));
+    if(sk){
+      const si = stallInfo(sk);
+      h += `<div class="card" style="display:flex;align-items:center;gap:10px">
+        <span style="flex:1;font-size:13px;line-height:1.5"><b>${t('stallTitle',{n:esc(exName(sk))})}</b><br>
+          <span style="color:var(--dim)">${t('stallSub',{c:si.n})}</span></span>
+        <button class="btn small" style="background:var(--accent);color:var(--on-accent)" onclick="openWaveModal('${esc(sk)}')">${t('stallGo')}</button>
+        <button class="minibtn" style="width:32px;min-height:32px;font-size:12px" onclick="S.stallSnooze['${esc(sk)}']=Date.now()+14*864e5; save(); render()">✕</button>
+      </div>`;
+    }
+  }
   /* home shows only PINNED splits as a grid of split cards; fall back to all when none pinned */
   const pinned = S.folders.filter(f=>f.pinned);
   const showFolders = pinned.length ? pinned : S.folders;

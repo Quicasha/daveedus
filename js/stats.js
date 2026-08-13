@@ -280,11 +280,11 @@ function sparkSVG(vals){
     <polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
     <circle cx="${X(vals.length-1)}" cy="${Y(vals[vals.length-1])}" r="3" fill="var(--accent)"/></svg>`;
 }
-/* passive stall detector: e1RM direction over the last ~6 sessions of a lift -
-   rising means the training is working, flat/falling is the honest deload signal.
-   Purely computed from history, never asks the user anything. */
-function trendFor(k){
-  if(isTimeEx(k)) return null;
+/* per-session best e1RM (Epley, TOTAL load) for a lift, oldest -> newest,
+   deloads and archived workouts excluded - the shared source for the trend
+   arrow, the goal ETA and the stall detector */
+function e1rmSeries(k){
+  if(isTimeEx(k)) return [];
   const info = exInfo(k);
   const nm = (info?info.n:k).trim().toLowerCase();
   const pts = [];
@@ -297,10 +297,16 @@ function trendFor(k){
       if(!work.length) continue;
       const add = (isBwEx(e.k) ? (e.bw||0) : 0) + (e.mb||0);
       const mul = e.x2 ? 2 : 1;
-      pts.push(Math.max(...work.map(s=>(s.weight*mul+add)*(1+s.reps/30))));
+      pts.push({ ts:new Date(w.date).getTime(), v:Math.max(...work.map(s=>(s.weight*mul+add)*(1+s.reps/30))) });
     }
   }
-  const rec = pts.slice(-6);
+  return pts;
+}
+/* passive stall detector: e1RM direction over the last ~6 sessions of a lift -
+   rising means the training is working, flat/falling is the honest deload signal.
+   Purely computed from history, never asks the user anything. */
+function trendFor(k){
+  const rec = e1rmSeries(k).slice(-6).map(p=>p.v);
   if(rec.length < 4) return null; /* too little data to call a direction */
   const half = Math.floor(rec.length/2);
   const a = rec.slice(0,half).reduce((x,y)=>x+y,0)/half;
@@ -308,6 +314,37 @@ function trendFor(k){
   if(a <= 0) return null;
   const pct = (b-a)/a*100;
   return pct > 1.5 ? 'up' : pct < -1.5 ? 'down' : 'flat';
+}
+/* goal ETA: linear fit over the last <=10 sessions of e1RM; a date only comes
+   back when there is enough data, the trend actually climbs and the answer
+   lands within three years - anything else would be a guess, so show nothing */
+function etaFor(k, goalKg){
+  if(trendFor(k) !== 'up') return null; /* the date and the trend arrow must agree */
+  const pts = e1rmSeries(k).slice(-10);
+  if(pts.length < 4) return null;
+  const n = pts.length;
+  const mx = pts.reduce((a,p)=>a+p.ts,0)/n, my = pts.reduce((a,p)=>a+p.v,0)/n;
+  let num = 0, den = 0;
+  for(const p of pts){ num += (p.ts-mx)*(p.v-my); den += (p.ts-mx)*(p.ts-mx); }
+  if(den <= 0) return null;
+  const slope = num/den; /* kg per ms */
+  const cur = pts[n-1].v;
+  if(slope <= 0 || cur >= goalKg) return null;
+  const ms = (goalKg - cur)/slope;
+  if(ms > 3*365*864e5) return null;
+  return new Date(Date.now() + ms);
+}
+/* stalled = 4+ recent sessions without beating the lift's best e1RM (0.25%
+   tolerance eats rounding noise); needs some history before it dares to speak */
+function stallInfo(k){
+  const pts = e1rmSeries(k);
+  if(pts.length < 6) return null;
+  let best = 0, since = 0;
+  for(const p of pts){
+    if(p.v > best*1.0025){ best = p.v; since = 0; }
+    else since++;
+  }
+  return since >= 4 ? { n:since } : null;
 }
 function trackedHtml(){
   let h = `<h2 class="sec">${t('trackedTitle')}</h2>`;
@@ -339,9 +376,12 @@ function trackedHtml(){
       const cur = exStats(k, name).e1rm;
       const pct = Math.min(100, Math.round(cur/goal*100));
       const done = cur >= goal;
+      /* honest projection: only shows when the trend really climbs (see etaFor) */
+      const eta = done ? null : etaFor(k, goal);
+      const etaTxt = eta ? ` · ${t('goalEta',{d:eta.toLocaleDateString('en-GB',{year:'numeric',month:'short'})})}` : '';
       goalHtml = `<div class="goalrow">
         <span class="goalbar"><i style="width:${pct}%${done?';background:var(--green)':''}"></i></span>
-        <span class="goaltxt${done?' done':''}">${wu(Math.round(cur*10)/10)} / ${wu(goal,true)} · ${done?t('goalReached'):t('goalLeft',{n:wu(Math.round((goal-cur)*10)/10)})}</span>
+        <span class="goaltxt${done?' done':''}">${wu(Math.round(cur*10)/10)} / ${wu(goal,true)} · ${done?t('goalReached'):t('goalLeft',{n:wu(Math.round((goal-cur)*10)/10)})}${etaTxt}</span>
       </div>`;
     }
     return `<div class="card trackcard" onclick="openExDetailByKey('${k}')">

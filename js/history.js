@@ -161,6 +161,13 @@ function continueWorkout(){
   S.history.splice(idx, 1);
   S.active = S.lastActive.act;
   S.active.rest = null; /* the old rest clock is long stale */
+  /* un-finishing also rewinds any wave the finish advanced */
+  for(const k of (S.lastActive.waved||[])){
+    const wv = S.waves[k];
+    if(!wv) continue;
+    wv.idx--;
+    if(wv.idx < 0){ wv.idx = 3; wv.base = Math.round((wv.base - wv.step)*100)/100; }
+  }
   S.lastActive = null;
   save(); scheduleCloudSync();
   go('workout');

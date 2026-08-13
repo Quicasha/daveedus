@@ -70,7 +70,13 @@ function startDeload(){
   const f = S.folders.find(x=>x.id===fid);
   if(!f || !S.templates.some(tp=>tp.folderId===fid)) return;
   V.dlm = { pct:DL_FACTOR, vol:1 };
+  /* say out loud WHICH program gets the deload - with several programs the
+     star on Home decides, and that must not be a surprise */
+  const count = S.templates.filter(tp=>tp.folderId===fid).length;
+  const multi = S.folders.filter(x=>S.templates.some(tp=>tp.folderId===x.id)).length > 1;
+  const scope = t('dlmScope',{c:count, n:f.name}) + (multi ? ' ' + t('dlmScopeStar') : '');
   openModal(`<h3>${t('dlBtn')} · ${esc(f.name)}<button class="x" onclick="closeModal()">✕</button></h3>
+    <div style="color:var(--accent-soft);font-size:13px;font-weight:600;line-height:1.45;margin:0 4px 10px">${scope}</div>
     <div style="color:var(--dim);font-size:13px;line-height:1.45;margin:0 4px 14px">${t('dlmHow')}</div>
     <div id="dlm-body"></div>
     <button class="btn primary" style="margin-top:14px" onclick="confirmDeload()">${t('dlmStart')}</button>`);
@@ -84,7 +90,7 @@ function renderDlm(){
   const pctChip = p => `<button class="chip ${o.pct===p?'on':''}" onclick="V.dlm.pct=${p};${p===1?' V.dlm.vol=0.5;':''} renderDlm()">${Math.round(p*100)} %</button>`;
   el.innerHTML = `
     <h2 class="sec" style="margin-top:0">${t('dlmW')}</h2>
-    <div class="chips" style="padding-bottom:4px">${[0.5,0.6,0.7,0.9,1].map(pctChip).join('')}</div>
+    <div class="chips" style="padding-bottom:4px">${[0.5,0.6,0.7,0.8,0.9,1].map(pctChip).join('')}</div>
     <div style="color:var(--dim);font-size:12px;line-height:1.45;margin:0 4px 6px">${t('dlmWHint')}</div>
     <h2 class="sec">${t('dlmSets')}</h2>
     <div class="chips" style="padding-bottom:4px">
