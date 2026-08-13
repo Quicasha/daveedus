@@ -513,6 +513,9 @@ function htmlWorkout(){
       const wph = g ? wu(dl && !s.warm ? dlW(ghostW(ex,g)) : ghostW(ex,g)) : (bw ? '+' : unitL());
       const isCur = si === firstNotDone;                          /* the set to do now */
       const isLocked = firstNotDone!==-1 && !s.done && !isCur;    /* later sets: ✓ waits its turn */
+      /* the rest bar is a SIBLING of the row, not a child - otherwise the done
+         row's green background stretches around the timer and the row looks
+         inflated. It still anchors visually right under the set it follows. */
       return `<div class="setrow-wrap ${s.done?'done':''} ${s.drop?'droprow':''} ${isLocked?'locked':''}">
         <div class="${gcls}">
           <button class="setnum ${s.warm?'warm':''} ${s.drop?'dropn':''} ${s.fail?'failn':''}" onclick="toggleWarm(${xi},${si})">${label}</button>
@@ -524,8 +527,7 @@ function htmlWorkout(){
           <button class="checkbtn ${chkCls}${isCur?' cur':''}" onclick="toggleSet(${xi},${si})">${ACT_ICONS.check}</button>
           ${rowBtn}
         </div>
-        ${restHere ? restBarHtml() : ''}
-      </div>`;
+      </div>${restHere ? restBarHtml() : ''}`;
     }).join('');
     const bwPh = latestBw()!=null ? fmtW(kg2u(latestBw())) : '';
     const bwField = bw ? `<div class="bwline">
