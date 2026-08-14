@@ -16,27 +16,27 @@ function seedTemplates(fid){
   const tex = (k,s,r,alts,pn,rt) => ({ id:uid(), k, s, r,
     ...(alts && alts.length ? { alts } : {}), ...(pn ? { pnote:pn } : {}), ...(rt ? { rt } : {}) });
   return [
-    { id:uid(), name:'Upper 1', folderId:fid, ex:[
+    { id:uid(), name:'Upper A', folderId:fid, ex:[
       tex('bench-press',4,'4-6',['smith-bench-press','db-bench-press'],'1 RIR, last set 0 RIR. Rest 3-5 min',240),
       tex('barbell-row',3,'6-8',['chest-supported-row','seated-cable-row'],'1 RIR, last set to failure. Rest 2-3 min',180),
       tex('incline-db-press',3,'8-10',['smith-incline-press','incline-bench-press'],'Last set to failure. Rest 2 min',120),
       tex('close-grip-lat-pulldown',3,'10-12',['neutral-grip-lat-pulldown','pull-up'],'Last set to failure. Rest 1.5 min',90),
       tex('cable-lateral-raise',3,'12-15',['lateral-raise','machine-lateral-raise'],'To failure. Rest 1 min',60),
       tex('triceps-pushdown',2,'10-12',['rope-pushdown','overhead-triceps-ext'],'To failure. Rest 1 min',60) ]},
-    { id:uid(), name:'Lower 1', folderId:fid, ex:[
+    { id:uid(), name:'Lower A', folderId:fid, ex:[
       tex('back-squat',4,'4-6',['hack-squat','leg-press'],'1-2 RIR, never to failure. Rest 3-5 min',240),
       tex('romanian-deadlift',3,'6-8',['db-romanian-deadlift','seated-leg-curl'],'1 RIR. Rest 2-3 min',180),
       tex('leg-press',2,'10-12',['hack-squat','smith-squat'],'To failure. Rest 2 min',120),
       tex('lying-leg-curl',2,'10-12',['seated-leg-curl','nordic-curl'],'To failure. Rest 1.5 min',90),
       tex('seated-calf-raise',2,'10-15',['standing-calf-raise','calf-press'],'To failure. Rest 1 min',60) ]},
-    { id:uid(), name:'Upper 2', folderId:fid, ex:[
+    { id:uid(), name:'Upper B', folderId:fid, ex:[
       tex('paused-bench-press',3,'3-5',['close-grip-bench','smith-bench-press'],'1 RIR. Rest 3 min',180),
       tex('chest-dip',3,'6-8',['machine-dip','close-grip-bench'],'Last set to failure. Rest 2-3 min',180),
       tex('pull-up',3,'6-8',['close-grip-lat-pulldown','lat-pulldown'],'Last set to failure. Rest 2-3 min',180),
       tex('lateral-raise',4,'12-20',['cable-lateral-raise','machine-lateral-raise'],'To failure. Rest 1 min',60),
       tex('face-pull',2,'15-20',['reverse-cable-fly','reverse-pec-deck'],'To failure. Rest 1 min',60),
       tex('hammer-curl',2,'8-12',['ez-bar-curl','cable-hammer-curl'],'To failure. Rest 1 min',60) ]},
-    { id:uid(), name:'Lower 2', folderId:fid, ex:[
+    { id:uid(), name:'Lower B', folderId:fid, ex:[
       tex('tempo-squat',4,'5-6',['hack-squat','smith-squat'],'2 RIR. Rest 3 min',180),
       tex('bulgarian-split-squat',2,'8-12',['walking-lunge','lunge'],'To failure, per leg. Rest 1.5 min',90),
       tex('leg-press',2,'12-15',['hack-squat','goblet-squat'],'To failure. Rest 2 min',120),
