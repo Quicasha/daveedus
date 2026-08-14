@@ -13,47 +13,36 @@ const LS_KEY = 'daveedus.v1';
 const uid = () => Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-3);
 
 function seedTemplates(fid){
-  const tex = (k,s,r,alts,pn) => ({ id:uid(), k, s, r,
-    ...(alts && alts.length ? { alts } : {}), ...(pn ? { pnote:pn } : {}) });
+  const tex = (k,s,r,alts,pn,rt) => ({ id:uid(), k, s, r,
+    ...(alts && alts.length ? { alts } : {}), ...(pn ? { pnote:pn } : {}), ...(rt ? { rt } : {}) });
   return [
-    { id:uid(), name:'Upper A', folderId:fid, ex:[
-      tex('bench-press',4,'4-6',['smith-bench-press','db-bench-press'],'1 RIR, last set 0 RIR'),
-      tex('barbell-row',3,'6-8',['chest-supported-row'],'last set to failure'),
-      tex('incline-db-press',2,'8-10',['smith-incline-press','incline-bench-press'],'to failure'),
-      tex('close-grip-lat-pulldown',2,'10-12',['pull-up'],'to failure'),
-      tex('cable-lateral-raise',3,'12-15',['lateral-raise'],'to failure'),
-      tex('incline-db-curl',2,'8-12',['preacher-curl'],'to failure'),
-      tex('triceps-pushdown',2,'10-12',['overhead-triceps-ext'],'to failure') ]},
-    { id:uid(), name:'Lower A', folderId:fid, ex:[
-      tex('back-squat',4,'4-6',['hack-squat','leg-press'],'1-2 RIR'),
-      tex('romanian-deadlift',3,'6-8',['db-romanian-deadlift'],'1 RIR'),
-      tex('leg-press',2,'10-12',['hack-squat'],'to failure'),
-      tex('lying-leg-curl',2,'10-12',['seated-leg-curl'],'to failure'),
-      tex('leg-extension',2,'12-15',null,'to failure'),
-      tex('seated-calf-raise',3,'10-15',['standing-calf-raise'],'to failure') ]},
-    { id:uid(), name:'Upper B', folderId:fid, ex:[
-      tex('overhead-press',4,'5-7',['seated-db-press'],'1 RIR'),
-      tex('chest-dip',3,'6-8',['machine-dip','close-grip-bench'],'last set to failure'),
-      tex('pull-up',3,'6-8',['close-grip-lat-pulldown'],'last set to failure'),
-      tex('chest-supported-row',2,'10-12',['seated-cable-row'],'to failure'),
-      tex('face-pull',2,'15-20',['reverse-cable-fly'],'to failure'),
-      tex('hammer-curl',2,'8-12',['ez-bar-curl'],'to failure'),
-      tex('overhead-triceps-ext',2,'10-12',['triceps-pushdown'],'to failure') ]},
-    { id:uid(), name:'Lower B', folderId:fid, ex:[
-      tex('tempo-squat',3,'8-10',['hack-squat'],'1-2 RIR'),
-      tex('bulgarian-split-squat',2,'8-12',['lunge'],'to failure'),
-      tex('leg-press',2,'12-15',['hack-squat'],'to failure'),
-      tex('lying-leg-curl',2,'10-12',['seated-leg-curl'],'to failure'),
-      tex('leg-extension',2,'15-20',null,'to failure'),
-      tex('calf-press',3,'12-20',['seated-calf-raise'],'to failure') ]},
-    { id:uid(), name:'Upper C', folderId:fid, ex:[
-      tex('close-grip-bench',3,'6-8',['paused-bench-press','db-bench-press'],'1 RIR'),
-      tex('incline-db-press',2,'8-10',['smith-incline-press'],'to failure'),
-      tex('seated-cable-row',2,'10-12',['chest-supported-row'],'to failure'),
-      tex('close-grip-lat-pulldown',2,'12-15',['pull-up'],'to failure'),
-      tex('lateral-raise',4,'12-20',['cable-lateral-raise'],'to failure'),
-      tex('preacher-curl',2,'8-12',['incline-db-curl'],'to failure'),
-      tex('triceps-pushdown',2,'10-15',['overhead-triceps-ext'],'to failure') ]}
+    { id:uid(), name:'Upper 1', folderId:fid, ex:[
+      tex('bench-press',4,'4-6',['smith-bench-press','db-bench-press'],'1 RIR, last set 0 RIR. Rest 3-5 min',240),
+      tex('barbell-row',3,'6-8',['chest-supported-row','seated-cable-row'],'1 RIR, last set to failure. Rest 2-3 min',180),
+      tex('incline-db-press',3,'8-10',['smith-incline-press','incline-bench-press'],'Last set to failure. Rest 2 min',120),
+      tex('close-grip-lat-pulldown',3,'10-12',['neutral-grip-lat-pulldown','pull-up'],'Last set to failure. Rest 1.5 min',90),
+      tex('cable-lateral-raise',3,'12-15',['lateral-raise','machine-lateral-raise'],'To failure. Rest 1 min',60),
+      tex('triceps-pushdown',2,'10-12',['rope-pushdown','overhead-triceps-ext'],'To failure. Rest 1 min',60) ]},
+    { id:uid(), name:'Lower 1', folderId:fid, ex:[
+      tex('back-squat',4,'4-6',['hack-squat','leg-press'],'1-2 RIR, never to failure. Rest 3-5 min',240),
+      tex('romanian-deadlift',3,'6-8',['db-romanian-deadlift','seated-leg-curl'],'1 RIR. Rest 2-3 min',180),
+      tex('leg-press',2,'10-12',['hack-squat','smith-squat'],'To failure. Rest 2 min',120),
+      tex('lying-leg-curl',2,'10-12',['seated-leg-curl','nordic-curl'],'To failure. Rest 1.5 min',90),
+      tex('seated-calf-raise',2,'10-15',['standing-calf-raise','calf-press'],'To failure. Rest 1 min',60) ]},
+    { id:uid(), name:'Upper 2', folderId:fid, ex:[
+      tex('paused-bench-press',3,'3-5',['close-grip-bench','smith-bench-press'],'1 RIR. Rest 3 min',180),
+      tex('chest-dip',3,'6-8',['machine-dip','close-grip-bench'],'Last set to failure. Rest 2-3 min',180),
+      tex('pull-up',3,'6-8',['close-grip-lat-pulldown','lat-pulldown'],'Last set to failure. Rest 2-3 min',180),
+      tex('lateral-raise',4,'12-20',['cable-lateral-raise','machine-lateral-raise'],'To failure. Rest 1 min',60),
+      tex('face-pull',2,'15-20',['reverse-cable-fly','reverse-pec-deck'],'To failure. Rest 1 min',60),
+      tex('hammer-curl',2,'8-12',['ez-bar-curl','cable-hammer-curl'],'To failure. Rest 1 min',60) ]},
+    { id:uid(), name:'Lower 2', folderId:fid, ex:[
+      tex('tempo-squat',4,'5-6',['hack-squat','smith-squat'],'2 RIR. Rest 3 min',180),
+      tex('bulgarian-split-squat',2,'8-12',['walking-lunge','lunge'],'To failure, per leg. Rest 1.5 min',90),
+      tex('leg-press',2,'12-15',['hack-squat','goblet-squat'],'To failure. Rest 2 min',120),
+      tex('lying-leg-curl',2,'10-12',['seated-leg-curl','db-romanian-deadlift'],'To failure. Rest 1.5 min',90),
+      tex('standing-calf-raise',2,'12-20',['calf-press','seated-calf-raise'],'To failure. Rest 1 min',60),
+      tex('leg-extension',2,'12-15',null,'To failure. Rest 1 min',60) ]}
   ];
 }
 /* plate calculator: full selectable options and the default "what my gym has" set (per unit) */
