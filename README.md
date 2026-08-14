@@ -13,24 +13,14 @@
 
 Takes half a minute. After that it runs full-screen and works fully offline.
 
-## What you get
+## What it does
 
-- **Programs** - build your split (e.g. Upper / Lower), pin what you're running, the home screen shows which workout is next
-- **Weekly schedule** - assign workouts to fixed weekdays; the home screen marks TODAY and counts your week. A missed day is simply skipped, nothing shifts
-- **Fast logging** - last session's numbers sit right next to the inputs; check a set off and the rest clock starts. Green or red tells you if you beat last time
-- **Progression hints** - opt-in per exercise: when every working set hits the top of the rep range, next session offers the weight bump (+1.25 / +2.5 / +5) with one tap
-- **Goals** - set a target e1RM on a tracked lift: progress bar, an honest "at this pace ~May 2027" projection and a dashed goal line on the chart
-- **Stall watch + wave mode** - a tracked lift that stops setting e1RM bests gets a nudge; one tap starts a 4-week 5/4/3/6 wave with an auto-suggested starting weight (~86% of your recent best e1RM). The wave ends itself: new best = job done, three dry rounds = time to deload
-- **Set types** - warm-ups, failure sets, drop sets (opt-in per exercise), supersets
-- **Alternatives** - every exercise can have backups; rack taken? Swap with one tap, or pin the alternative as your new main. Each variant keeps its own history, so numbers never mix
-- **Machine base weight** - enter what the machine weighs empty once; from then on you log only the plates you add, while records count the full load. Remembered per machine
-- **Rest targets** - optional, per exercise; when time is up the bar flashes and beeps
-- **Bodyweight exercises** - pull-ups and dips log added weight separately, while records count the full load you moved
-- **Progress** - training rhythm at a glance, weekly stats, muscle balance, per-exercise charts (weight / volume / est. 1RM), rep-specific PRs, tracked lifts with goal targets
-- **Deload** - one light pass over your program when you need it (pick the load, down to "same weight, half the sets"), kept out of your records; an optional calendar reminder nudges you every N weeks
-- **Undo, not "Are you sure?"** - deletions apply instantly and offer a five-second Undo instead of a dialog
-- **Share codes** - send a program to a friend as a short code; they paste it and have your exact routine
-- **kg / lb, dark / light, seven styles** - from Ice Cold and Locked In to Golden Era and Princess Treatment, each with its own dark and light palette
+- Logs sets fast - last session's numbers are the placeholders, one tap confirms, green or red shows how it went, the rest clock starts itself
+- Programs with alternatives per exercise - bench taken, swap in one tap; each variant keeps its own history
+- Progression runs quietly in the background - rep-range hints, a 4-week wave for stalled lifts, deloads, eased-in suggestions after a break
+- Records and charts - e1RM trends, rep PRs, tracked lifts with goals
+- The gym details covered: warm-ups, drop sets, supersets, rest timers, machine base weight, bodyweight exercises, kg / lb
+- Share a program as a short code
 
 ## Your data
 
