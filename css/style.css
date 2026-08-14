@@ -13,14 +13,16 @@
 :root{
   --display:'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
-/* Three selectable skins (data-skin on <html>, "ice" = no attribute), each with
-   a dark and a light palette (data-theme). Order matters: skin blocks come after
-   the ice blocks, and each skin's light block carries higher specificity than its
-   dark base, so the cascade resolves skin+theme without JS help.
+/* Selectable skins (data-skin on <html>), each with a dark and a light palette
+   (data-theme). The bare :root block below is the BASE token layer every skin
+   overrides - not a selectable skin itself (the old "Ice Cold" retired 2026-08-13;
+   the name lives on as the aero skin's label). Order matters: skin blocks come
+   after the base blocks, and each skin's light block carries higher specificity
+   than its dark base, so the cascade resolves skin+theme without JS help.
    Shared rules: win/loss green-red never changes meaning; warmup orange and
    deload amber stay warm in every skin; solid-accent surfaces read --on-accent. */
 
-/* ---- ICE COLD (default): night sky blue-black, steel, frost, ice accent ---- */
+/* ---- base tokens (fallback when no data-skin is stamped yet) ---- */
 :root, :root[data-theme="dark"]{
   --bg:#05070c; --card:#0d141f; --input:#16202c; --line:#253349;
   --text:#edf3fa; --dim:#92a5ba; --ghost:#5a6f86;
@@ -280,7 +282,47 @@
   --card-shadow:0 1px 2px rgba(10,20,50,.05);
 }
 
+/* ---- I'M BATMAN: Gotham night - graphite blue-black, bat-signal yellow,
+        a faint signal glow in the sky; light mode is Bruce Wayne's daytime ---- */
+:root[data-skin="batman"]{
+  --bg:#05060a; --card:#0e1219; --input:#171c26; --line:#28303f;
+  --text:#eef1f6; --dim:#96a0b0; --ghost:#5a6373;
+  --edge:rgba(255,214,10,.08);
+  --accent:#ffd60a; --accent-soft:#ffe25c; --on-accent:#1a1400;
+  --accent-bg:rgba(255,214,10,.10);
+  --glow:rgba(255,214,10,.12);
+  --atmo:radial-gradient(ellipse 62% 42% at 50% -12%, rgba(255,214,10,.10), transparent 62%),
+         linear-gradient(180deg, #0c1016 0%, #05060a 380px);
+  --topbar-bg:rgba(9,11,16,.86); --tabbar-bg:rgba(8,10,14,.88);
+  --green:#2ecf87; --green-bg:rgba(46,207,135,.13);
+  --red:#ff453a; --red-bg:rgba(255,69,58,.13);
+  --orange:#ff9f0a;
+  --shadow:0 10px 34px rgba(0,2,6,.8);
+  --card-shadow:none;
+}
+:root[data-skin="batman"][data-theme="light"]{
+  --bg:#f0f0f2; --card:#ffffff; --input:#e8e8ec; --line:#dbdce2;
+  --text:#14161c; --dim:#71767f; --ghost:#a8adb6;
+  --edge:#e2e3e8;
+  --accent:#a16207; --accent-soft:#854d0e; --on-accent:#fff;
+  --accent-bg:rgba(161,98,7,.10);
+  --glow:rgba(161,98,7,.10);
+  --atmo:linear-gradient(180deg, #e9eaee 0%, #f0f0f2 380px);
+  --topbar-bg:rgba(242,242,245,.86); --tabbar-bg:rgba(242,242,245,.88);
+  --green:#0ca678; --green-bg:rgba(12,166,120,.11);
+  --red:#ff3b30; --red-bg:rgba(255,59,48,.10);
+  --orange:#b45309;
+  --shadow:0 10px 34px rgba(20,22,28,.14);
+  --card-shadow:0 1px 2px rgba(15,17,22,.05);
+}
+
 /* ---- per-skin personality (beyond color): shape, type, tempo ---- */
+/* I'm Batman: hard edges, heavy caps - the symbol does the talking */
+:root[data-skin="batman"] .card, :root[data-skin="batman"] .tplbtn, :root[data-skin="batman"] .stat,
+:root[data-skin="batman"] .splitcard, :root[data-skin="batman"] .btn{border-radius:8px;}
+:root[data-skin="batman"] .btn.primary{border-radius:8px;}
+:root[data-skin="batman"] #topbar h1{text-transform:uppercase; letter-spacing:3px;}
+
 /* Locked In: tighter corners, stilled pulse - silence is the feature */
 :root[data-skin="locked"] .card, :root[data-skin="locked"] .tplbtn, :root[data-skin="locked"] .stat,
 :root[data-skin="locked"] .splitcard, :root[data-skin="locked"] .btn{border-radius:10px;}

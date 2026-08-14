@@ -25,7 +25,7 @@ function htmlSettings(){
     </div>
     <div class="setline">
       <span class="lb">${t('setStyle')}</span>
-      <button class="btn small" onclick="openSkinPicker()">${t('skin_'+(S.skin||'ice'))} ›</button>
+      <button class="btn small" onclick="openSkinPicker()">${t('skin_'+(S.skin||'locked'))} ›</button>
     </div>
   </div>
   <div class="card">

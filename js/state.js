@@ -103,6 +103,7 @@ function hydrate(s){
   if(typeof s.mainFolder!=='string') s.mainFolder = null;
   if(typeof s.restTarget!=='number' || !(s.restTarget>=15 && s.restTarget<=1800)) s.restTarget = 120;
   if(typeof s.restSound!=='boolean') s.restSound = true;
+  if(s.skin==='ice') s.skin = 'aero'; /* the old Ice Cold retired; aero carries the name now */
   if(!SKIN_META[s.skin]) s.skin = 'locked'; /* util.js loads first; SKIN_META is the skin registry */
   if(typeof s.ghRepo!=='string') s.ghRepo = '';
   if(typeof s.ghToken!=='string') s.ghToken = '';
