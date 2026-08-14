@@ -1,5 +1,5 @@
 /* Daveedus service worker - offline-first app shell */
-const CACHE = 'daveedus-v2.11.0';
+const CACHE = 'daveedus-v2.11.1';
 const ASSETS = [
   './', './index.html', './css/style.css',
   './js/exercises.js', './js/i18n.js', './js/util.js', './js/state.js',

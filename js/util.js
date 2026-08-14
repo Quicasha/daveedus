@@ -100,12 +100,11 @@ function copyFallback(txt){
 
 /* ======================= theme + skin ======================= */
 /* Two independent axes: data-theme (dark/light, "auto" resolves here) and
-   data-skin (ice = no attribute / zaza / stim). CSS owns the palettes;
+   data-skin (see SKIN_META for the registry). CSS owns the palettes;
    this only stamps the attributes and keeps the browser-chrome color in step. */
 const mediaDark = window.matchMedia('(prefers-color-scheme: dark)');
 const SKIN_META = { /* status-bar color per skin+mode, matches each --atmo top tone */
   zaza:     { dark:'#150c28', light:'#f0f2ec' },
-  stim:     { dark:'#0b0d05', light:'#f7f8f2' },
   locked:   { dark:'#000000', light:'#f5f5f5' },
   aero:     { dark:'#082633', light:'#dff0f7' },
   golden:   { dark:'#1c1610', light:'#e9dfc9' },
@@ -124,7 +123,6 @@ const SKIN_PREVIEW = {
   aero:     { bg:'linear-gradient(135deg,#0c3c52,#04141c)', accent:'#22d3ee' },
   spooder:  { bg:'linear-gradient(135deg,#1a2c63,#070a18)', accent:'#f43f4b', accent2:'#4f74ff' },
   zaza:     { bg:'linear-gradient(135deg,#2a1856,#0a0712)', accent:'#4ade80', accent2:'#a855f7' },
-  stim:     { bg:'linear-gradient(135deg,#1a2108,#030304)', accent:'#c8f135' },
   batman:   { bg:'linear-gradient(135deg,#232b3a,#05060a)', accent:'#ffd60a' },
   golden:   { bg:'linear-gradient(135deg,#332714,#120e08)', accent:'#e0a32e' },
   princess: { bg:'linear-gradient(135deg,#f6e7ee,#ecc3d8)', accent:'#db2777' }

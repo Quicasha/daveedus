@@ -89,38 +89,6 @@
   --card-shadow:0 1px 2px rgba(15,25,10,.05);
 }
 
-/* ---- STIMMED OUT: pre-workout at 2 AM - acid lime on void black, no patience ---- */
-:root[data-skin="stim"]{
-  --bg:#030304; --card:#0f0f11; --input:#19191c; --line:#2b2b30;
-  --text:#f4f5ef; --dim:#9fa19a; --ghost:#616359;
-  --edge:rgba(200,241,53,.10);
-  --accent:#c8f135; --accent-soft:#e2ff70; --on-accent:#131600;
-  --accent-bg:rgba(200,241,53,.11);
-  --glow:rgba(200,241,53,.16);
-  --atmo:linear-gradient(180deg, #0b0d05 0%, #030304 380px);
-  --topbar-bg:rgba(9,10,6,.86); --tabbar-bg:rgba(8,9,5,.88);
-  --green:#2ecf87; --green-bg:rgba(46,207,135,.13);
-  --red:#ff453a; --red-bg:rgba(255,69,58,.13);
-  --orange:#ff9f0a;
-  --shadow:0 10px 34px rgba(0,0,0,.8);
-  --card-shadow:none;
-}
-:root[data-skin="stim"][data-theme="light"]{
-  --bg:#f7f8f2; --card:#ffffff; --input:#ebeee0; --line:#dde2cd;
-  --text:#151806; --dim:#73785f; --ghost:#adb394;
-  --edge:#e4e8d4;
-  --accent:#4d7c0f; --accent-soft:#3f6212; --on-accent:#fff;
-  --accent-bg:rgba(77,124,15,.10);
-  --glow:rgba(77,124,15,.12);
-  --atmo:linear-gradient(180deg, #f0f2e4 0%, #f7f8f2 380px);
-  --topbar-bg:rgba(248,249,243,.86); --tabbar-bg:rgba(248,249,243,.88);
-  --green:#0ca678; --green-bg:rgba(12,166,120,.11);
-  --red:#ff3b30; --red-bg:rgba(255,59,48,.10);
-  --orange:#ff9500;
-  --shadow:0 10px 34px rgba(25,30,5,.14);
-  --card-shadow:0 1px 2px rgba(20,24,4,.05);
-}
-
 /* ---- LOCKED IN: pure monochrome, no sky, no halo - nothing competes ---- */
 :root[data-skin="locked"]{
   --bg:#000000; --card:#101010; --input:#1a1a1a; --line:#2a2a2a;
@@ -351,14 +319,6 @@
 :root[data-skin="zaza"] .btn{border-radius:20px;}
 :root[data-skin="zaza"] .tbdot, :root[data-skin="zaza"] .pulse{animation-duration:2.6s;}
 :root[data-skin="zaza"] #topbar h1{text-transform:lowercase; letter-spacing:-.5px;}
-/* Stimmed Out: sharp corners, double-speed pulses, italic caps shouting */
-:root[data-skin="stim"] .card, :root[data-skin="stim"] .tplbtn, :root[data-skin="stim"] .stat,
-:root[data-skin="stim"] .splitcard, :root[data-skin="stim"] .btn{border-radius:6px;}
-:root[data-skin="stim"] .btn.primary{border-radius:6px;}
-:root[data-skin="stim"] .tbdot, :root[data-skin="stim"] .pulse{animation-duration:.55s;}
-:root[data-skin="stim"] .checkbtn.pop{animation-duration:.2s;}
-:root[data-skin="stim"] #topbar h1{text-transform:uppercase; font-style:italic; letter-spacing:.6px;}
-
 /* ============ base ============ */
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action:manipulation;}
 html,body{margin:0; padding:0; background:var(--bg); color:var(--text);
