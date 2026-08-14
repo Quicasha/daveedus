@@ -1213,8 +1213,9 @@ function confetti(){
     locked:   ['#ffffff','#d9d9d9','#ababab','#f5f5f5','#7a7a7a','#4a4a4a'],
     aero:     ['#22d3ee','#7fe7f7','#e0f7ff','#34d399','#38bdf8','#a5f3fc'],
     golden:   ['#e0a32e','#f0c060','#fff3d6','#b3a284','#d97706','#fde68a'],
-    princess: ['#f28ab5','#f7b1cd','#ffe4ef','#db2777','#e9d5ff','#fbcfe8']
-  }[SKIN_META[S.skin] ? S.skin : 'ice'];
+    princess: ['#f28ab5','#f7b1cd','#ffe4ef','#db2777','#e9d5ff','#fbcfe8'],
+    spooder:  ['#f43f4b','#ff7a82','#4f74ff','#9db9ff','#eef1fb','#ffd166']
+  }[SKIN_META[S.skin] ? S.skin : 'locked'];
   let html = '';
   for(let i=0;i<70;i++){
     const l = Math.random()*100, delay = Math.random()*0.5, dur = 1.6+Math.random()*1.2;

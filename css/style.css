@@ -248,6 +248,38 @@
   --card-shadow:0 1px 2px rgba(80,25,55,.05);
 }
 
+/* ---- SPOODERMAN: web-slinger night blue, spidey-red accent doing the pointing ---- */
+:root[data-skin="spooder"]{
+  --bg:#070a18; --card:#101527; --input:#181f36; --line:#293356;
+  --text:#eef1fb; --dim:#98a3c6; --ghost:#5d688f;
+  --edge:rgba(96,140,255,.10);
+  --accent:#f43f4b; --accent-soft:#ff7a82; --on-accent:#2a040a;
+  --accent-bg:rgba(244,63,75,.13);
+  --glow:rgba(244,63,75,.16);
+  --atmo:linear-gradient(180deg, #101a3c 0%, #070a18 380px);
+  --topbar-bg:rgba(10,15,34,.86); --tabbar-bg:rgba(9,13,29,.88);
+  --green:#2ecf87; --green-bg:rgba(46,207,135,.13);
+  --red:#ff453a; --red-bg:rgba(255,69,58,.13);
+  --orange:#ff9f0a;
+  --shadow:0 10px 34px rgba(2,5,18,.75);
+  --card-shadow:none;
+}
+:root[data-skin="spooder"][data-theme="light"]{
+  --bg:#eef1fa; --card:#ffffff; --input:#e5eaf7; --line:#d8dff0;
+  --text:#101832; --dim:#68739b; --ghost:#a2accc;
+  --edge:#e0e7f4;
+  --accent:#d92637; --accent-soft:#b01c2b; --on-accent:#fff;
+  --accent-bg:rgba(217,38,55,.09);
+  --glow:rgba(217,38,55,.11);
+  --atmo:linear-gradient(180deg, #dde5f8 0%, #eef1fa 380px);
+  --topbar-bg:rgba(240,243,251,.86); --tabbar-bg:rgba(240,243,251,.88);
+  --green:#0ca678; --green-bg:rgba(12,166,120,.11);
+  --red:#ff3b30; --red-bg:rgba(255,59,48,.10);
+  --orange:#ff9500;
+  --shadow:0 10px 34px rgba(12,25,60,.16);
+  --card-shadow:0 1px 2px rgba(10,20,50,.05);
+}
+
 /* ---- per-skin personality (beyond color): shape, type, tempo ---- */
 /* Locked In: tighter corners, stilled pulse - silence is the feature */
 :root[data-skin="locked"] .card, :root[data-skin="locked"] .tplbtn, :root[data-skin="locked"] .stat,
@@ -840,9 +872,11 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 /* time-exercise tag in list sub-lines: seconds are logged, not reps */
 .xt{color:var(--accent-soft); font-weight:700;}
 /* skin picker rows: fixed-color swatch (dark bg + accent dot) per style */
-.skinsw{flex:none; width:36px; height:26px; border-radius:8px; border:1px solid var(--line);
-  display:flex; align-items:center; justify-content:center;}
-.skinsw i{width:12px; height:12px; border-radius:50%; display:block;}
+/* skin swatch = the skin's real sky (atmo-to-bg gradient) with its accent dot(s) */
+.skinsw{flex:none; width:44px; height:30px; border-radius:9px; border:1px solid var(--line);
+  display:flex; align-items:center; justify-content:center; gap:5px;}
+.skinsw i{width:13px; height:13px; border-radius:50%; display:block;
+  box-shadow:0 1px 3px rgba(0,0,0,.4);}
 .exitem .best{flex:none; color:var(--accent-soft); font-weight:700; font-size:13px; font-variant-numeric:tabular-nums;}
 
 /* ============ stats dashboard ============ */

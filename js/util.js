@@ -110,26 +110,30 @@ const SKIN_META = { /* status-bar color per skin+mode, matches each --atmo top t
   locked:   { dark:'#000000', light:'#f5f5f5' },
   aero:     { dark:'#082633', light:'#dff0f7' },
   golden:   { dark:'#1c1610', light:'#e9dfc9' },
-  princess: { dark:'#3a1d2b', light:'#f6e7ee' }
+  princess: { dark:'#3a1d2b', light:'#f6e7ee' },
+  spooder:  { dark:'#101a3c', light:'#dde5f8' }
 };
-/* fixed swatch colors for the skin pickers (dark palette bg + accent) - a new
-   skin only needs entries here, in SKIN_META, the confetti map and a CSS token
-   block. Retired skins (villain/batman/old, 2026-08-13) fall back to 'ice' via
-   the hydrate/applyBak validation - no migration code needed. */
+/* skin-picker swatches: each shows the skin's real sky (atmo-top -> bg gradient)
+   plus its accent dot(s) - two dots for the two-color skins. Object ORDER is the
+   picker order: mono first (the default), then blues, greens, warm tones, pink.
+   A new skin needs entries here, in SKIN_META, the confetti map and a CSS token
+   block. Retired skins (villain/batman/old, 2026-08-13) fall back to 'locked'
+   via the hydrate/applyBak validation - no migration code needed. */
 const SKIN_PREVIEW = {
-  ice:      { bg:'#05070c', accent:'#38bdf8' },
-  zaza:     { bg:'#0a0712', accent:'#4ade80' },
-  stim:     { bg:'#030304', accent:'#c8f135' },
-  locked:   { bg:'#000000', accent:'#f5f5f5' },
-  aero:     { bg:'#04141c', accent:'#22d3ee' },
-  golden:   { bg:'#120e08', accent:'#e0a32e' },
-  princess: { bg:'#faf1f4', accent:'#db2777' }
+  locked:   { bg:'linear-gradient(135deg,#1f1f1f,#000000)', accent:'#f5f5f5' },
+  ice:      { bg:'linear-gradient(135deg,#12233f,#05070c)', accent:'#38bdf8' },
+  aero:     { bg:'linear-gradient(135deg,#0c3c52,#04141c)', accent:'#22d3ee' },
+  spooder:  { bg:'linear-gradient(135deg,#1a2c63,#070a18)', accent:'#f43f4b', accent2:'#4f74ff' },
+  zaza:     { bg:'linear-gradient(135deg,#2a1856,#0a0712)', accent:'#4ade80', accent2:'#a855f7' },
+  stim:     { bg:'linear-gradient(135deg,#1a2108,#030304)', accent:'#c8f135' },
+  golden:   { bg:'linear-gradient(135deg,#332714,#120e08)', accent:'#e0a32e' },
+  princess: { bg:'linear-gradient(135deg,#f6e7ee,#ecc3d8)', accent:'#db2777' }
 };
 function applyTheme(){
   const mode = S.theme==='auto' ? (mediaDark.matches?'dark':'light') : S.theme;
   const el = document.documentElement;
   el.dataset.theme = mode;
-  const skin = SKIN_META[S.skin] ? S.skin : 'ice';
+  const skin = SKIN_META[S.skin] ? S.skin : 'locked';
   if(skin==='ice') delete el.dataset.skin; else el.dataset.skin = skin;
   const meta = $('#themecolor');
   if(meta) meta.content = SKIN_META[skin][mode];

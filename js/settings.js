@@ -81,10 +81,10 @@ function setSkin(k){ S.skin=k; save(); applyTheme(); render(); scheduleCloudSync
 function skinRowsHtml(act){
   return Object.keys(SKIN_PREVIEW).map(k=>{
     const sw = SKIN_PREVIEW[k];
-    return `<button class="swapitem ${(S.skin||'ice')===k?'on':''}" onclick="${act.replace(/KEY/g,k)}">
-      <span class="skinsw" style="background:${sw.bg}"><i style="background:${sw.accent}"></i></span>
+    return `<button class="swapitem ${S.skin===k?'on':''}" onclick="${act.replace(/KEY/g,k)}">
+      <span class="skinsw" style="background:${sw.bg}"><i style="background:${sw.accent}"></i>${sw.accent2?`<i style="background:${sw.accent2}"></i>`:''}</span>
       <span class="sn">${t('skin_'+k)}</span>
-      ${(S.skin||'ice')===k?`<span class="chk">${ACT_ICONS.check}</span>`:''}
+      ${S.skin===k?`<span class="chk">${ACT_ICONS.check}</span>`:''}
     </button>`;
   }).join('');
 }
