@@ -13,8 +13,9 @@ const LS_KEY = 'daveedus.v1';
 const uid = () => Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-3);
 
 function seedTemplates(fid){
-  const tex = (k,s,r,alts,pn,rt) => ({ id:uid(), k, s, r,
-    ...(alts && alts.length ? { alts } : {}), ...(pn ? { pnote:pn } : {}), ...(rt ? { rt } : {}) });
+  const tex = (k,s,r,alts,pn,rt,ss) => ({ id:uid(), k, s, r,
+    ...(alts && alts.length ? { alts } : {}), ...(pn ? { pnote:pn } : {}), ...(rt ? { rt } : {}),
+    ...(ss ? { ss:true } : {}) }); /* ss links the exercise to the NEXT one as a superset */
   return [
     { id:uid(), name:'Upper A', folderId:fid, ex:[
       tex('bench-press',4,'4-6',['smith-bench-press','db-bench-press'],'1 RIR, last set 0 RIR. Rest 3-5 min',240),
@@ -28,7 +29,8 @@ function seedTemplates(fid){
       tex('romanian-deadlift',3,'6-8',['db-romanian-deadlift','seated-leg-curl'],'1 RIR. Rest 2-3 min',180),
       tex('leg-press',2,'10-12',['hack-squat','smith-squat'],'To failure. Rest 2 min',120),
       tex('lying-leg-curl',2,'10-12',['seated-leg-curl','nordic-curl'],'To failure. Rest 1.5 min',90),
-      tex('seated-calf-raise',2,'10-15',['standing-calf-raise','calf-press'],'To failure. Rest 1 min',60) ]},
+      tex('seated-calf-raise',2,'10-15',['standing-calf-raise','calf-press'],'To failure. Rest 1 min',60),
+      tex('incline-db-curl',3,'8-12',['db-curl','preacher-curl'],'To failure. Rest 1 min',60) ]},
     { id:uid(), name:'Upper B', folderId:fid, ex:[
       tex('paused-bench-press',3,'3-5',['close-grip-bench','smith-bench-press'],'1 RIR. Rest 3 min',180),
       tex('chest-dip',3,'6-8',['machine-dip','close-grip-bench'],'Last set to failure. Rest 2-3 min',180),
@@ -42,7 +44,9 @@ function seedTemplates(fid){
       tex('leg-press',2,'12-15',['hack-squat','goblet-squat'],'To failure. Rest 2 min',120),
       tex('lying-leg-curl',2,'10-12',['seated-leg-curl','db-romanian-deadlift'],'To failure. Rest 1.5 min',90),
       tex('standing-calf-raise',2,'12-20',['calf-press','seated-calf-raise'],'To failure. Rest 1 min',60),
-      tex('leg-extension',2,'12-15',null,'To failure. Rest 1 min',60) ]}
+      tex('leg-extension',2,'12-15',null,'To failure. Rest 1 min',60),
+      tex('preacher-curl',2,'8-12',['db-preacher-curl','machine-preacher-curl'],'To failure. Rest 1 min',60,true),
+      tex('overhead-triceps-ext',2,'10-15',['cable-overhead-triceps-ext','triceps-pushdown'],'To failure. Rest 1 min',60) ]}
   ];
 }
 /* plate calculator: full selectable options and the default "what my gym has" set (per unit) */
@@ -62,6 +66,7 @@ function defaultState(){
            waves:{}, /* 4-week wave per exercise key: { base (week-A kg), step (kg), idx 0-3 } */
            stallSnooze:{}, /* per-key ts until which the home stall nudge stays hidden */
            dlEvery:0, dlSnooze:0, /* calendar deload reminder: every N weeks; snoozed-until ts */
+           dlaSnooze:0, /* passive deload advisor: snoozed-until ts */
            onboarded:0, a2hsOff:0, /* one-time first-launch intro / install-hint dismissal */
            plates:{ kg:PLATE_DEF.kg.slice(), lb:PLATE_DEF.lb.slice() } };
 }
@@ -141,6 +146,7 @@ function hydrate(s){
   if(!s.stallSnooze || typeof s.stallSnooze!=='object' || Array.isArray(s.stallSnooze)) s.stallSnooze = {};
   if(typeof s.dlEvery!=='number' || !(s.dlEvery>=0 && s.dlEvery<=16)) s.dlEvery = 0;
   if(typeof s.dlSnooze!=='number') s.dlSnooze = 0;
+  if(typeof s.dlaSnooze!=='number') s.dlaSnooze = 0;
   return Object.assign(defaultState(), s);
 }
 let LS_OK = false; /* did localStorage contain valid data at boot? */

@@ -86,6 +86,17 @@ function htmlHome(){
           onclick="event.stopPropagation();S.dlSnooze=Date.now()+7*864e5; save(); render()">✕</button></div>`;
     }
   }
+  /* passive deload advisor: fires only when research-grade signals stack
+     (see dlAdvice in deload.js) - one tap starts the deload, X snoozes 2 weeks */
+  const adv = dl ? null : dlAdvice();
+  if(adv){
+    h += `<div class="dlcard" style="flex-direction:row;align-items:center;gap:10px" onclick="startDeload()">
+      <span style="flex:1;display:flex;flex-direction:column;gap:2px">
+        <span class="dlttl">${t('dlaTitle')}</span>
+        <span class="dlsub">${adv.why} · ${t('dlRemindSub',{n:adv.w})}</span></span>
+      <button class="minibtn" style="width:32px;min-height:32px;font-size:12px;background:none;color:var(--orange)"
+        onclick="event.stopPropagation();S.dlaSnooze=Date.now()+14*864e5; save(); render()">✕</button></div>`;
+  }
   /* stall nudge: the first tracked lift that stopped setting e1RM bests -
      one card at a time, snoozable, silent for lifts already on a wave */
   if(!dl){

@@ -663,6 +663,12 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 .bwmrow .d{color:var(--dim); flex:1;}
 .bwmrow .w{font-weight:700; font-variant-numeric:tabular-nums;}
 
+/* comeback note: quiet line on the exercise card while suggestions are eased in */
+.cbnote{font-size:12px; color:var(--orange); font-weight:600; margin:2px 2px 6px;}
+/* mastery fact in the finish summary: one quiet win on no-PR days */
+.mfact{display:flex; align-items:center; gap:9px; background:var(--accent-bg); color:var(--accent-soft);
+  border-radius:12px; padding:11px 14px; margin-top:14px; font-weight:650; font-size:14px;}
+.mfact svg{width:16px; height:16px; flex:none;}
 /* superset connector between linked exercise cards */
 .ssline{display:flex; align-items:center; justify-content:center; gap:6px;
   color:var(--accent-soft); font-size:11px; font-weight:800; letter-spacing:.6px;

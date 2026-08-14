@@ -5,7 +5,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.11.1'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.12.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 /* UI strings. One flat dictionary - the app is English-only by design. */
@@ -201,7 +201,15 @@ const T = {
   ghRestore:'Restore from cloud', ghRestoreConfirm:'Download the latest backup from the cloud? Current data will be replaced.',
   ghRestoreFail:'Could not download the cloud backup',
   histSearch:'Search by workout or exercise...', histNoMatch:'No matches',
-  wkS:'wk'
+  wkS:'wk',
+  /* v2.12: comeback easing, mastery fact, passive deload advisor */
+  cbNote:'After the break: suggestions eased to {p}% of last time',
+  mfWks:'{n}: best e1RM in {w} weeks', mfMo:'{n}: best e1RM in {m} months',
+  mfEver:'{n}: all-time best e1RM',
+  dlaTitle:'A deload week looks due',
+  dlaFlat:'Progress on tracked lifts has stalled',
+  dlaDown:'Tracked lifts are trending down',
+  dlaTime:'A long stretch of hard training'
 };
 function t(k, vars){
   let s = T[k] || k;

@@ -123,6 +123,48 @@ function endDeload(){
   d.e = Date.now();
   save(); render();
 }
+/* ===== passive deload advisor: purely computed, never asks anything =====
+   Research-tuned thresholds:
+   - coaches/athletes deload every 4-6 weeks, 8 is the practical ceiling
+     (Bell 2023/2025, Rogerson 2024 survey of 246 trained lifters);
+   - single-session e1RM noise is ~2.5-4% in trained lifters (Grgic 2020),
+     so FLAT = last 3 sessions gained nothing beyond the 2.5% band vs the
+     3 sessions before, DOWN = last 2 sessions both >=5% under the 4-week peak;
+   - deloading when not needed carries a small strength cost (Coleman 2024),
+     so performance triggers lead and the calendar is only a backstop. */
+function liftFatigue(k){ /* 'down' | 'flat' | null, on the current-form window */
+  const pts = recentSeries(k);
+  if(pts.length >= 3){
+    const cut = Date.now() - 28*864e5;
+    const p4 = Math.max(0, ...pts.filter(p=>p.ts>=cut).map(p=>p.v));
+    const last2 = pts.slice(-2);
+    if(p4 > 0 && last2.length===2 && last2.every(p=>p.v <= p4*0.95)) return 'down';
+  }
+  if(pts.length >= 6){
+    const last3 = Math.max(...pts.slice(-3).map(p=>p.v));
+    const prev3 = Math.max(...pts.slice(-6,-3).map(p=>p.v));
+    if(prev3 > 0 && last3 <= prev3*1.025) return 'flat';
+  }
+  return null;
+}
+function dlAdvice(){
+  if(dlActive()) return null;
+  if(S.dlEvery > 0) return null; /* the calendar reminder already owns this job */
+  if(Date.now() < (S.dlaSnooze||0)) return null;
+  const anchor = dlLastStart() || (S.history.length ? new Date(S.history[S.history.length-1].date).getTime() : 0);
+  if(!anchor) return null;
+  const wks = (Date.now()-anchor)/(7*864e5);
+  if(wks < 3) return null; /* quiet period right after a deload (or a fresh log) */
+  const st = S.trackedLifts.map(liftFatigue);
+  const tired = st.filter(Boolean).length, down = st.filter(x=>x==='down').length;
+  const w = Math.floor(wks);
+  if(down >= 2)              return { why:t('dlaDown'), w };
+  if(wks >= 8)               return { why:t('dlaTime'), w };
+  if(wks >= 6 && tired >= 1) return { why:t('dlaFlat'), w };
+  if(wks >= 4 && tired >= 2) return { why:t('dlaFlat'), w };
+  return null;
+}
+
 /* workouts done per template since the last deload started (deload sets excluded) -
    the "how many rounds before the next deload" counters on the home split cards */
 function tplCounts(){

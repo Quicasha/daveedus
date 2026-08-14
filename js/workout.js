@@ -289,6 +289,32 @@ function ghostFor(ex, si){
   let wi = 0; for(let i=0;i<si;i++) if(!ex.sets[i].warm && !ex.sets[i].drop) wi++;
   return prevWork[wi] || null;
 }
+/* ===== comeback easing: after a long gap on a lift the SUGGESTED weights come
+   back a notch lower and ramp up by themselves (each comeback session becomes
+   the new "last", so the factor decays session by session).
+   Numbers follow the detraining evidence for trained lifters: 1RM is largely
+   kept ~3 weeks (Hwang 2017, Ogasawara 2013), ~5-10% gone by 6-8 weeks
+   (Encarnacao 2022), more later (Halonen 2024) - and the reload sits a notch
+   below what was lost because connective tissue re-adapts slower than muscle
+   and load spikes after low-load periods are the injury window (Gabbett 2016). */
+function cbFactor(ex){
+  if(!ex || !ex.last) return 1;
+  const d = (Date.now() - new Date(ex.last.date).getTime())/864e5;
+  return d<10 ? 1 : d<14 ? .95 : d<21 ? .9 : d<28 ? .85 : d<56 ? .75 : d<84 ? .65 : d<180 ? .55 : .5;
+}
+function cbW(ex, kg){
+  const f = cbFactor(ex);
+  if(f>=1 || kg<=0) return kg; /* assisted (negative) loads are left alone, like dlW */
+  const step = S.unit==='lb' ? 5/LB_PER_KG : 2.5;
+  return Math.max(step, Math.round(kg*f/step)*step);
+}
+/* the one place that decides what a ghost SUGGESTS: deload scaling wins
+   (it is deliberate and temporary), otherwise comeback easing applies */
+function sugW(ex, isWarm, gkg){
+  const dl = dlForTpl(S.active && S.active.tplId);
+  if(dl) return isWarm ? gkg : dlW(gkg);
+  return cbW(ex, gkg);
+}
 /* ===== 4-week wave (the stage after linear progress stalls) =====
    Fixed weekly prescription off a base weight: A base x5, B +step x4,
    C +2 steps x3, D base x6 - then the next round starts one step higher.
@@ -422,6 +448,7 @@ function dpDue(ex){
   if(!ex.dp || isTimeEx(ex.k)) return false;
   if(S.waves[ex.k]) return false;                          /* the wave owns this lift now */
   if(dlForTpl(S.active && S.active.tplId)) return false;   /* not on a deload pass */
+  if(cbFactor(ex) < 1) return false;                       /* never offer +weight right after a break */
   if(ex.sets.some(s=>s.done || s.w)) return false;         /* already lifting / typed */
   if(!ex.last || !ex.last.sameTpl) return false;           /* borrowed values don't count */
   const p = repsParse(ex.targetReps);
@@ -515,7 +542,7 @@ function htmlWorkout(){
         : s.drop ? `<button class="dropbtn del" onclick="removeDrop(${xi},${si})">✕</button>`
         : ex.dropUi ? `<button class="dropbtn" onclick="addDrop(${xi},${si})">D+</button>`
         : '<div></div>';
-      const wph = g ? wu(dl && !s.warm ? dlW(ghostW(ex,g)) : ghostW(ex,g)) : (bw ? '+' : unitL());
+      const wph = g ? wu(sugW(ex, s.warm, ghostW(ex,g))) : (bw ? '+' : unitL());
       const isCur = si === firstNotDone;                          /* the set to do now */
       const isLocked = firstNotDone!==-1 && !s.done && !isCur;    /* later sets: ✓ waits its turn */
       /* the rest bar is a SIBLING of the row, not a child - otherwise the done
@@ -562,6 +589,7 @@ function htmlWorkout(){
         <button class="minibtn${isAlt||ex.ss?' acc':''}" onclick="openExMenu(${xi})" aria-label="menu">${ACT_ICONS.more}</button>
       </div>
       ${isAlt?`<div class="altbar" onclick="swapExercise(${xi},'${esc(ex.baseK)}')">${ACT_ICONS.swap}<span>${t('woAltBack')} ${esc(exName(ex.baseK))}</span></div>`:''}
+      ${(!dl && !ex.ghost && cbFactor(ex)<1) ? `<div class="cbnote">${t('cbNote',{p:Math.round(cbFactor(ex)*100)})}</div>` : ''}
       ${(ex.pnote && !ex.notePerm) ? `<div class="pnote">${ACT_ICONS.pin} ${esc(ex.pnote)}</div>` : ''}
       ${ex.last && ex.last.note ? `<div class="lastnote">${ACT_ICONS.note} <span>${esc(ex.last.note)}</span></div>` : ''}
       <div class="noterow">
@@ -850,7 +878,7 @@ function autoWarmup(xi){
     const s = ex.sets[i];
     if(s.warm || s.drop) continue;
     w = parseNum(s.w);
-    if(isNaN(w)){ const g = ghostFor(ex,i); if(g) w = kg2u(dlForTpl(S.active.tplId) ? dlW(ghostW(ex,g)) : ghostW(ex,g)); }
+    if(isNaN(w)){ const g = ghostFor(ex,i); if(g) w = kg2u(sugW(ex, false, ghostW(ex,g))); }
     break;
   }
   if(isNaN(w) || w<=0){ toast(t('warmNeedW')); return; }
@@ -968,7 +996,7 @@ function toggleSet(xi,si){
   const tm = isTimeEx(ex.k), bw = isBwEx(ex.k);
   const dl = dlForTpl(S.active.tplId);
   let w = parseNum(s.w), r = parseNum(s.r);  /* w is in the display unit */
-  if(isNaN(w) && g) w = kg2u(dl && !s.warm ? dlW(ghostW(ex,g)) : ghostW(ex,g));
+  if(isNaN(w) && g) w = kg2u(sugW(ex, s.warm, ghostW(ex,g)));
   if(isNaN(r) && g) r = g.reps;
   if(isNaN(w) && (tm || bw)) w = 0;          /* weight optional for time & bodyweight */
   if(isNaN(w) || isNaN(r) || Math.abs(w)>2000 || r<1 || r>5000){ toast(t('woEmptyVals')); return; }
@@ -1124,6 +1152,37 @@ function finishWorkout(){
       if(prev.best>0 && topW>prev.best) prs.push({ name:e.name, txt:wu(topW,true) });
     }
   }
+  /* quiet mastery fact for no-PR days: the strongest true statement history
+     supports - "best e1RM on X in N weeks". Computed BEFORE the entry lands in
+     history, so "history" means every session except today. Gaps under 6 weeks
+     are recency noise, not mastery; the biggest gap (or an all-time e1RM best,
+     which the top-weight PR check can miss) wins. One fact, zero input. */
+  let fact = null;
+  if(!isDl && !prs.length){
+    const MIN_GAP = 42*864e5;
+    let best = null; /* { name, gap } - gap Infinity = all-time */
+    for(const e of exercises){
+      if(isTimeEx(e.k)) continue;
+      const work = e.sets.filter(s=>!s.warm && !s.drop && s.reps>0);
+      if(!work.length) continue;
+      const add = (isBwEx(e.k) ? (e.bw||0) : 0) + (e.mb||0);
+      const mul = e.x2 ? 2 : 1;
+      const today = Math.max(...work.map(s=>(s.weight*mul+add)*(1+s.reps/30)));
+      if(today <= 0) continue;
+      const pts = e1rmSeries(e.k);
+      if(pts.length < 4) continue; /* young lifts: every session is a "best" - not a fact */
+      let lastBeat = null; /* newest session that already matched today (0.25% noise band) */
+      for(let i=pts.length-1; i>=0; i--){ if(pts[i].v >= today*0.9975){ lastBeat = pts[i].ts; break; } }
+      const gap = lastBeat==null ? Infinity : Date.now()-lastBeat;
+      if(gap >= MIN_GAP && (!best || gap > best.gap)) best = { name:e.name, gap };
+    }
+    if(best){
+      const wks = Math.round(best.gap/(7*864e5));
+      fact = best.gap===Infinity ? t('mfEver',{n:best.name})
+           : wks > 12 ? t('mfMo',{n:best.name, m:Math.round(wks/4.345)})
+           : t('mfWks',{n:best.name, w:wks});
+    }
+  }
   const dur = Math.round((Date.now()-new Date(S.active.startedAt).getTime())/1000);
   const vol = woVolume(exercises);
   const entry = {
@@ -1182,22 +1241,23 @@ function finishWorkout(){
   save();
   scheduleCloudSync();
   go('home');
-  showSummary(dur, vol, exercises.reduce((a,e)=>a+e.sets.length,0), prs);
+  showSummary(dur, vol, exercises.reduce((a,e)=>a+e.sets.length,0), prs, fact);
   if(ended.length) toast(t(ended[0].verdict==='win'?'waveWin':'waveFlat', {n:exName(ended[0].k)}));
   else if(wrapped.length) toast(t('waveNextRound',{n:exName(wrapped[0].k), w:wu(wrapped[0].base,true)}));
 }
-function showSummary(dur, vol, setsDone, prs){
+function showSummary(dur, vol, setsDone, prs, fact){
   const prHtml = prs.length ? `<h2 class="sec" style="margin-top:14px">${t('sumPRs')}</h2>` +
     prs.map(p=>`<div class="card" style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px">
       <span style="flex:1;font-weight:700">${esc(p.name)}</span>
       <span style="font-weight:800;color:var(--accent-soft);font-size:18px">${p.txt}</span></div>`).join('') : '';
+  const factHtml = fact ? `<div class="mfact">${ACT_ICONS.star}<span>${esc(fact)}</span></div>` : '';
   openModal(`<h3>${t('sumTitle')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div class="statrow">
       <div class="stat"><div class="v">${fmtTime(dur)}</div><div class="l">${t('sumDur')}</div></div>
       <div class="stat"><div class="v">${Math.round(kg2u(vol))}</div><div class="l">${t('sumVol')}, ${unitL()}</div></div>
       <div class="stat"><div class="v">${setsDone}</div><div class="l">${t('sumSets')}</div></div>
     </div>
-    ${prHtml}
+    ${prHtml}${factHtml}
     <button class="btn primary" style="margin-top:14px" onclick="closeModal()">${t('sumOk')}</button>`);
   if(prs.length) confetti();
 }
@@ -1310,10 +1370,9 @@ function stepWeight(d){
   }
   let cur = parseNum(stepEl.value);
   if(isNaN(cur)){
-    /* start from the value the placeholder is showing (deload-scaled, base-adjusted) */
+    /* start from the value the placeholder is showing (deload/comeback-scaled, base-adjusted) */
     const g = ghostFor(ex, si);
-    const dl = dlForTpl(S.active.tplId);
-    cur = g ? kg2u(dl && !ex.sets[si].warm ? dlW(ghostW(ex,g)) : ghostW(ex,g)) : 0;
+    cur = g ? kg2u(sugW(ex, ex.sets[si].warm, ghostW(ex,g))) : 0;
   }
   cur = Math.round((cur + d) * 100) / 100;
   if(!isBwEx(ex.k) && cur < 0) cur = 0; /* assisted bodyweight may go negative */
