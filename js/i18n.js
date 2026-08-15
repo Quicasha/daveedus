@@ -5,7 +5,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.12.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.13.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 /* UI strings. One flat dictionary - the app is English-only by design. */
@@ -209,7 +209,9 @@ const T = {
   dlaTitle:'A deload week looks due',
   dlaFlat:'Progress on tracked lifts has stalled',
   dlaDown:'Tracked lifts are trending down',
-  dlaTime:'A long stretch of hard training'
+  dlaTime:'A long stretch of hard training',
+  rhTotal:'{n} workouts', rhDays:'{n} training days', rhDl:'{n} deload', rhBest:'best month {m} ({n})',
+  rhSince:'since {d}'
 };
 function t(k, vars){
   let s = T[k] || k;

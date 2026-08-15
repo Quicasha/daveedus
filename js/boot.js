@@ -245,5 +245,6 @@ render = function(){
   _origRender();
   if(V.screen==='exercises') renderExList();
   if(V.screen==='settings'){ updatePersistStatus(); updateGhStatus(); }
+  if(V.screen==='history') rhythmYearScroll();
 };
 

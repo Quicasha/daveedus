@@ -920,6 +920,44 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 .rc.on:active{opacity:.6;}
 .rc.today{box-shadow:inset 0 0 0 2px var(--accent);}
 .rc.on.today{box-shadow:inset 0 0 0 2px rgba(255,255,255,.65);}
+/* year grid: GitHub-style, 7 rows (Mon top) x ~53 week columns, fluid width */
+.ynav{display:flex; align-items:center; justify-content:center; gap:14px; margin:2px 0 8px;}
+.ynav .minibtn{width:34px; min-height:30px; font-size:18px; line-height:1;}
+.ynav .minibtn:disabled{opacity:.25;}
+.yyr{font-family:var(--display); font-weight:750; font-size:16px; min-width:52px; text-align:center;}
+/* the grid keeps GitHub-size cells and scrolls sideways on phones; it opens
+   scrolled to the current week (rhythmYearScroll) */
+.ywrap{padding-top:16px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
+  margin:0 -4px; padding-left:4px; padding-right:4px;}
+.ywrap::-webkit-scrollbar{display:none;}
+.yinner{position:relative; width:max-content; min-width:100%;}
+.ymonths{position:relative; height:0;}
+.ymonths span{position:absolute; top:-15px; font-size:10px; color:var(--ghost); font-weight:600; white-space:nowrap;}
+.ygrid{display:flex; gap:3px;}
+.ycol{display:flex; flex-direction:column; gap:3px; flex:none;}
+.yc{display:block; width:11px; height:11px; border:none; padding:0; border-radius:2px; background:var(--input);}
+@media (min-width:760px){ .yc{width:13px; height:13px;} }
+.yc.off{background:transparent;}
+.yc.on{background:var(--accent); opacity:.72; cursor:pointer;}
+.yc.on.x2{opacity:1;}
+.yc.on.dl{background:var(--orange);}
+.yc.today{box-shadow:inset 0 0 0 1.5px var(--accent);}
+.yc.on.today{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.7);}
+.ystats{font-size:12px; color:var(--dim); margin-top:10px; line-height:1.5;}
+/* all-time month heat map: a row per year */
+.mrow{display:flex; gap:3px; align-items:center; margin-bottom:3px;}
+.mrow .myr{flex:none; width:36px; font-size:11px; color:var(--dim); font-weight:600;}
+.mhead span{flex:1; text-align:center; font-size:10px; color:var(--ghost); font-weight:600;}
+.mc{flex:1; height:24px; border-radius:5px; background:var(--input); display:flex; align-items:center;
+  justify-content:center; font-style:normal; font-size:10px; font-weight:800; color:var(--text);
+  font-variant-numeric:tabular-nums; position:relative; overflow:hidden;}
+.mc.off{background:transparent;}
+/* shade lives on a ::before layer so the number stays fully legible */
+.mc.l1::before, .mc.l2::before, .mc.l3::before, .mc.l4::before{content:''; position:absolute; inset:0; background:var(--accent);}
+.mc.l1::before{opacity:.28;} .mc.l2::before{opacity:.5;} .mc.l3::before{opacity:.75;} .mc.l4::before{opacity:1;}
+.mc.l3, .mc.l4{color:var(--on-accent);}
+.mc span{position:relative;}
+.mc.dl{box-shadow:inset 0 0 0 2px var(--orange);}
 /* tracked lift cards */
 .trackcard{cursor:pointer;}
 .trackcard:active{opacity:.7;}

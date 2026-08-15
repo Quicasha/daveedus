@@ -210,18 +210,29 @@ function histSummaryHtml(){
   </div>`;
 }
 
-/* ---- rhythm strip: the last 14/30/90 days (replaces the month calendar) ---- */
-function rhythmHtml(){
-  const n = +V.cp.rh.p || 14;
-  const today = new Date(); today.setHours(0,0,0,0);
+/* ---- rhythm: 14/30/90-day strips, a GitHub-style year grid and an all-time
+        month heat map. Deload days stay orange everywhere - a rest week is part
+        of the story, not a gap in it. ---- */
+function rhythmDayMap(){ /* midnight ts -> { id, ltr, n, dl } */
   const map = {};
   for(const h of S.history){
     if(h.arch) continue;
     const d = new Date(h.date); d.setHours(0,0,0,0);
     const ts = d.getTime();
     if(!map[ts]) map[ts] = { id:h.id, ltr:(h.name||'').trim().charAt(0).toUpperCase()||'✓', n:1, dl:!!h.dl };
-    else map[ts].n++;
+    else { map[ts].n++; if(h.dl) map[ts].dl = true; }
   }
+  return map;
+}
+function rhythmHtml(){
+  const p = V.cp.rh.p || '14';
+  const chips = pchipsHtml('rh',[['14','14 d.'],['30','30 d.'],['90','90 d.'],['y',t('pdcY')],['all',t('pdAll')]],false);
+  const head = `<div class="chead" style="margin-bottom:8px"><span class="ct">${t('rhythmTitle')}</span>${chips}</div>`;
+  if(p==='y') return head + rhythmYearHtml();
+  if(p==='all') return head + rhythmAllHtml();
+  const n = +p || 14;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const map = rhythmDayMap();
   let cells = '';
   for(let i=n-1; i>=0; i--){
     const d = new Date(today); d.setDate(d.getDate()-i);
@@ -233,9 +244,92 @@ function rhythmHtml(){
   }
   /* 14 d = one row; longer ranges wrap into 15-day rows (no weekday grid on purpose -
      the user's rhythm is self-regulated, not weekly) */
-  return `<div class="chead" style="margin-bottom:8px"><span class="ct">${t('rhythmTitle')}</span>
-      ${pchipsHtml('rh',[['14','14 d.'],['30','30 d.'],['90','90 d.']],false)}</div>
-    <div class="rhythm${n>14?' multi':''}">${cells}</div>`;
+  return head + `<div class="rhythm${n>14?' multi':''}">${cells}</div>`;
+}
+/* year grid: 7 weekday rows (Mon top) x one column per week, month labels above,
+   < > to step through the years that have data; totals underneath */
+function rhythmYearHtml(){
+  const now = new Date();
+  const first = S.history.length ? new Date(S.history[S.history.length-1].date).getFullYear() : now.getFullYear();
+  const yr = Math.min(now.getFullYear(), Math.max(first, V.cp.rh.y || now.getFullYear()));
+  V.cp.rh.y = yr;
+  const map = rhythmDayMap();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const jan1 = new Date(yr,0,1), dec31 = new Date(yr,11,31);
+  /* grid starts on the Monday on/before Jan 1 */
+  const start = new Date(jan1); start.setDate(start.getDate() - ((jan1.getDay()+6)%7));
+  const cols = [];
+  const months = []; /* [colIndex, label] where a month begins */
+  const byMonth = new Array(12).fill(0);
+  let total = 0, dlDays = 0, days = 0;
+  for(let c=0; ; c++){
+    const colStart = new Date(start); colStart.setDate(start.getDate()+c*7);
+    if(colStart > dec31) break;
+    let col = '';
+    for(let r=0; r<7; r++){
+      const d = new Date(colStart); d.setDate(colStart.getDate()+r);
+      const inYear = d.getFullYear()===yr;
+      if(inYear && d.getDate()===1) months.push([c, d.toLocaleDateString('en-GB',{month:'short'})]);
+      if(!inYear || d > today){ col += `<i class="yc off"></i>`; continue; }
+      const w = map[d.getTime()];
+      if(w){ total += w.n; byMonth[d.getMonth()] += w.n; if(w.dl) dlDays++; days++; }
+      const td = d.getTime()===today.getTime() ? ' today' : '';
+      col += w ? `<button class="yc on${w.dl?' dl':''}${w.n>1?' x2':''}${td}" onclick="rhythmTap('${w.id}')" aria-label="${fmtDate(d.toISOString())}"></button>`
+               : `<i class="yc${td}"></i>`;
+    }
+    cols.push(`<div class="ycol">${col}</div>`);
+  }
+  /* month labels: absolute-positioned by column index, skip ones that would collide */
+  let lastLbl = -3, mh = '';
+  for(const [c,l] of months){ if(c-lastLbl >= 3){ mh += `<span style="left:${(c/cols.length*100).toFixed(2)}%">${l}</span>`; lastLbl = c; } }
+  const bestI = byMonth.indexOf(Math.max(...byMonth));
+  const best = byMonth[bestI] ? t('rhBest',{m:new Date(yr,bestI,1).toLocaleDateString('en-GB',{month:'long'}), n:byMonth[bestI]}) : '';
+  const canPrev = yr > first, canNext = yr < now.getFullYear();
+  return `<div class="ynav">
+      <button class="minibtn" ${canPrev?'':'disabled'} onclick="V.cp.rh.y=${yr-1}; render()">‹</button>
+      <span class="yyr">${yr}</span>
+      <button class="minibtn" ${canNext?'':'disabled'} onclick="V.cp.rh.y=${yr+1}; render()">›</button>
+    </div>
+    <div class="ywrap" id="ywrap"><div class="yinner"><div class="ymonths">${mh}</div><div class="ygrid">${cols.join('')}</div></div></div>
+    <div class="ystats">${t('rhTotal',{n:total})}${days!==total?` · ${t('rhDays',{n:days})}`:''}${dlDays?` · ${t('rhDl',{n:dlDays})}`:''}${best?` · ${best}`:''}</div>`;
+}
+/* after render: a current-year grid opens scrolled to today's week, past years to January */
+function rhythmYearScroll(){
+  const el = document.getElementById('ywrap');
+  if(!el) return;
+  el.scrollLeft = (V.cp.rh.y === new Date().getFullYear()) ? el.scrollWidth : 0;
+}
+/* all-time: one row per year, one cell per month, shade = workouts that month */
+function rhythmAllHtml(){
+  if(!S.history.length) return `<div class="empty" style="padding:14px">${t('chartNoData')}</div>`;
+  const now = new Date();
+  const first = new Date(S.history[S.history.length-1].date);
+  const cnt = {}, dlm = {}; /* 'y-m' -> workouts / deload workouts */
+  let total = 0;
+  for(const h of S.history){
+    if(h.arch) continue;
+    const d = new Date(h.date), k = d.getFullYear()+'-'+d.getMonth();
+    cnt[k] = (cnt[k]||0)+1; total++;
+    if(h.dl) dlm[k] = (dlm[k]||0)+1;
+  }
+  const max = Math.max(1, ...Object.values(cnt));
+  let rows = '';
+  for(let y=first.getFullYear(); y<=now.getFullYear(); y++){
+    let cells = '';
+    for(let m=0; m<12; m++){
+      const k = y+'-'+m, n = cnt[k]||0;
+      const future = y===now.getFullYear() && m>now.getMonth();
+      const before = y===first.getFullYear() && m<first.getMonth();
+      if(future || before){ cells += `<i class="mc off"></i>`; continue; }
+      const lvl = n ? Math.max(1, Math.ceil(n/max*4)) : 0;
+      const dl = dlm[k] ? ' dl' : '';
+      cells += `<i class="mc l${lvl}${dl}"><span>${n||''}</span></i>`;
+    }
+    rows += `<div class="mrow"><span class="myr">${y}</span>${cells}</div>`;
+  }
+  const mons = Array.from({length:12},(_,i)=>`<span>${new Date(2000,i,1).toLocaleDateString('en-GB',{month:'narrow'})}</span>`).join('');
+  return `<div class="mrow mhead"><span class="myr"></span>${mons}</div>${rows}
+    <div class="ystats">${t('rhTotal',{n:total})} · ${t('rhSince',{d:first.toLocaleDateString('en-GB',{month:'short',year:'numeric'})})}</div>`;
 }
 function rhythmTap(id){
   const idx = S.history.filter(w=>!w.arch).findIndex(w=>w.id===id);
