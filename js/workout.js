@@ -2,9 +2,10 @@
    The active session: building exercises from a template, ghost values
    (previous session, rescaled to today's machine base), set logging with
    win/loss coloring, warmup ramp, drop sets, supersets, swaps with
-   per-variant stashes, double-progression offers, rest timer, the +/-
-   steppers above the keyboard, and finishWorkout() which turns it all
-   into a history entry.
+   per-variant stashes, double-progression offers, the 4-week wave, comeback
+   easing after a layoff (cbFactor/sugW), rest timer, the +/- steppers above
+   the keyboard, and finishWorkout() which turns it all into a history entry
+   (plus the no-PR mastery fact for the summary).
    Key invariant: set weights in inputs are display-unit strings; history
    stores kg. Machine-base exercises store ADDED load only (entry.mb keeps
    the base); bodyweight exercises store added load too (entry.bw).
@@ -299,21 +300,55 @@ function ghostFor(ex, si){
    and load spikes after low-load periods are the injury window (Gabbett 2016). */
 function cbFactor(ex){
   if(!ex || !ex.last) return 1;
-  const d = (Date.now() - new Date(ex.last.date).getTime())/864e5;
+  /* ex.last skips deload sessions, so measure the gap from the last time the
+     lift was TRAINED at all (deload passes included) - a deload week is not a
+     layoff and must not earn a second reduction on top of itself */
+  const d = (Date.now() - lastTrainedTs(ex.k, ex.last.date))/864e5;
   return d<10 ? 1 : d<14 ? .95 : d<21 ? .9 : d<28 ? .85 : d<56 ? .75 : d<84 ? .65 : d<180 ? .55 : .5;
 }
-function cbW(ex, kg){
-  const f = cbFactor(ex);
-  if(f>=1 || kg<=0) return kg; /* assisted (negative) loads are left alone, like dlW */
-  const step = S.unit==='lb' ? 5/LB_PER_KG : 2.5;
-  return Math.max(step, Math.round(kg*f/step)*step);
+function lastTrainedTs(k, fallbackIso){
+  for(const h of S.history){
+    if(h.arch) continue;
+    if(h.exercises.some(e=>e.k===k && e.sets.some(s=>!s.warm))) return new Date(h.date).getTime();
+  }
+  return new Date(fallbackIso).getTime();
 }
+function cbW(ex, kg){ return scaleLoad(kg, cbFactor(ex)); } /* assisted (negative) loads pass through, like dlW */
 /* the one place that decides what a ghost SUGGESTS: deload scaling wins
    (it is deliberate and temporary), otherwise comeback easing applies */
 function sugW(ex, isWarm, gkg){
   const dl = dlForTpl(S.active && S.active.tplId);
   if(dl) return isWarm ? gkg : dlW(gkg);
   return cbW(ex, gkg);
+}
+/* ===== quiet mastery fact for no-PR days: the strongest true statement history
+   supports - "best e1RM on X in N weeks". Called BEFORE today's entry lands in
+   history, so "history" means every session except today. Gaps under 6 weeks are
+   recency noise, not mastery; the biggest gap (or an all-time e1RM best, which
+   the top-weight PR check can miss) wins. One fact, zero input. ===== */
+function masteryFact(exercises){
+  const MIN_GAP = 42*864e5;
+  let best = null; /* { name, gap } - gap Infinity = all-time */
+  for(const e of exercises){
+    if(isTimeEx(e.k)) continue;
+    const work = e.sets.filter(s=>!s.warm && !s.drop && s.reps>0);
+    if(!work.length) continue;
+    const add = (isBwEx(e.k) ? (e.bw||0) : 0) + (e.mb||0);
+    const mul = e.x2 ? 2 : 1;
+    const today = Math.max(...work.map(s=>(s.weight*mul+add)*(1+s.reps/30)));
+    if(today <= 0) continue;
+    const pts = e1rmSeries(e.k);
+    if(pts.length < 4) continue; /* young lifts: every session is a "best" - not a fact */
+    let lastBeat = null; /* newest session that already matched today (0.25% noise band) */
+    for(let i=pts.length-1; i>=0; i--){ if(pts[i].v >= today*0.9975){ lastBeat = pts[i].ts; break; } }
+    const gap = lastBeat==null ? Infinity : Date.now()-lastBeat;
+    if(gap >= MIN_GAP && (!best || gap > best.gap)) best = { name:e.name, gap };
+  }
+  if(!best) return null;
+  const wks = Math.round(best.gap/(7*864e5));
+  return best.gap===Infinity ? t('mfEver',{n:best.name})
+       : wks > 12 ? t('mfMo',{n:best.name, m:Math.round(wks/4.345)})
+       : t('mfWks',{n:best.name, w:wks});
 }
 /* ===== 4-week wave (the stage after linear progress stalls) =====
    Fixed weekly prescription off a base weight: A base x5, B +step x4,
@@ -342,9 +377,20 @@ function waveRecommend(k){
   const pts = recentSeries(k).slice(-5);
   if(pts.length < 3) return 0;
   const best = Math.max(...pts.map(p=>p.v));
-  const stepU = S.unit==='lb' ? 5 : 2.5;
-  const u = Math.round(kg2u(best*0.855)/stepU)*stepU;
+  /* e1RM is TOTAL load; the wave base lives in the ADDED-load column (what the
+     user types), so body weight / machine base come back off before rounding */
+  const add = lastAddedBase(k);
+  const su = stepU();
+  const u = Math.round(kg2u(best*0.855 - add)/su)*su;
   return u > 0 ? u2kg(u) : 0;
+}
+/* body weight or machine base recorded on the lift's newest non-deload session */
+function lastAddedBase(k){
+  for(const h of S.history){
+    if(h.arch || h.dl) continue;
+    for(const e of h.exercises) if(e.k===k) return (isBwEx(k) ? (e.bw||0) : 0) + (e.mb||0);
+  }
+  return 0;
 }
 /* end-of-round verdict: 'win' (new best during the wave), 'flat' (3 rounds
    without one), or null = keep going. startBest 0 = unknown, never auto-wins. */
@@ -527,7 +573,7 @@ function htmlWorkout(){
     const hdr = `<div class="${gcls} hdr"><div>${t('woSet')}</div><div>${t('woPrev')}</div>
       <div>${wcol}${x2chip}${baseChip}</div><div>${tm?t('woSec'):t('woReps')}</div><div>${ACT_ICONS.check}</div>${dropCol?'<div></div>':''}</div>`;
     let workNum = 0;
-    const approx = ex.last && !ex.last.sameTpl ? '~' : ''; /* values borrowed from another workout */
+    const approx = ex.last && !ex.last.sameTpl ? '* ' : ''; /* values borrowed from another workout */
     const rows = ex.sets.map((s,si)=>{
       const g = ghostFor(ex,si);
       const prevTxt = g ? approx + ghostText({ weight:ghostW(ex,g), reps:g.reps }, tm, bw) : '—';
@@ -881,14 +927,14 @@ function autoWarmup(xi){
     if(isNaN(w)){ const g = ghostFor(ex,i); if(g) w = kg2u(sugW(ex, false, ghostW(ex,g))); }
     break;
   }
-  if(isNaN(w) || w<=0){ toast(t('warmNeedW')); return; }
-  const step = S.unit==='lb' ? 5 : 2.5;
+  const step = stepU();
   const bar = plateBars()[0];
   const barbell = (exInfo(ex.k)||{}).e==='barbell';
   /* machine base: the % ramp works on the TOTAL load (base + plates) - the set
      stores plates only, so convert back after scaling. 0 plates = empty machine,
      a perfectly valid first warmup on a heavy sled. */
   const baseU = kg2u(ex.base||0);
+  if(isNaN(w) || w+baseU<=0){ toast(t('warmNeedW')); return; }
   const ramp = [];
   if(barbell && w > bar) ramp.push({ w:bar, r:10 });
   [[0.4,6],[0.6,4],[0.8,2]].forEach(([p,r])=>{
@@ -1152,37 +1198,7 @@ function finishWorkout(){
       if(prev.best>0 && topW>prev.best) prs.push({ name:e.name, txt:wu(topW,true) });
     }
   }
-  /* quiet mastery fact for no-PR days: the strongest true statement history
-     supports - "best e1RM on X in N weeks". Computed BEFORE the entry lands in
-     history, so "history" means every session except today. Gaps under 6 weeks
-     are recency noise, not mastery; the biggest gap (or an all-time e1RM best,
-     which the top-weight PR check can miss) wins. One fact, zero input. */
-  let fact = null;
-  if(!isDl && !prs.length){
-    const MIN_GAP = 42*864e5;
-    let best = null; /* { name, gap } - gap Infinity = all-time */
-    for(const e of exercises){
-      if(isTimeEx(e.k)) continue;
-      const work = e.sets.filter(s=>!s.warm && !s.drop && s.reps>0);
-      if(!work.length) continue;
-      const add = (isBwEx(e.k) ? (e.bw||0) : 0) + (e.mb||0);
-      const mul = e.x2 ? 2 : 1;
-      const today = Math.max(...work.map(s=>(s.weight*mul+add)*(1+s.reps/30)));
-      if(today <= 0) continue;
-      const pts = e1rmSeries(e.k);
-      if(pts.length < 4) continue; /* young lifts: every session is a "best" - not a fact */
-      let lastBeat = null; /* newest session that already matched today (0.25% noise band) */
-      for(let i=pts.length-1; i>=0; i--){ if(pts[i].v >= today*0.9975){ lastBeat = pts[i].ts; break; } }
-      const gap = lastBeat==null ? Infinity : Date.now()-lastBeat;
-      if(gap >= MIN_GAP && (!best || gap > best.gap)) best = { name:e.name, gap };
-    }
-    if(best){
-      const wks = Math.round(best.gap/(7*864e5));
-      fact = best.gap===Infinity ? t('mfEver',{n:best.name})
-           : wks > 12 ? t('mfMo',{n:best.name, m:Math.round(wks/4.345)})
-           : t('mfWks',{n:best.name, w:wks});
-    }
-  }
+  const fact = (!isDl && !prs.length) ? masteryFact(exercises) : null;
   const dur = Math.round((Date.now()-new Date(S.active.startedAt).getTime())/1000);
   const vol = woVolume(exercises);
   const entry = {
@@ -1193,7 +1209,7 @@ function finishWorkout(){
   if(isDl){
     entry.dl = 1; /* deload session: out of records/PRs/ghosts, badged in history */
     const d = dlActive();
-    dlUndo = { tplId:null, closed:0 };
+    dlUndo = { ds:d ? d.s : 0, tplId:null, closed:0 }; /* ds = start ts, the deload record's identity */
     if(d && !d.done.includes(entry.tplId)){ d.done.push(entry.tplId); dlUndo.tplId = entry.tplId; }
     if(d && !dlRemaining(d).length){ d.e = Date.now(); dlUndo.closed = 1; toast(t('dlDone')); }
   }
@@ -1266,15 +1282,12 @@ function confetti(){
   if(document.getElementById('confetti')) return;
   const box = document.createElement('div');
   box.id = 'confetti';
-  const cols = { /* confetti wears the skin's colors - keep in sync with SKIN_META */
-    zaza:     ['#4ade80','#86efac','#c9a2ff','#ede9fe','#a855f7','#bbf7d0'],
-    locked:   ['#ffffff','#d9d9d9','#ababab','#f5f5f5','#7a7a7a','#4a4a4a'],
-    kitty:    ['#e6194b','#ff5c8a','#ff9dbb','#ffffff','#ffe6ef','#ffd166'],
-    monster:  ['#111214','#2b2e33','#78bee6','#ffffff','#c9ccd2','#e5312a'],
-    golden:   ['#e0a32e','#f0c060','#fff3d6','#b3a284','#d97706','#fde68a'],
-    spooder:  ['#f43f4b','#ff7a82','#4f74ff','#9db9ff','#eef1fb','#ffd166'],
-    batman:   ['#ffd60a','#ffe25c','#c3cad6','#f5f5f5','#6b7689','#ffb703']
-  }[SKIN_META[S.skin] ? S.skin : 'locked'];
+  /* confetti wears the LIVE palette (skin AND light/dark) straight from the CSS
+     tokens - every piece is a color that already reads on this background, and
+     a new skin needs no confetti table */
+  const cs = getComputedStyle(document.documentElement);
+  const tok = n => cs.getPropertyValue(n).trim();
+  const cols = [tok('--accent'), tok('--accent-soft'), tok('--text'), tok('--green'), tok('--orange'), tok('--dim')].filter(Boolean);
   let html = '';
   for(let i=0;i<70;i++){
     const l = Math.random()*100, delay = Math.random()*0.5, dur = 1.6+Math.random()*1.2;
@@ -1294,21 +1307,20 @@ function cancelWorkout(){
 
 /* ============== quick ±weight steppers (shown while a weight input is focused) ============== */
 let stepEl = null;
-function stepVal(){ return S.unit==='lb' ? 5 : 2.5; }
 function stepperInit(){
   const bar = $('#stepper');
   if(!bar) return;
   bar.querySelectorAll('button').forEach(b=>{
     b.addEventListener('pointerdown', e=>{
       e.preventDefault(); /* keep the input focused */
-      stepWeight(parseFloat(b.dataset.d) < 0 ? -stepVal() : stepVal());
+      stepWeight(parseFloat(b.dataset.d) < 0 ? -stepU() : stepU());
     });
   });
   document.addEventListener('focusin', e=>{
     if(V.screen==='workout' && e.target.id && /^[wr]-/.test(e.target.id)){
       stepEl = e.target;
       const reps = e.target.id.startsWith('r-');
-      const step = reps ? 1 : stepVal();
+      const step = reps ? 1 : stepU();
       bar.querySelectorAll('button').forEach(b=>{
         b.textContent = (parseFloat(b.dataset.d)<0?'−':'+') + step;
       });

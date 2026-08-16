@@ -1,7 +1,8 @@
 /* ============================================================
    History tab: summary strip, searchable workout list with deload dividers,
    row expansion, edit/archive/delete, the resurrect-last-workout Continue,
-   and body-weight logging.
+   body-weight logging (with the quiet median/trend sheet) and the plate
+   calculator sheet (opened from the workout exercise menu).
    ============================================================ */
 'use strict';
 
@@ -170,7 +171,7 @@ function continueWorkout(){
      (banner, scaled ghosts, dl tagging) back exactly as it was */
   const du = S.lastActive.dl;
   if(du){
-    const d = S.deloads[S.deloads.length-1];
+    const d = S.deloads.find(x=>x.s===du.ds); /* the record the finish touched, not just the newest */
     if(d){
       if(du.closed) d.e = 0;
       if(du.tplId){ const i = d.done.indexOf(du.tplId); if(i>=0) d.done.splice(i,1); }
@@ -191,10 +192,20 @@ function delHist(id){
   if(i<0) return;
   const entry = S.history[i], lastAct = S.lastActive;
   S.history.splice(i,1);
-  if(S.lastActive && S.lastActive.id===id) S.lastActive = null;
+  const clearedLast = S.lastActive && S.lastActive.id===id;
+  if(clearedLast) S.lastActive = null;
   V.expanded = null;
   save(); render();
-  undoToast(t('histDelDone'), ()=>{ S.history.splice(i,0,entry); S.lastActive = lastAct; });
+  undoToast(t('histDelDone'), ()=>{
+    insertByDate(S.history, entry); /* by date, not index - a workout may have finished meanwhile */
+    if(clearedLast && !S.lastActive) S.lastActive = lastAct; /* never clobber a newer resume snapshot */
+  });
+}
+/* keep a newest-first array ordered when re-inserting a deleted entry */
+function insertByDate(arr, entry){
+  const ts = new Date(entry.date).getTime();
+  const i = arr.findIndex(x=>new Date(x.date).getTime() <= ts);
+  arr.splice(i<0 ? arr.length : i, 0, entry);
 }
 
 /* ---- history editing ---- */
@@ -302,9 +313,9 @@ function delWeightModal(id){
   if(i<0) return;
   const entry = S.weights[i];
   S.weights.splice(i,1);
-  save(); render();
+  save(); render(); scheduleCloudSync();
   openBwModal(true);
-  undoToast(t('bwDelDone'), ()=>{ S.weights.splice(i,0,entry); openBwModal(true); });
+  undoToast(t('bwDelDone'), ()=>{ insertByDate(S.weights, entry); scheduleCloudSync(); openBwModal(true); });
 }
 function stepBwModal(d){
   const inp = $('#bwm-input');
@@ -324,8 +335,8 @@ function delWeight(id){
   if(i<0) return;
   const entry = S.weights[i];
   S.weights.splice(i,1);
-  save(); render();
-  undoToast(t('bwDelDone'), ()=>S.weights.splice(i,0,entry));
+  save(); render(); scheduleCloudSync();
+  undoToast(t('bwDelDone'), ()=>{ insertByDate(S.weights, entry); scheduleCloudSync(); });
 }
 
 /* ---- plate calculator (works entirely in the display unit) ---- */

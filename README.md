@@ -42,19 +42,19 @@ The code is split into small per-domain scripts, loaded in dependency order (eve
 
 ```
 index.html              App shell + script load order
-css/style.css           Styles, dark / light themes
+css/style.css           Styles, seven skins x dark / light
 js/exercises.js         Built-in exercise database (ids are permanent)
 js/i18n.js              App version + every user-facing string
-js/util.js              Formatting, unit conversion, DB lookups, theme
-js/state.js             The S state object: schema, validation, persistence
+js/util.js              Formatting, volume formula, toast, skin registry + theme
+js/state.js             The S state object: schema, validation, persistence, units
 js/ui.js                Render core: navigation, topbar, tab bar, modal
 js/home.js              Home screen (week plan, reminders, program cards)
-js/deload.js            Deload cycle logic + options sheet
-js/workout.js           The active session: logging, ghosts, rest, finish
+js/deload.js            Deload cycle, options sheet, passive deload advisor
+js/workout.js           The active session: logging, ghosts, wave, comeback easing, finish
 js/program.js           Programs and the template editor
 js/exercises-ui.js      Exercise picker, browser, custom form, detail view
-js/stats.js             Records, e1RM, PR feed, tracked lifts, charts
-js/history.js           History list, search, editing, body weight
+js/stats.js             e1RM trends, tracked lifts, PR feed, rhythm views, charts
+js/history.js           History list, search, editing, body weight, plate calculator
 js/settings.js          Settings screen
 js/data.js              Share/backup codes, import, CSV, GitHub cloud sync
 js/boot.js              Startup, rest signal, wake lock, onboarding

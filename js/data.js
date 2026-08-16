@@ -38,7 +38,10 @@ function bakPayload(){
     restTarget:S.restTarget, restSound:S.restSound,
     folders:S.folders, customEx:S.customEx, templates:S.templates, history:S.history, weights:S.weights,
     trackedLifts:S.trackedLifts, deloads:S.deloads, mainFolder:S.mainFolder, mbase:S.mbase,
-    goals:S.goals, dlEvery:S.dlEvery, waves:S.waves } };
+    goals:S.goals, dlEvery:S.dlEvery, waves:S.waves,
+    /* the quiet bookkeeping too, so a restore does not re-nag every snoozed card */
+    lastActive:S.lastActive, lastBackup:S.lastBackup, bakSnooze:S.bakSnooze,
+    stallSnooze:S.stallSnooze, dlSnooze:S.dlSnooze, dlaSnooze:S.dlaSnooze, a2hsOff:S.a2hsOff } };
 }
 function copyBackup(){
   S.lastBackup = Date.now();
@@ -148,33 +151,28 @@ function importTplPayload(d, folderId){
 /* replace all data from a bak payload (backup code or cloud backup.json);
    this device's cloud-sync setup survives - backup payloads never carry it */
 function applyBak(d){
-  if(!Array.isArray(d.s.folders)){ /* backup from pre-split version */
+  /* everything below is validation-tolerant: hydrate() repairs/validates every
+     field (arrays filtered, objects checked), so a malformed backup can neither
+     throw here nor brick the app; only the pre-folder migration is done first */
+  if(!Array.isArray(d.s.folders) && Array.isArray(d.s.templates)){ /* backup from pre-split version */
     const fid = uid();
     d.s.folders = [{ id:fid, name:'Upper / Lower', open:true }];
-    d.s.templates.forEach(tp=>{ if(!tp.folderId) tp.folderId=fid; });
+    d.s.templates.forEach(tp=>{ if(tp && !tp.folderId) tp.folderId=fid; });
   }
-  d.s.folders.forEach(f=>{ if(typeof f.pinned==='undefined') f.pinned=true; });
-  if(!Array.isArray(d.s.trackedLifts)) delete d.s.trackedLifts; /* keep the [] default */
-  if(!Array.isArray(d.s.deloads)) delete d.s.deloads;
-  if(!d.s.mbase || typeof d.s.mbase!=='object' || Array.isArray(d.s.mbase)) delete d.s.mbase;
-  if(!d.s.goals || typeof d.s.goals!=='object' || Array.isArray(d.s.goals)) delete d.s.goals;
-  if(!d.s.waves || typeof d.s.waves!=='object' || Array.isArray(d.s.waves)) delete d.s.waves;
-  if(typeof d.s.dlEvery!=='number') delete d.s.dlEvery;
-  if(typeof d.s.mainFolder!=='string') delete d.s.mainFolder;
-  if(typeof d.s.restTarget!=='number' || !(d.s.restTarget>=15 && d.s.restTarget<=1800)) delete d.s.restTarget;
-  if(typeof d.s.restSound!=='boolean') delete d.s.restSound;
-  if(!SKIN_META[d.s.skin]) delete d.s.skin;
   const gh = { ghRepo:S.ghRepo, ghToken:S.ghToken, ghLast:S.ghLast, ghDirty:S.ghDirty };
-  /* funnel the payload through hydrate() like every other data source - it
-     repairs/validates every field, so a malformed backup cannot brick the app */
   const next = hydrate(Object.assign({}, d.s, { active:null, onboarded:1 }, gh));
   if(!next){ toast(t('codeBad')); return; }
+  /* the state being replaced is parked, not destroyed - a wrong restore is undoable by hand */
+  try{ localStorage.setItem(LS_KEY+'.bad', JSON.stringify(S)); }catch(e){}
   S = next;
   save(); scheduleCloudSync(); applyTheme(); closeModal();
   go('home');
   toast(t('bakDone'));
 }
 function doImport(){
+  try{ doImportInner(); }catch(e){ toast(t('codeBad')); } /* a hostile payload gets a toast, never a stuck modal */
+}
+function doImportInner(){
   const code = $('#import-code').value;
   const d = decodeShare(code);
   if(!d || !d.t){ toast(t('codeBad')); return; }
@@ -190,8 +188,8 @@ function doImport(){
     save(); closeModal();
     go('program');
     toast(t('folderImported',{n:f.name}));
-  }else if(d.t==='bak' && d.s && Array.isArray(d.s.templates)){
-    if(!confirm(t('bakConfirm'))) return;
+  }else if(d.t==='bak' && d.s && typeof d.s==='object'){
+    if(!confirm(t(S.active ? 'bakConfirmActive' : 'bakConfirm'))) return;
     applyBak(d);
   }else{
     toast(t('codeBad'));
@@ -263,13 +261,13 @@ async function ghConnect(){
 /* new phone / reinstall: pull the latest cloud backup and restore it in one tap */
 async function ghRestore(){
   if(!ghOn()) return;
-  if(!confirm(t('ghRestoreConfirm'))) return;
+  if(!confirm(t(S.active ? 'bakConfirmActive' : 'ghRestoreConfirm'))) return;
   try{
     const r = await fetch('https://api.github.com/repos/'+S.ghRepo+'/contents/'+GH_FILE,
       { headers:{ 'Authorization':'Bearer '+S.ghToken, 'Accept':'application/vnd.github.raw+json' } });
     if(!r.ok) throw new Error('HTTP '+r.status);
     const d = await r.json();
-    if(!d || d.t!=='bak' || !d.s || !Array.isArray(d.s.templates)) throw new Error('bad payload');
+    if(!d || d.t!=='bak' || !d.s || typeof d.s!=='object') throw new Error('bad payload');
     applyBak(d);
   }catch(e){ toast(t('ghRestoreFail')); }
 }

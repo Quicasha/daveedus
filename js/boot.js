@@ -70,6 +70,9 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if(raw){
       const s = hydrate(typeof raw==='string' ? JSON.parse(raw) : raw);
       if(s && (!LS_OK || (s.ts||0) > (S.ts||0))){
+        /* the copy being replaced is parked, never destroyed - if the stamp
+           lied (clock skew) the real data is still one key away */
+        if(LS_OK){ try{ localStorage.setItem(LS_KEY+'.bad', JSON.stringify(S)); }catch(e){} }
         S = s; save(); applyTheme();
         if(!LS_OK) toast(t('protRecovered'));
       }
@@ -184,7 +187,7 @@ function obDemo(step){
     <div class="setgrid nod">
       <span class="setnum">1</span><div class="prev">40 ${u} × 10</div>
       <span class="obin"><i class="obtype">${up}</i></span><span class="obin">10</span>
-      <div class="checkbtn obchk2">${ACT_ICONS.check}<span class="obtap tap2"></span></div>
+      <div class="checkbtn obchk2">${ACT_ICONS.check}<span class="obtap"></span></div>
     </div></div>`;
 }
 function renderOb(){

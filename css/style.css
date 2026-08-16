@@ -16,7 +16,7 @@
 /* Selectable skins (data-skin on <html>), each with a dark and a light palette
    (data-theme). The bare :root block below is the BASE token layer every skin
    overrides - not a selectable skin itself (the old "Ice Cold" retired 2026-08-13;
-   the name lives on as the aero skin's label). Order matters: skin blocks come
+   both it and its aero successor retired). Order matters: skin blocks come
    after the base blocks, and each skin's light block carries higher specificity
    than its dark base, so the cascade resolves skin+theme without JS help.
    Shared rules: win/loss green-red never changes meaning; warmup orange and
@@ -34,7 +34,7 @@
   --topbar-bg:rgba(8,13,22,.86); --tabbar-bg:rgba(7,11,19,.88);
   --green:#2ecf87; --green-bg:rgba(46,207,135,.13);
   --red:#ff453a; --red-bg:rgba(255,69,58,.13);
-  --orange:#ff9f0a;
+  --orange:#ff9f0a; --orange-bg:rgba(255,159,10,.14);
   --shadow:0 10px 34px rgba(1,6,16,.7);
   --card-shadow:none;
 }
@@ -49,7 +49,7 @@
   --topbar-bg:rgba(240,244,250,.86); --tabbar-bg:rgba(240,244,250,.88);
   --green:#0ca678; --green-bg:rgba(12,166,120,.11);
   --red:#ff3b30; --red-bg:rgba(255,59,48,.10);
-  --orange:#ff9500;
+  --orange:#ff9500; --orange-bg:rgba(255,149,0,.12);
   --shadow:0 10px 34px rgba(15,30,55,.16);
   --card-shadow:0 1px 2px rgba(14,17,22,.05);
 }
@@ -69,7 +69,7 @@
   --topbar-bg:rgba(17,11,30,.86); --tabbar-bg:rgba(15,10,26,.88);
   --green:#2ecf87; --green-bg:rgba(46,207,135,.13);
   --red:#ff453a; --red-bg:rgba(255,69,58,.13);
-  --orange:#ff9f0a;
+  --orange:#ff9f0a; --orange-bg:rgba(255,159,10,.14);
   --shadow:0 10px 34px rgba(8,3,20,.75);
   --card-shadow:none;
 }
@@ -77,14 +77,14 @@
   --bg:#f0f2ec; --card:#ffffff; --input:#e6ebe0; --line:#d9e0d2;
   --text:#131b10; --dim:#6f7f68; --ghost:#a6b39e;
   --edge:#e0e6d9;
-  --accent:#16a34a; --accent-soft:#15803d; --on-accent:#fff;
+  --accent:#15803d; --accent-soft:#166534; --on-accent:#fff;
   --accent-bg:rgba(22,163,74,.10);
   --glow:rgba(22,163,74,.12);
   --atmo:linear-gradient(180deg, #e9ede2 0%, #f0f2ec 380px);
   --topbar-bg:rgba(242,244,238,.86); --tabbar-bg:rgba(242,244,238,.88);
   --green:#0ca678; --green-bg:rgba(12,166,120,.11);
   --red:#ff3b30; --red-bg:rgba(255,59,48,.10);
-  --orange:#ff9500;
+  --orange:#ff9500; --orange-bg:rgba(255,149,0,.12);
   --shadow:0 10px 34px rgba(20,35,15,.14);
   --card-shadow:0 1px 2px rgba(15,25,10,.05);
 }
@@ -101,7 +101,7 @@
   --topbar-bg:rgba(8,8,8,.86); --tabbar-bg:rgba(6,6,6,.88);
   --green:#2ecf87; --green-bg:rgba(46,207,135,.13);
   --red:#ff453a; --red-bg:rgba(255,69,58,.13);
-  --orange:#ff9f0a;
+  --orange:#ff9f0a; --orange-bg:rgba(255,159,10,.14);
   --shadow:0 10px 34px rgba(0,0,0,.8);
   --card-shadow:none;
 }
@@ -116,7 +116,7 @@
   --topbar-bg:rgba(247,247,247,.86); --tabbar-bg:rgba(247,247,247,.88);
   --green:#0ca678; --green-bg:rgba(12,166,120,.11);
   --red:#ff3b30; --red-bg:rgba(255,59,48,.10);
-  --orange:#b45309;
+  --orange:#b45309; --orange-bg:rgba(180,83,9,.12);
   --shadow:0 10px 34px rgba(0,0,0,.14);
   --card-shadow:0 1px 2px rgba(0,0,0,.05);
 }
@@ -135,7 +135,7 @@
   --topbar-bg:rgba(30,17,25,.86); --tabbar-bg:rgba(26,15,22,.88);
   --green:#2ecf87; --green-bg:rgba(46,207,135,.14);
   --red:#ff5a50; --red-bg:rgba(255,90,80,.15);
-  --orange:#ffab2e;
+  --orange:#ffab2e; --orange-bg:rgba(255,171,46,.15);
   --shadow:0 10px 34px rgba(20,6,13,.6);
   --card-shadow:none;
 }
@@ -150,7 +150,7 @@
   --topbar-bg:rgba(255,246,249,.86); --tabbar-bg:rgba(255,246,249,.88);
   --green:#0ca678; --green-bg:rgba(12,166,120,.11);
   --red:#e0264d; --red-bg:rgba(224,38,77,.10);
-  --orange:#f59e0b;
+  --orange:#f59e0b; --orange-bg:rgba(245,158,11,.12);
   --shadow:0 10px 34px rgba(120,30,60,.13);
   --card-shadow:0 1px 2px rgba(100,20,50,.05);
 }
@@ -171,7 +171,7 @@
   --topbar-bg:rgba(240,241,243,.86); --tabbar-bg:rgba(240,241,243,.88);
   --green:#0ca678; --green-bg:rgba(12,166,120,.12);
   --red:#e5312a; --red-bg:rgba(229,49,42,.10);
-  --orange:#d97706;
+  --orange:#d97706; --orange-bg:rgba(217,119,6,.13);
   --shadow:0 10px 34px rgba(0,0,0,.14);
   --card-shadow:0 1px 2px rgba(0,0,0,.06);
 }
@@ -187,7 +187,7 @@
   --topbar-bg:rgba(247,247,248,.86); --tabbar-bg:rgba(247,247,248,.88);
   --green:#0ca678; --green-bg:rgba(12,166,120,.11);
   --red:#e5312a; --red-bg:rgba(229,49,42,.10);
-  --orange:#d97706;
+  --orange:#d97706; --orange-bg:rgba(217,119,6,.13);
   --shadow:0 10px 34px rgba(0,0,0,.12);
   --card-shadow:0 1px 2px rgba(0,0,0,.05);
 }
@@ -204,7 +204,7 @@
   --topbar-bg:rgba(24,19,12,.86); --tabbar-bg:rgba(21,17,11,.88);
   --green:#2ecf87; --green-bg:rgba(46,207,135,.13);
   --red:#ff453a; --red-bg:rgba(255,69,58,.13);
-  --orange:#ff9f0a;
+  --orange:#ff9f0a; --orange-bg:rgba(255,159,10,.14);
   --shadow:0 10px 34px rgba(8,6,2,.75);
   --card-shadow:none;
 }
@@ -219,7 +219,7 @@
   --topbar-bg:rgba(243,236,222,.86); --tabbar-bg:rgba(243,236,222,.88);
   --green:#0ca678; --green-bg:rgba(12,166,120,.11);
   --red:#e02d22; --red-bg:rgba(224,45,34,.10);
-  --orange:#b45309;
+  --orange:#b45309; --orange-bg:rgba(180,83,9,.12);
   --shadow:0 10px 34px rgba(45,35,15,.14);
   --card-shadow:0 1px 2px rgba(40,30,12,.05);
 }
@@ -236,7 +236,7 @@
   --topbar-bg:rgba(10,15,34,.86); --tabbar-bg:rgba(9,13,29,.88);
   --green:#2ecf87; --green-bg:rgba(46,207,135,.13);
   --red:#ff453a; --red-bg:rgba(255,69,58,.13);
-  --orange:#ff9f0a;
+  --orange:#ff9f0a; --orange-bg:rgba(255,159,10,.14);
   --shadow:0 10px 34px rgba(2,5,18,.75);
   --card-shadow:none;
 }
@@ -251,7 +251,7 @@
   --topbar-bg:rgba(240,243,251,.86); --tabbar-bg:rgba(240,243,251,.88);
   --green:#0ca678; --green-bg:rgba(12,166,120,.11);
   --red:#ff3b30; --red-bg:rgba(255,59,48,.10);
-  --orange:#ff9500;
+  --orange:#ff9500; --orange-bg:rgba(255,149,0,.12);
   --shadow:0 10px 34px rgba(12,25,60,.16);
   --card-shadow:0 1px 2px rgba(10,20,50,.05);
 }
@@ -270,7 +270,7 @@
   --topbar-bg:rgba(9,11,16,.86); --tabbar-bg:rgba(8,10,14,.88);
   --green:#2ecf87; --green-bg:rgba(46,207,135,.13);
   --red:#ff453a; --red-bg:rgba(255,69,58,.13);
-  --orange:#ff9f0a;
+  --orange:#ff9f0a; --orange-bg:rgba(255,159,10,.14);
   --shadow:0 10px 34px rgba(0,2,6,.8);
   --card-shadow:none;
 }
@@ -285,7 +285,7 @@
   --topbar-bg:rgba(242,242,245,.86); --tabbar-bg:rgba(242,242,245,.88);
   --green:#0ca678; --green-bg:rgba(12,166,120,.11);
   --red:#ff3b30; --red-bg:rgba(255,59,48,.10);
-  --orange:#b45309;
+  --orange:#b45309; --orange-bg:rgba(180,83,9,.12);
   --shadow:0 10px 34px rgba(20,22,28,.14);
   --card-shadow:0 1px 2px rgba(15,17,22,.05);
 }
@@ -297,11 +297,10 @@
 :root[data-skin="batman"] .btn.primary{border-radius:8px;}
 :root[data-skin="batman"] #topbar h1{text-transform:uppercase; letter-spacing:3px;}
 
-/* Locked In: tighter corners, stilled pulse - silence is the feature */
+/* Locked In: tighter corners; the pulses stay alive - a still dot read as broken */
 :root[data-skin="locked"] .card, :root[data-skin="locked"] .tplbtn, :root[data-skin="locked"] .stat,
 :root[data-skin="locked"] .splitcard, :root[data-skin="locked"] .btn{border-radius:10px;}
 :root[data-skin="locked"] .btn.primary{border-radius:10px;}
-:root[data-skin="locked"] .tbdot, :root[data-skin="locked"] .pulse{animation:none; opacity:1;}
 /* Hello Kitty: round everything, soft pink glow under the primary button */
 :root[data-skin="kitty"] .card, :root[data-skin="kitty"] .tplbtn, :root[data-skin="kitty"] .stat,
 :root[data-skin="kitty"] .splitcard{border-radius:20px;}
@@ -441,7 +440,7 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 .exhead .minibtn.del{color:var(--red);}
 /* one-tap warmup ramp button - orange like the W set type */
 .exhead .minibtn.warm{color:var(--orange); font-weight:800; font-size:14px;}
-.exhead .minibtn.warm.on{background:rgba(255,159,10,.15);}
+.exhead .minibtn.warm.on{background:var(--orange-bg);}
 /* order badge: green = this session's completion order; outlined = last session's order */
 .ordbadge{flex:none; width:22px; height:22px; padding:0; border-radius:50%; background:var(--green);
   border:none; color:#fff; font-size:11px; font-weight:700; line-height:1;
@@ -497,14 +496,14 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 .secbtn{border:none; background:var(--input); color:var(--dim); border-radius:8px;
   min-height:26px; padding:0 10px; font-size:11px; font-weight:800; letter-spacing:.5px; text-transform:uppercase;}
 .secbtn:active{opacity:.6;}
-.dlcard{background:rgba(255,159,10,.14); border-radius:14px; padding:12px 16px; margin-bottom:10px;
+.dlcard{background:var(--orange-bg); border-radius:14px; padding:12px 16px; margin-bottom:10px;
   cursor:pointer; display:flex; flex-direction:column; gap:2px;}
 .dlcard:active{opacity:.7;}
 .dlcard .dlttl{color:var(--orange); font-weight:800; font-size:15px; letter-spacing:.3px;}
 .dlcard .dlsub{color:var(--dim); font-size:12px; font-weight:600;}
-.dlbar{background:rgba(255,159,10,.14); color:var(--orange); border-radius:10px;
+.dlbar{background:var(--orange-bg); color:var(--orange); border-radius:10px;
   padding:9px 12px; margin-bottom:10px; font-size:12px; font-weight:700; text-align:center;}
-.dlchip{flex:none; background:rgba(255,159,10,.16); color:var(--orange); border-radius:6px;
+.dlchip{flex:none; background:var(--orange-bg); color:var(--orange); border-radius:6px;
   font-size:9px; font-weight:800; letter-spacing:.5px; padding:2px 6px; vertical-align:1px;}
 .rc.on.dl{background:var(--orange);}
 .sprow{display:flex; align-items:center; gap:6px; width:100%; text-align:left;
@@ -663,7 +662,7 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 .bwmmed{display:flex; align-items:baseline; gap:8px; font-size:13px; color:var(--dim); margin:0 2px 8px;}
 .bwmmed b{color:var(--text); font-weight:750; font-variant-numeric:tabular-nums;}
 .bwmspark{opacity:.85; margin-bottom:6px;}
-.bwmspark svg.spark{width:100%; height:48px;}
+.bwmspark svg.spark{width:100%; height:auto; max-height:56px;}
 .bwmlist{max-height:168px; overflow-y:auto; -webkit-overflow-scrolling:touch;}
 .bwmrow{display:flex; gap:8px; padding:5px 2px; align-items:center; font-size:14px;}
 .bwmrow .d{color:var(--dim); flex:1;}
@@ -733,7 +732,6 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 .numfield button{width:34px; min-height:42px; background:none; border:none; color:var(--accent-soft); font-size:19px; font-weight:700;
   display:flex; align-items:center; justify-content:center; padding:0;}
 .numfield .val{min-width:20px; text-align:center; font-size:16px; font-weight:700; font-variant-numeric:tabular-nums;}
-.numfield .lbl{color:var(--dim); font-size:12px; margin:0 10px;}
 /* reps range toggle - flows right after the steppers (no floating gap) */
 .rangetog{min-height:36px; padding:0 11px; border:none; border-radius:9px; background:var(--input);
   color:var(--dim); font-size:12px; font-weight:700;
@@ -925,7 +923,7 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 .rc.on{background:var(--accent); cursor:pointer;}
 .rc.on:active{opacity:.6;}
 .rc.today{box-shadow:inset 0 0 0 2px var(--accent);}
-.rc.on.today{box-shadow:inset 0 0 0 2px rgba(255,255,255,.65);}
+.rc.on.today{box-shadow:inset 0 0 0 2px var(--on-accent);}
 /* year grid: GitHub-style, 7 rows (Mon top) x ~53 week columns, fluid width */
 .ynav{display:flex; align-items:center; justify-content:center; gap:14px; margin:2px 0 8px;}
 .ynav .minibtn{width:34px; min-height:30px; font-size:18px; line-height:1;}
@@ -948,7 +946,7 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 .yc.on.x2{opacity:1;}
 .yc.on.dl{background:var(--orange);}
 .yc.today{box-shadow:inset 0 0 0 1.5px var(--accent);}
-.yc.on.today{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.7);}
+.yc.on.today{box-shadow:inset 0 0 0 1.5px var(--on-accent);}
 .ystats{font-size:12px; color:var(--dim); margin-top:10px; line-height:1.5;}
 /* all-time month heat map: a row per year */
 .mrow{display:flex; gap:3px; align-items:center; margin-bottom:3px;}

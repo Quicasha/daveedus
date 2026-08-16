@@ -2,9 +2,11 @@
    Persistent state: the S object and everything that guards it.
    defaultState() is the schema, hydrate() validates/migrates any raw blob
    (localStorage, IndexedDB mirror, backup codes, cloud restore - they all
-   funnel through it), save() writes localStorage + debounced IndexedDB.
+   funnel through it), save() writes localStorage + debounced IndexedDB;
+   saveSoon() debounces the per-keystroke paths and backgrounding flushes.
    V holds per-session view state and is never persisted.
-   All weights are stored in KG everywhere; display conversion happens in util.js.
+   All weights are stored in KG everywhere; unit conversion (kg2u/u2kg/wu),
+   the plate step (stepU/stepKg/scaleLoad) and exercise lookups live here too.
    ============================================================ */
 'use strict';
 
@@ -78,6 +80,7 @@ function hydrate(s){
   if(!s || typeof s!=='object' || Array.isArray(s)) return null;
   try{ delete s.__proto__; }catch(e){} /* harden against crafted import codes */
   if(!Array.isArray(s.templates)) s.templates = [];
+  s.templates = s.templates.filter(tp=>tp && typeof tp==='object' && Array.isArray(tp.ex));
   if(!Array.isArray(s.history)) s.history = [];
   s.history = s.history.filter(w=>w && typeof w==='object' && Array.isArray(w.exercises)
     && w.exercises.every(e=>e && Array.isArray(e.sets)));
@@ -85,6 +88,10 @@ function hydrate(s){
   s.customEx = s.customEx.filter(x=>x && typeof x.id==='string' && typeof x.n==='string');
   /* migration: older data had no program folders */
   if(!Array.isArray(s.folders)) s.folders = [];
+  s.folders = s.folders.filter(f=>f && typeof f==='object' && typeof f.id==='string');
+  /* save-time stamp used by boot to pick the newer of the two on-device copies;
+     a future or non-numeric stamp (clock skew) must never win forever */
+  if(typeof s.ts!=='number' || !(s.ts>0) || s.ts > Date.now()+864e5) s.ts = 0;
   if(!s.mig13 && !s.folders.length && s.templates.length){
     /* one-time recovery of flat-era data: group everything under one program.
        Guarded by mig13 so deleting all programs later does not resurrect them. */
@@ -161,18 +168,18 @@ function load(){
   /* unusable blob: never destroy it silently - park it under a side key so the
      data survives the defaults being saved over the main key */
   if(raw){ try{ localStorage.setItem(LS_KEY+'.bad', raw); }catch(e){} }
+  /* ...and if a parked copy from an earlier boot IS readable, that beats defaults
+     (boot still consults the IndexedDB mirror and keeps whichever is newer) */
+  try{
+    const bad = localStorage.getItem(LS_KEY+'.bad');
+    if(bad && bad!==raw){ const s = hydrate(JSON.parse(bad)); if(s){ LS_OK = true; return s; } }
+  }catch(e){}
   return defaultState();
 }
 let S = load();
 
-/* ---- storage safety net: IndexedDB mirror (+ backup codes / cloud sync) ----
-   Daily on-device snapshots were retired in v1.22.0: GitHub sync keeps a full
-   commit history of the data, which does the same job better. */
-const SNAP_PREFIX = 'daveedus.snap.';
-try{ /* one-time cleanup of legacy snapshot keys */
-  Object.keys(localStorage).filter(k=>k.startsWith(SNAP_PREFIX)).forEach(k=>localStorage.removeItem(k));
-  localStorage.removeItem('daveedus.lastSnap');
-}catch(e){}
+/* ---- storage safety net: IndexedDB mirror (+ backup codes / cloud sync).
+   Boot keeps whichever on-device copy carries the newer save stamp. ---- */
 function idbOpen(){
   return new Promise((res,rej)=>{
     const q = indexedDB.open('daveedus', 1);
@@ -203,21 +210,32 @@ async function idbGet(){
     return v;
   }catch(e){ return null; }
 }
-let idbTimer = null, lsTimer = null;
+let idbTimer = null, lsTimer = null, lsFailed = false;
 function save(){
   S.ts = Date.now(); /* boot compares the two copies by this stamp and keeps the newer */
   const json = JSON.stringify(S);
   clearTimeout(lsTimer); lsTimer = null; /* a pending debounced write is covered by this one */
   try{
+    if(lsFailed){ /* storage was full: drop the parked copy first - it is the one luxury we can afford to lose */
+      try{ localStorage.removeItem(LS_KEY+'.bad'); }catch(e){}
+    }
     localStorage.setItem(LS_KEY, json);
+    lsFailed = false;
   }catch(e){
     /* quota exceeded - localStorage keeps its stale copy, so flush the fresh
-       state to the IndexedDB mirror NOW; boot will prefer the newer copy */
-    toast(t('saveError'));
+       state to the IndexedDB mirror NOW; boot will prefer the newer copy.
+       One toast per session, not one per keystroke. */
+    if(!lsFailed) toast(t('saveError'));
+    lsFailed = true;
     idbSet(json);
   }
   clearTimeout(idbTimer);
-  idbTimer = setTimeout(()=>idbSet(json), 800);
+  idbTimer = setTimeout(()=>{ idbTimer = null; idbSet(json); }, 800);
+}
+/* backgrounding flushes BOTH pending writes - the phone may never come back */
+function flushSaves(){
+  if(lsTimer) save();
+  else if(idbTimer){ clearTimeout(idbTimer); idbTimer = null; idbSet(JSON.stringify(S)); }
 }
 /* debounced save for per-keystroke paths (weight/reps/note typing): S is already
    mutated, only the O(full history) serialize+write waits until typing settles.
@@ -226,8 +244,8 @@ function saveSoon(){
   clearTimeout(lsTimer);
   lsTimer = setTimeout(()=>{ lsTimer = null; save(); }, 400);
 }
-window.addEventListener('pagehide', ()=>{ if(lsTimer) save(); });
-document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden' && lsTimer) save(); });
+window.addEventListener('pagehide', flushSaves);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') flushSaves(); });
 /* view state (not persisted) */
 const V = { screen:'home', editTpl:null, viewFolder:null, exDetail:null, expanded:null,
             pickerCb:null, pickerQ:'', pickerG:'all', exQ:'', exG:'mine',
@@ -256,6 +274,20 @@ function kg2u(kg){ if(kg==null||isNaN(kg)) return kg; return S.unit==='lb' ? Mat
 function u2kg(v){ if(v==null||isNaN(v)) return v; return S.unit==='lb' ? v/LB_PER_KG : v; }
 /* format a kg value in display unit; withUnit appends the label */
 function wu(kg, withUnit){ const n = fmtW(kg2u(kg)); return withUnit ? n+' '+unitL() : n; }
+/* THE plate step - one small plate pair: 2.5 kg or 5 lb - in display units and in kg.
+   Every suggestion that snaps to plates (deload, comeback, wave base, warmup ramp,
+   the +/- stepper) reads it from here. */
+function stepU(){ return S.unit==='lb' ? 5 : 2.5; }
+function stepKg(){ return u2kg(stepU()); }
+/* scale a load by a factor and snap to the plate step - never ABOVE the original:
+   a light load that rounds to zero stays at its own value instead of jumping up
+   to a full step (1.25 kg "eased to 85%" must not become 2.5 kg) */
+function scaleLoad(kg, f){
+  if(!(kg>0) || f>=1) return kg;
+  const step = stepKg();
+  const snapped = Math.round(kg*f/step)*step;
+  return snapped > 0 ? Math.min(kg, snapped) : Math.round(kg*f*100)/100;
+}
 
 function fmtSet(s, k, mb){
   const tm = isTimeEx(k), bw = isBwEx(k);

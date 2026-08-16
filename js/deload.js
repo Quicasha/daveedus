@@ -3,6 +3,8 @@
    the main program. dlW() scales suggested loads (pct >= 1 means "same
    weight, fewer sets" and passes loads through untouched); deload sessions
    are tagged dl:1 and excluded from records, PRs and ghosts.
+   Plus the passive advisor (liftFatigue / hardWeeks / dlAdvice) that suggests
+   a deload from performance signals without ever asking anything.
    ============================================================ */
 'use strict';
 
@@ -20,8 +22,9 @@ const DL_LIGHT_FLOOR = 0.8;
 function dlActive(){
   const d = S.deloads[S.deloads.length-1];
   if(!d || d.e) return null;
-  /* self-heal: if every still-existing workout has its pass, the cycle is complete */
-  if(d.tpls.length && !dlRemaining(d).length){ d.e = Date.now(); save(); return null; }
+  /* self-heal: if every still-existing workout has its pass (or the record lost
+     its template list to corruption), the cycle is complete */
+  if(!dlRemaining(d).length){ d.e = Date.now(); save(); return null; }
   return d;
 }
 /* workouts still waiting for their deload pass (deleted templates don't block) */
@@ -60,8 +63,7 @@ function dlW(kg){
   let p = (d && d.pct) || DL_FACTOR;
   if(p>=1) return kg; /* "same weight, fewer sets" deload - loads untouched, no rounding drift */
   if(kg < DL_LIGHT_KG) p = Math.max(p, DL_LIGHT_FLOOR); /* light/isolation: gentle trim only */
-  const step = S.unit==='lb' ? 5/LB_PER_KG : 2.5;
-  return Math.max(step, Math.round(kg*p/step)*step);
+  return scaleLoad(kg, p);
 }
 /* deload options sheet: pick load % and set volume, with one-line explanations */
 function startDeload(){
@@ -147,14 +149,31 @@ function liftFatigue(k){ /* 'down' | 'flat' | null, on the current-form window *
   }
   return null;
 }
+/* weeks of continuous training since the last deload - or, for a lifter who
+   never deloaded, since the last real break (a gap of 3+ weeks resets the
+   count: a layoff IS a deload as far as fatigue goes). Null when the last
+   session is itself older than 3 weeks - nobody needs a rest from resting. */
+function hardWeeks(){
+  const D = 864e5, now = Date.now();
+  const since = dlLastStart();
+  let last = null, start = null;
+  for(const h of S.history){ /* newest first */
+    if(h.arch || h.dl) continue;
+    const ts = new Date(h.date).getTime();
+    if(ts < since) break;
+    if(last===null){ if(now - ts > 21*D) return null; last = ts; }
+    else if(start - ts > 21*D) break; /* the streak began after this gap */
+    start = ts;
+  }
+  if(start===null) return null;
+  return (now - Math.max(start, since))/(7*D);
+}
 function dlAdvice(){
   if(dlActive()) return null;
   if(S.dlEvery > 0) return null; /* the calendar reminder already owns this job */
   if(Date.now() < (S.dlaSnooze||0)) return null;
-  const anchor = dlLastStart() || (S.history.length ? new Date(S.history[S.history.length-1].date).getTime() : 0);
-  if(!anchor) return null;
-  const wks = (Date.now()-anchor)/(7*864e5);
-  if(wks < 3) return null; /* quiet period right after a deload (or a fresh log) */
+  const wks = hardWeeks();
+  if(wks===null || wks < 3) return null; /* quiet period right after a deload / break */
   const st = S.trackedLifts.map(liftFatigue);
   const tired = st.filter(Boolean).length, down = st.filter(x=>x==='down').length;
   const w = Math.floor(wks);

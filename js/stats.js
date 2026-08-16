@@ -1,7 +1,9 @@
 /* ============================================================
-   Derived numbers and charts: exStats/e1RM, rep-specific PR feed, tracked
-   lifts with goals and trends, rhythm strip, period-bucketed bar charts,
-   muscle balance and the generic SVG chart builders.
+   Derived numbers and charts: e1RM series and the current-form window,
+   trend / ETA / stall detectors, tracked lifts with goals, rep-specific PR
+   feed, the rhythm card (day strips, GitHub-style year grid, all-time month
+   map), period-bucketed bar charts, muscle balance and the bar/spark SVG
+   builders (exStats and the line chart live in exercises-ui.js).
    All totals use FULL load: x2 pairs doubled, body weight and machine base
    added. Deload (dl) and archived (arch) workouts are excluded from records.
    ============================================================ */
@@ -248,9 +250,15 @@ function rhythmHtml(){
 }
 /* year grid: 7 weekday rows (Mon top) x one column per week, month labels above,
    < > to step through the years that have data; totals underneath */
+/* oldest non-archived workout, or null - the anchor for both long-range views */
+function rhythmFirst(){
+  for(let i=S.history.length-1; i>=0; i--) if(!S.history[i].arch) return new Date(S.history[i].date);
+  return null;
+}
 function rhythmYearHtml(){
   const now = new Date();
-  const first = S.history.length ? new Date(S.history[S.history.length-1].date).getFullYear() : now.getFullYear();
+  const f0 = rhythmFirst();
+  const first = f0 ? Math.min(f0.getFullYear(), now.getFullYear()) : now.getFullYear();
   const yr = Math.min(now.getFullYear(), Math.max(first, V.cp.rh.y || now.getFullYear()));
   V.cp.rh.y = yr;
   const map = rhythmDayMap();
@@ -293,17 +301,23 @@ function rhythmYearHtml(){
     <div class="ywrap" id="ywrap"><div class="yinner"><div class="ymonths">${mh}</div><div class="ygrid">${cols.join('')}</div></div></div>
     <div class="ystats">${t('rhTotal',{n:total})}${days!==total?` · ${t('rhDays',{n:days})}`:''}${dlDays?` · ${t('rhDl',{n:dlDays})}`:''}${best?` · ${best}`:''}</div>`;
 }
-/* after render: a current-year grid opens scrolled to today's week, past years to January */
+/* after render: the grid keeps the scroll position the user left it at (re-renders
+   happen on every tap); a freshly opened year lands on today's week for the
+   current year and on January for past ones */
 function rhythmYearScroll(){
   const el = document.getElementById('ywrap');
   if(!el) return;
-  el.scrollLeft = (V.cp.rh.y === new Date().getFullYear()) ? el.scrollWidth : 0;
+  const key = V.cp.rh.y;
+  if(V.rhScroll && V.rhScroll.y === key) el.scrollLeft = V.rhScroll.x;
+  else el.scrollLeft = (key === new Date().getFullYear()) ? el.scrollWidth : 0;
+  el.onscroll = ()=>{ V.rhScroll = { y:key, x:el.scrollLeft }; };
 }
 /* all-time: one row per year, one cell per month, shade = workouts that month */
 function rhythmAllHtml(){
-  if(!S.history.length) return `<div class="empty" style="padding:14px">${t('chartNoData')}</div>`;
+  const first = rhythmFirst();
+  if(!first) return `<div class="empty" style="padding:14px">${t('chartNoData')}</div>`;
   const now = new Date();
-  const first = new Date(S.history[S.history.length-1].date);
+  if(first > now) first.setTime(now.getTime()); /* clock skew: never an empty table */
   const cnt = {}, dlm = {}; /* 'y-m' -> workouts / deload workouts */
   let total = 0;
   for(const h of S.history){
@@ -323,7 +337,7 @@ function rhythmAllHtml(){
       if(future || before){ cells += `<i class="mc off"></i>`; continue; }
       const lvl = n ? Math.max(1, Math.ceil(n/max*4)) : 0;
       const dl = dlm[k] ? ' dl' : '';
-      cells += `<i class="mc l${lvl}${dl}"><span>${n||''}</span></i>`;
+      cells += `<i class="mc${lvl?' l'+lvl:''}${dl}"><span>${n||''}</span></i>`;
     }
     rows += `<div class="mrow"><span class="myr">${y}</span>${cells}</div>`;
   }
@@ -385,27 +399,41 @@ function e1rmSeries(k){
   for(let i=S.history.length-1; i>=0; i--){
     const w = S.history[i];
     if(w.arch || w.dl) continue;
+    /* ONE point per SESSION: a lift logged twice in a workout (top set + back-off
+       slot, an added duplicate) must not count as two sessions - every window
+       downstream (trend, stall, fatigue, ETA) is denominated in sessions */
+    let v = 0;
     for(const e of w.exercises){
       if(!(e.k===k || (e.name && e.name.trim().toLowerCase()===nm))) continue;
       const work = e.sets.filter(s=>!s.warm && !s.drop && s.reps>0);
       if(!work.length) continue;
       const add = (isBwEx(e.k) ? (e.bw||0) : 0) + (e.mb||0);
       const mul = e.x2 ? 2 : 1;
-      const v = Math.max(...work.map(s=>(s.weight*mul+add)*(1+s.reps/30)));
-      /* v=0 happens on bodyweight lifts logged before any body weight existed -
-         an artifact, not form; letting it in fabricates trends and ETAs */
-      if(v > 0) pts.push({ ts:new Date(w.date).getTime(), v });
+      v = Math.max(v, ...work.map(s=>(s.weight*mul+add)*(1+s.reps/30)));
     }
+    /* v=0 happens on bodyweight lifts logged before any body weight existed -
+       an artifact, not form; letting it in fabricates trends and ETAs */
+    if(v > 0) pts.push({ ts:new Date(w.date).getTime(), v });
   }
   return pts;
+}
+/* "where the lift is NOW" for the goal row and the ETA - the best of the
+   current-form window, so the bar and the projected date agree on one number */
+function currentE1rm(k){
+  const rp = recentSeries(k);
+  return rp.length ? Math.max(...rp.map(p=>p.v)) : 0;
 }
 /* passive stall detector: e1RM direction over the last ~6 sessions of a lift -
    rising means the training is working, flat/falling is the honest deload signal.
    Purely computed from history, never asks the user anything. */
 function trendFor(k){
-  /* CURRENT-FORM window only: after a layoff the pre-break sessions must not
-     mix into the direction call (they would fake a 'down' and mute the watch) */
-  const rec = recentSeries(k).slice(-6).map(p=>p.v);
+  /* CURRENT-FORM window first: after a layoff the pre-break sessions must not
+     mix into the direction call (they would fake a 'down' and mute the watch).
+     A lift trained rarely (under 4 sessions in 90 days) falls back to its last
+     6 sessions whatever their age - a slow lift still deserves an arrow. */
+  let rec = recentSeries(k);
+  if(rec.length < 4) rec = e1rmSeries(k);
+  rec = rec.slice(-6).map(p=>p.v);
   if(rec.length < 4) return null; /* too little data to call a direction */
   const half = Math.floor(rec.length/2);
   const a = rec.slice(0,half).reduce((x,y)=>x+y,0)/half;
@@ -419,15 +447,20 @@ function trendFor(k){
    lands within three years - anything else would be a guess, so show nothing */
 function etaFor(k, goalKg){
   if(trendFor(k) !== 'up') return null; /* the date and the trend arrow must agree */
-  const pts = recentSeries(k).slice(-10);
+  let pts = recentSeries(k);
+  if(pts.length < 4) pts = e1rmSeries(k); /* same fallback as trendFor for rare lifts */
+  pts = pts.slice(-10);
   if(pts.length < 4) return null;
+  /* a fit needs real calendar span - four sessions in one week (or one day)
+     would extrapolate a slope of nonsense */
+  if(pts[pts.length-1].ts - pts[0].ts < 14*864e5) return null;
   const n = pts.length;
   const mx = pts.reduce((a,p)=>a+p.ts,0)/n, my = pts.reduce((a,p)=>a+p.v,0)/n;
   let num = 0, den = 0;
   for(const p of pts){ num += (p.ts-mx)*(p.v-my); den += (p.ts-mx)*(p.ts-mx); }
   if(den <= 0) return null;
   const slope = num/den; /* kg per ms */
-  const cur = pts[n-1].v;
+  const cur = currentE1rm(k) || pts[n-1].v; /* the same "now" the goal bar shows */
   if(slope <= 0 || cur >= goalKg) return null;
   const ms = (goalKg - cur)/slope;
   if(ms > 3*365*864e5) return null;
@@ -488,8 +521,10 @@ function trackedHtml(){
     const goal = (S.goals||{})[k];
     let goalHtml = '';
     if(goal>0 && !tm){
-      const rp = recentSeries(k);
-      const cur = rp.length ? Math.max(...rp.map(p=>p.v)) : exStats(k, name).e1rm;
+      /* no session in 90 days: the LAST session is "now", never the lifetime
+         peak - otherwise a single old point ageing out would jump the bar */
+      const all = e1rmSeries(k);
+      const cur = currentE1rm(k) || (all.length ? all[all.length-1].v : 0);
       const pct = Math.min(100, Math.round(cur/goal*100));
       const done = cur >= goal;
       /* honest projection: only shows when the trend really climbs (see etaFor) */
@@ -529,7 +564,7 @@ function trackRemove(k){
 function openGoalEdit(k){
   const goal = (S.goals||{})[k];
   openModal(`<h3>${esc(exName(k))}<button class="x" onclick="closeModal()">✕</button></h3>
-    <div class="pvsub" style="margin-bottom:12px">${t('goalTitle')} (e1RM)</div>
+    <div class="pvsub" style="margin-bottom:12px">${t('goalTitle')} (${t('metric1RM')})</div>
     <div style="display:flex;align-items:center;gap:10px">
       <input id="goal-in" type="text" inputmode="decimal" class="nameinput" style="flex:1;text-align:center;font-weight:700;font-size:18px"
         value="${goal?esc(fmtW(kg2u(goal))):''}" placeholder="0" onfocus="this.select()">

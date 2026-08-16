@@ -5,7 +5,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.14.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.14.1'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 /* UI strings. One flat dictionary - the app is English-only by design. */
@@ -25,7 +25,7 @@ const T = {
   woAltBack:'Back to', altLabel:'alt.', altAdd:'Alternative',
   woOrderHint:'Order done', woPrevOrderHint:'Last time you did it in this order',
   warmBtn:'Warmup sets', warmNeedW:'Enter your working weight first', warmTooLight:'Weight too light for a warmup ramp',
-  warmLate:'Warmups go before the working sets - some are already done',
+  warmLate:'Some sets are already done - warmups go first',
   woNoteSess:'Note (this workout)…', woNotePerm:'Permanent note…', woNotePermToggle:'Permanent note',
   woEmptyVals:'Enter weight and reps',
   woFinishEmpty:'No completed sets. Discard workout?',
@@ -48,7 +48,7 @@ const T = {
   woSec:'sec',
   sumTitle:'Workout saved', sumDur:'Duration', sumVol:'Volume', sumSets:'Sets',
   sumPRs:'New records', sumOk:'Done',
-  recTitle:'Records', rec1RM:'~1RM (estimated)', recBestSet:'Best set', recTime:'Longest',
+  recTitle:'Records', rec1RM:'est. 1RM', recBestSet:'Best set', recTime:'Longest',
   bakRemind:"Backup code hasn't been copied in a while.",
   protTitle:'Data protection', protPersist:'Persistent storage',
   protOn:'✓ On', protOff:'Not granted',
@@ -78,7 +78,7 @@ const T = {
   dlOn:'Deload started',
   dlDone:'Deload cycle complete',
   dlActiveBanner:'DELOAD',
-  dlLeft:'{n} workouts left', dlSub:'records paused · tap to end',
+  dlLeft:'workouts left: {n}', dlSub:'records paused · tap to end',
   dlWoBar:'DELOAD - suggested weights {p}%', dlWoBarVol:'half sets',
   dlBadge:'DELOAD', dlCycles:'Full cycles since deload',
   dlmHow:'A deload is one deliberately light pass over every workout below - fatigue drops, technique stays. During the pass the suggested weights scale down, sets stay out of records and PRs, and the cycle counters restart. When every workout has had its light session the deload ends on its own; the orange banner on Home ends it early.',
@@ -92,7 +92,7 @@ const T = {
   dlmLight:'Light exercises (< {n}) are only trimmed to 80% - isolation work needs little reduction.',
   dlmStart:'Start deload',
   histMore:'Show more', bwLogNew:'+ Log weight',
-  metricW:'Weight', metricVol:'Volume', metric1RM:'~1RM',
+  metricW:'Weight', metricVol:'Volume', metric1RM:'est. 1RM',
   exMine:'Mine', exMineEmpty:'Exercises you have done will appear here. Browse “All” for now.',
   saveDone:'Save',
   bw:'Body weight', bwLog:'Log', bwMed7:'7-day median',
@@ -131,7 +131,7 @@ const T = {
   baseHint:'What the machine weighs empty (e.g. the leg press sled). The weight column then takes only the plates YOU add - records and charts count the full load. Remembered permanently. Empty field turns it off.',
   x2Label:'Dumbbell pair - enter one, both are counted',
   rrstLabel:'Restart rest',
-  histContinue:'Continue', histDlAfter:'after {n} workouts', dlActiveShort:'active',
+  histContinue:'Continue', histDlAfter:'workouts before: {n}', dlActiveShort:'active',
   histDlCycles:'full cycles: {n}',
   repRecTitle:'Rep records',
   trend_up:'Rising', trend_flat:'Flat', trend_down:'Falling',
@@ -150,6 +150,7 @@ const T = {
   csvEmpty:'Nothing to export yet',
   bakHint:'Paste a backup code - ALL current data will be replaced.',
   bakConfirm:'Restore data from code? Current data will be replaced.',
+  bakConfirmActive:'A workout is in progress and will be lost. Restore anyway? Current data will be replaced.',
   bakDone:'Data restored ✓',
   setDanger:'Danger zone', setWipe:'Delete all data',
   setWipeConfirm:'Really delete ALL data (templates and history)?',
@@ -163,19 +164,19 @@ const T = {
   dpLabel:'Progression', dpHint:'When every working set reaches the top of the rep range - next time the app offers to add this step to the weight.',
   dpChipHint:'All sets hit the range top last time - tap to fill the weights with the increase',
   dlmRemind:'Deload reminder', dlmRemindHint:'A card on the home screen will remind you once this many weeks pass since the last deload.',
-  dlRemindTitle:'Time to deload', dlRemindSub:'{n} weeks since the last deload',
+  dlRemindTitle:'Time to deload', dlRemindSub:'{n} weeks of hard training',
   wdLabel:'Weekday', wdHint:'The assigned day shows on the home screen as TODAY. A missed day is simply skipped.',
   wd1:'Mo', wd2:'Tu', wd3:'We', wd4:'Th', wd5:'Fr', wd6:'Sa', wd7:'Su',
   todayBadge:'TODAY', statWeekOf:'this week',
-  goalTitle:'Goal', goalHint:'Enter the e1RM you are aiming for (estimated one-rep max). The card will show how much is left.',
+  goalTitle:'Goal', goalHint:'Enter the est. 1RM you are aiming for (estimated one-rep max). The card will show how much is left.',
   goalLeft:'{n} to go', goalReached:'reached',
-  goalEta:'at this pace ~{d}',
+  goalEta:'at this pace, around {d}',
   stallTitle:'{n} looks stalled', stallSub:'{c} sessions without a new best. A 4-week wave breaks it: reps drop, weight climbs. Only your tracked lifts are watched like this.',
   stallGo:'Set up wave',
   waveTitle:'4-week wave', waveMode:'Wave mode',
   waveHint:'Week A: base ×5 · B: +step ×4 · C: +2 steps ×3 · D: base ×6, then a new round starts one step higher. The chip on the workout card fills each session’s weights.',
-  waveEndHint:'The wave ends by itself: a new e1RM best during a round means it did its job; 3 rounds without one means it is time to deload or change the approach.',
-  waveRecFrom:'Suggested start: {w} · ≈86% of your recent best e1RM - a five with a rep or two in reserve. Week D turns it into a six: the new-best attempt.',
+  waveEndHint:'The wave ends by itself: a new est. 1RM best during a round means it did its job; 3 rounds without one means it is time to deload or change the approach.',
+  waveRecFrom:'Suggested start: {w} · about 86% of your recent best est. 1RM - a five with a rep or two in reserve. Week D turns it into a six: the new-best attempt.',
   waveWin:'{n}: wave done - new best set. Back to normal progression.',
   waveFlat:'{n}: 3 rounds without a new best. Deload or change the approach.',
   waveBase:'Week-A weight', waveStep:'Step',
@@ -192,7 +193,7 @@ const T = {
   ob4T:'Bench taken? Swap it', ob4B:'Every exercise keeps alternatives in the ⋯ menu: one tap swaps in the next option, no waiting around. Each variant tracks its own progress.',
   ob5T:'Warmup in one tap', ob5B:'Tap W and a warmup ramp builds itself from your working weight. Warmups stay out of your records.',
   ob6T:'Pin it, star it', ob6B:'Pinned programs sit on your home screen. The star marks your MAIN program - TODAY, the week counter and deloads follow only the starred one.',
-  obBwT:'The scale tile is a button', obBwB:'Third tile on the home screen logs your body weight - tap, type, done. Underneath it keeps a 7-day median and a trend line, and pull-ups or dips count that weight into your records.',
+  obBwT:'The body weight tile is a button', obBwB:'The third tile on the home screen logs your body weight - tap, type, done. It keeps a 7-day median and a trend line, and pull-ups or dips count that weight into your records.',
   ob3T:'Your data, your phone', ob3B:'Everything lives on this phone. Grab a backup code in Settings - it brings it all back on a new one.',
   obNext:'Next', obDone:'Start',
   a2hsTitle:'Install as an app',
@@ -204,13 +205,13 @@ const T = {
   wkS:'wk',
   /* v2.12: comeback easing, mastery fact, passive deload advisor */
   cbNote:'After the break: suggestions eased to {p}% of last time',
-  mfWks:'{n}: best e1RM in {w} weeks', mfMo:'{n}: best e1RM in {m} months',
-  mfEver:'{n}: all-time best e1RM',
-  dlaTitle:'A deload week looks due',
+  mfWks:'{n}: best est. 1RM in {w} weeks', mfMo:'{n}: best est. 1RM in {m} months',
+  mfEver:'{n}: all-time best est. 1RM',
+  dlaTitle:'Time to deload',
   dlaFlat:'Progress on tracked lifts has stalled',
   dlaDown:'Tracked lifts are trending down',
   dlaTime:'A long stretch of hard training',
-  rhTotal:'{n} workouts', rhDays:'{n} training days', rhDl:'{n} deload', rhBest:'best month {m} ({n})',
+  rhTotal:'workouts: {n}', rhDays:'training days: {n}', rhDl:'deload days: {n}', rhBest:'best month: {m} ({n})',
   rhSince:'since {d}'
 };
 function t(k, vars){

@@ -1,7 +1,8 @@
 /* ============================================================
    Small pure-ish helpers used by every screen: DOM shortcut, escaping,
-   number/weight/date formatting, unit conversion (kg <-> lb), exercise DB
-   lookups, set formatting, toast, clipboard, theme application.
+   number/time/date formatting, normReps, woVolume (THE volume formula),
+   toast + undo toast, clipboard, and the skin registry with applyTheme.
+   Unit conversion and exercise lookups live in state.js (they read S).
    Nothing here renders screens or mutates S (except applyTheme reading S.theme).
    ============================================================ */
 'use strict';
@@ -112,18 +113,20 @@ const SKIN_META = { /* status-bar color per skin+mode, matches each --atmo top t
   kitty:    { dark:'#2c1522', light:'#ffe9f1' },
   monster:  { dark:'#f2f3f5', light:'#fafafb' }
 };
-/* skin-picker swatches: each shows the skin's real sky (atmo-top -> bg gradient)
-   plus its accent dot(s). Object ORDER is the picker order: Locked In first
-   (the default), then the rest of the ONE-dot skins, then the TWO-dot skins.
-   A new skin needs entries here, in SKIN_META, the confetti map and a CSS token
-   block. Retired skins (villain/old, ice, stim, aero, princess) fall back to locked via
+/* skin-picker swatches: each shows the skin's DARK sky (atmo-top -> bg gradient)
+   plus its accent dot(s) - dark, because that is what most pickers happen in
+   and what makes the row identifiable at a glance. Object ORDER is the picker
+   order: Locked In first (the default), then the rest of the ONE-dot skins,
+   then the TWO-dot skins. A new skin needs an entry here, in SKIN_META and a
+   CSS token block (confetti reads the live tokens, nothing to sync). Retired
+   skins (villain/old, ice, stim, aero, princess) fall back to locked via
    hydrate/applyBak validation - no migration code needed. */
 const SKIN_PREVIEW = {
   locked:   { bg:'linear-gradient(135deg,#1f1f1f,#000000)', accent:'#f5f5f5' },
   batman:   { bg:'linear-gradient(135deg,#232b3a,#05060a)', accent:'#ffd60a' },
   golden:   { bg:'linear-gradient(135deg,#332714,#120e08)', accent:'#e0a32e' },
   monster:  { bg:'linear-gradient(135deg,#ffffff,#dcdee2)', accent:'#111214', accent2:'#78bee6' },
-  kitty:    { bg:'linear-gradient(135deg,#ffffff,#ffe6ef)', accent:'#e6194b', accent2:'#ff9dbb' },
+  kitty:    { bg:'linear-gradient(135deg,#3a1c2c,#1c0f16)', accent:'#ff5c8a', accent2:'#fff1f6' },
   spooder:  { bg:'linear-gradient(135deg,#1a2c63,#070a18)', accent:'#f43f4b', accent2:'#4f74ff' },
   zaza:     { bg:'linear-gradient(135deg,#2a1856,#0a0712)', accent:'#4ade80', accent2:'#a855f7' }
 };

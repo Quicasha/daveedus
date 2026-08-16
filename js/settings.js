@@ -103,13 +103,14 @@ function setUnit(u){
   /* active-session set inputs hold DISPLAY-unit strings - rescale them so an
      already-logged 100 kg stays 100 kg (shown as 220.46 lb), instead of being
      reinterpreted as 100 lb when the session is finished */
-  if(S.active){
-    const conv = v=>{ const n = parseNum(v); return isNaN(n) ? v : fmtW(u==='lb' ? n*LB_PER_KG : n/LB_PER_KG); };
-    for(const ex of S.active.exercises){
+  const conv = v=>{ const n = parseNum(v); return isNaN(n) ? v : fmtW(u==='lb' ? n*LB_PER_KG : n/LB_PER_KG); };
+  const rescale = act=>{ if(!act) return;
+    for(const ex of act.exercises){
       const variants = [ex.sets].concat(Object.values(ex.stash||{}).map(x=>x.sets));
       for(const sets of variants) for(const s of sets) if(s.w) s.w = conv(s.w);
-    }
-  }
+    } };
+  rescale(S.active);
+  rescale(S.lastActive && S.lastActive.act); /* the resumable snapshot holds the same strings */
   S.unit=u; save(); render();
 }
 function updatePersistStatus(){
