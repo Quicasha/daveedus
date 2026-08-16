@@ -1269,9 +1269,9 @@ function confetti(){
   const cols = { /* confetti wears the skin's colors - keep in sync with SKIN_META */
     zaza:     ['#4ade80','#86efac','#c9a2ff','#ede9fe','#a855f7','#bbf7d0'],
     locked:   ['#ffffff','#d9d9d9','#ababab','#f5f5f5','#7a7a7a','#4a4a4a'],
-    aero:     ['#22d3ee','#7fe7f7','#e0f7ff','#34d399','#38bdf8','#a5f3fc'],
+    kitty:    ['#e6194b','#ff5c8a','#ff9dbb','#ffffff','#ffe6ef','#ffd166'],
+    monster:  ['#111214','#2b2e33','#78bee6','#ffffff','#c9ccd2','#e5312a'],
     golden:   ['#e0a32e','#f0c060','#fff3d6','#b3a284','#d97706','#fde68a'],
-    princess: ['#f28ab5','#f7b1cd','#ffe4ef','#db2777','#e9d5ff','#fbcfe8'],
     spooder:  ['#f43f4b','#ff7a82','#4f74ff','#9db9ff','#eef1fb','#ffd166'],
     batman:   ['#ffd60a','#ffe25c','#c3cad6','#f5f5f5','#6b7689','#ffb703']
   }[SKIN_META[S.skin] ? S.skin : 'locked'];

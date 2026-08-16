@@ -106,26 +106,26 @@ const mediaDark = window.matchMedia('(prefers-color-scheme: dark)');
 const SKIN_META = { /* status-bar color per skin+mode, matches each --atmo top tone */
   zaza:     { dark:'#150c28', light:'#f0f2ec' },
   locked:   { dark:'#000000', light:'#f5f5f5' },
-  aero:     { dark:'#082633', light:'#dff0f7' },
   golden:   { dark:'#1c1610', light:'#e9dfc9' },
-  princess: { dark:'#3a1d2b', light:'#f6e7ee' },
   spooder:  { dark:'#101a3c', light:'#dde5f8' },
-  batman:   { dark:'#0c1016', light:'#e9eaee' }
+  batman:   { dark:'#0c1016', light:'#e9eaee' },
+  kitty:    { dark:'#2c1522', light:'#ffe9f1' },
+  monster:  { dark:'#f2f3f5', light:'#fafafb' }
 };
 /* skin-picker swatches: each shows the skin's real sky (atmo-top -> bg gradient)
-   plus its accent dot(s) - two dots for the two-color skins. Object ORDER is the
-   picker order: mono first (the default), then blues, greens, yellows, warm
-   tones, pink. A new skin needs entries here, in SKIN_META, the confetti map and
-   a CSS token block. Retired skins (villain/old, the original ice) map or fall
-   back via hydrate/applyBak validation - no migration code needed. */
+   plus its accent dot(s). Object ORDER is the picker order: Locked In first
+   (the default), then the rest of the ONE-dot skins, then the TWO-dot skins.
+   A new skin needs entries here, in SKIN_META, the confetti map and a CSS token
+   block. Retired skins (villain/old, ice, stim, aero, princess) fall back to locked via
+   hydrate/applyBak validation - no migration code needed. */
 const SKIN_PREVIEW = {
   locked:   { bg:'linear-gradient(135deg,#1f1f1f,#000000)', accent:'#f5f5f5' },
-  aero:     { bg:'linear-gradient(135deg,#0c3c52,#04141c)', accent:'#22d3ee' },
-  spooder:  { bg:'linear-gradient(135deg,#1a2c63,#070a18)', accent:'#f43f4b', accent2:'#4f74ff' },
-  zaza:     { bg:'linear-gradient(135deg,#2a1856,#0a0712)', accent:'#4ade80', accent2:'#a855f7' },
   batman:   { bg:'linear-gradient(135deg,#232b3a,#05060a)', accent:'#ffd60a' },
   golden:   { bg:'linear-gradient(135deg,#332714,#120e08)', accent:'#e0a32e' },
-  princess: { bg:'linear-gradient(135deg,#f6e7ee,#ecc3d8)', accent:'#db2777' }
+  monster:  { bg:'linear-gradient(135deg,#ffffff,#dcdee2)', accent:'#111214', accent2:'#78bee6' },
+  kitty:    { bg:'linear-gradient(135deg,#ffffff,#ffe6ef)', accent:'#e6194b', accent2:'#ff9dbb' },
+  spooder:  { bg:'linear-gradient(135deg,#1a2c63,#070a18)', accent:'#f43f4b', accent2:'#4f74ff' },
+  zaza:     { bg:'linear-gradient(135deg,#2a1856,#0a0712)', accent:'#4ade80', accent2:'#a855f7' }
 };
 function applyTheme(){
   const mode = S.theme==='auto' ? (mediaDark.matches?'dark':'light') : S.theme;
