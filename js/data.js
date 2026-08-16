@@ -238,30 +238,46 @@ async function cloudSync(){
   ghBusy = false;
   updateGhStatus();
 }
-/* one-time connect: verify the repo is reachable with this token, then sync */
+/* one-time connect: verify the repo is reachable with this token - and NOTHING
+   else. Connecting must never upload: people connect on a fresh phone to GET
+   their data back, and an immediate push would overwrite the cloud copy with
+   whatever this device happens to hold (an empty log), making Restore useless.
+   The first push happens after the next finished workout, or on Sync now. */
 async function ghConnect(){
   const repo = ($('#gh-repo')||{}).value, tok = ($('#gh-token')||{}).value;
   if(!repo || !repo.trim() || !tok || !tok.trim()){ toast(t('ghBad')); return; }
   const btn = $('#gh-connect'); if(btn) btn.disabled = true;
   try{
-    const r = await fetch('https://api.github.com/repos/'+repo.trim(),
-      { headers:{ 'Authorization':'Bearer '+tok.trim(), 'Accept':'application/vnd.github+json' } });
+    const rep = repo.trim(), tk = tok.trim();
+    const r = await fetch('https://api.github.com/repos/'+rep,
+      { headers:{ 'Authorization':'Bearer '+tk, 'Accept':'application/vnd.github+json' } });
     if(!r.ok) throw new Error('HTTP '+r.status);
     const meta = await r.json();
     if(!meta.private && !confirm(t('ghPublicWarn'))){ if(btn) btn.disabled=false; return; }
-    S.ghRepo = repo.trim(); S.ghToken = tok.trim(); S.ghDirty = 1;
+    S.ghRepo = rep; S.ghToken = tk; S.ghDirty = 0;
     save(); render();
     toast(t('ghOkToast'));
-    cloudSync();
+    /* a backup already up there is the reason most people connect - offer it */
+    if(await ghHasBackup()){
+      if(confirm(t(S.active ? 'bakConfirmActive' : 'ghFoundRestore'))) ghRestore(true);
+    }
   }catch(e){
     if(btn) btn.disabled = false;
     toast(t('ghBad'));
   }
 }
-/* new phone / reinstall: pull the latest cloud backup and restore it in one tap */
-async function ghRestore(){
+/* does the repo already hold a backup? (existence only - nothing is downloaded) */
+async function ghHasBackup(){
+  try{
+    const r = await fetch('https://api.github.com/repos/'+S.ghRepo+'/contents/'+GH_FILE, { headers:ghHdr() });
+    return r.status === 200;
+  }catch(e){ return false; }
+}
+/* new phone / reinstall: pull the latest cloud backup and restore it in one tap.
+   skipAsk = the caller already asked (the connect flow) */
+async function ghRestore(skipAsk){
   if(!ghOn()) return;
-  if(!confirm(t(S.active ? 'bakConfirmActive' : 'ghRestoreConfirm'))) return;
+  if(!skipAsk && !confirm(t(S.active ? 'bakConfirmActive' : 'ghRestoreConfirm'))) return;
   try{
     const r = await fetch('https://api.github.com/repos/'+S.ghRepo+'/contents/'+GH_FILE,
       { headers:{ 'Authorization':'Bearer '+S.ghToken, 'Accept':'application/vnd.github.raw+json' } });

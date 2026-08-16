@@ -5,7 +5,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.14.1'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.14.2'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 /* UI strings. One flat dictionary - the app is English-only by design. */
@@ -143,7 +143,8 @@ const T = {
   ghPublicWarn:'WARNING: this repo is PUBLIC - anyone can see your data. Continue?',
   ghSyncing:'Syncing…', ghErr:'Sync pending', ghNever:'Not synced yet',
   ghLastSync:'Synced',
-  ghHint:'After every finished workout your data is pushed to your own private GitHub repo automatically. The token is entered once, stays on this device only and is never included in backup codes.',
+  ghHint:'After every finished workout your data is pushed to your own private GitHub repo automatically. Connecting itself uploads nothing, so a backup made on another phone stays untouched until you choose to sync. The token is entered once, stays on this device only and is never included in backup codes.',
+  ghFoundRestore:'A cloud backup was found in this repo. Restore it to this device now? Everything currently on this device will be replaced.',
   csvTitle:'CSV export (for analysis)',
   csvSets:'Workout sets (CSV)', csvBw:'Body weight (CSV)',
   csvHint:'One row = one set. Weights in {u}, ISO dates, UTF-8 - ready for Excel / Google Sheets / Python.',
