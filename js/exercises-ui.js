@@ -339,10 +339,14 @@ function lineChartSVG(pts, label, unit, goal){
     labels += `<text x="${padL-6}" y="${y+4}" fill="var(--dim)" font-size="11" text-anchor="end">${Math.round(v*10)/10}</text>`;
   }
   const line = data.map((p,i)=>`${X(i)},${Y(p.w)}`).join(' ');
+  /* value labels: the first and last hug the plot edges instead of centring on
+     their dot, or they would sit on top of the y-axis numbers / clip outside */
+  const lblAt = i => i===0 ? { x:X(i)+3, a:'start' }
+                   : i===data.length-1 ? { x:X(i)-3, a:'end' } : { x:X(i), a:'middle' };
   const dots = data.map((p,i)=>
     `<circle cx="${X(i)}" cy="${Y(p.w)}" r="4" fill="var(--accent)"/>` +
     `<circle cx="${X(i)}" cy="${Y(p.w)}" r="13" fill="transparent" style="cursor:pointer" onclick="chartTap(${i})"/>` +
-    (data.length<=10 ? `<text x="${X(i)}" y="${Y(p.w)-9}" fill="var(--text)" font-size="11" font-weight="700" text-anchor="middle">${fmtW(p.w)}</text>` : '')
+    (data.length<=10 ? (l=>`<text x="${l.x}" y="${Y(p.w)-9}" fill="var(--text)" font-size="11" font-weight="700" text-anchor="${l.a}">${fmtW(p.w)}</text>`)(lblAt(i)) : '')
   ).join('');
   const d0 = fmtDate(data[0].d), d1 = fmtDate(data[data.length-1].d);
   const goalLine = goal ? `<line x1="${padL}" y1="${Y(goal)}" x2="${W-padR}" y2="${Y(goal)}"

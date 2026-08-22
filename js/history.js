@@ -53,8 +53,8 @@ function htmlHistory(){
         : `<div class="empty" style="padding:6px 0 12px">${t('chartNoData')}</div>`}
       <button class="btn ghostbtn" style="margin-top:10px" onclick="openBwModal()">${t('bwLogNew')}</button>
       ${S.weights.slice(0,5).map(x=>`<div style="display:flex;gap:8px;padding:6px 0;align-items:center;font-size:14px">
-        <span style="color:var(--dim);flex:1">${fmtDate(x.date)}</span>
-        <span style="font-weight:700">${wu(x.kg,true)}</span>
+        <span style="color:var(--dim);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fmtDate(x.date)}</span>
+        <span style="font-weight:700;white-space:nowrap">${wu(x.kg,true)}</span>
         <button class="dropbtn del" style="min-height:28px" onclick="delWeight('${x.id}')">✕</button></div>`).join('')}
     </div>
     <h2 class="sec">${t('tabHistory')}</h2>`;
