@@ -526,7 +526,7 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 .setnum.warm{color:var(--orange);}
 .setnum.dropn{color:var(--accent-soft);}
 .setnum.failn{color:var(--red);}
-.dropbtn{width:24px; min-height:36px; border:none; background:none; color:var(--ghost);
+.dropbtn{width:100%; min-height:36px; border:none; background:none; color:var(--ghost);
   font-size:10px; font-weight:800; padding:0; border-radius:7px;}
 .dropbtn:active{color:var(--accent-soft);}
 .dropbtn.del{color:var(--red); font-size:12px;}
@@ -640,12 +640,13 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 .bwstepper .bwstep{flex:none; width:38px; min-height:36px; border:none; background:none;
   color:var(--accent-soft); font-size:15px; font-weight:800; padding:0; line-height:1;}
 .bwstepper .bwstep:active{opacity:.45;}
-.bwline .bwinput{flex:none; width:50px; background:none; border:none; min-height:36px;
+.bwline .bwinput{flex:none; width:64px; background:none; border:none; min-height:36px;
   font-size:16px; font-weight:800; text-align:center; -webkit-appearance:none;
   font-variant-numeric:tabular-nums;}
 .bwline .bwinput:focus{outline:none;}
 .bwline .bwu{color:var(--dim);}
-.bwline .bwhint{color:var(--ghost); font-weight:500; font-size:11px; flex:1; min-width:120px;}
+.bwline .bwhint{color:var(--ghost); font-weight:500; font-size:11px; flex:1 1 0; min-width:0;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;} /* never force the row to wrap */
 
 /* quick body-weight logging modal (home stat card) - big ±0.1 stepper */
 .bwmodal{display:flex; align-items:center; justify-content:center; gap:8px; margin:6px 0 18px;}

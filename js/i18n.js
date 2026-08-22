@@ -5,7 +5,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.14.2'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.14.3'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 /* UI strings. One flat dictionary - the app is English-only by design. */
@@ -57,7 +57,7 @@ const T = {
   updToast:'Updated to the latest version ✓',
   setUnit:'Units',
   bwEnter:'Enter your body weight',
-  woBwCol:'BW', woAddCol:'Added', woBwHint:'Body weight (stats only)',
+  woBwCol:'BW', woAddCol:'Added', woBwHint:'for stats only',
   exCreateMode:'Type', modeReps:'Reps', modeTime:'Time (sec)',
   histUnarch:'Restore', archTitle:'Archive',
   statsMuscle:'Muscle balance',
