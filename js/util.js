@@ -66,25 +66,24 @@ function daysAgoStr(iso){
 function toast(msg){
   const el = $('#toast');
   el.textContent = msg;
-  el.classList.remove('undo');
   el.classList.add('show');
   clearTimeout(toast._t);
-  toast._t = setTimeout(()=>el.classList.remove('show','undo'), 2200);
+  toast._t = setTimeout(()=>el.classList.remove('show'), 2200);
 }
 /* destructive actions apply immediately and offer a single-slot Undo for a few
    seconds instead of an "Are you sure?" dialog - restore() must fully reverse
-   the deletion (the caller captured whatever it needs beforehand) */
+   the deletion (the caller captured whatever it needs beforehand).
+   It owns its own element: an incidental toast fired meanwhile must never take
+   away the only way back, and the sheet layer covers it so a modal built on
+   now-stale indices cannot be undone from underneath. */
 function undoToast(msg, restore){
-  const el = $('#toast');
+  const el = $('#undo');
   el.innerHTML = `${esc(msg)}<button id="undo-btn">${t('undoBtn')}</button>`;
-  el.classList.add('show','undo');
-  $('#undo-btn').onclick = ()=>{
-    el.classList.remove('show','undo');
-    clearTimeout(toast._t);
-    restore(); save(); render();
-  };
-  clearTimeout(toast._t);
-  toast._t = setTimeout(()=>el.classList.remove('show','undo'), 5000);
+  el.classList.add('show');
+  const hide = ()=>{ el.classList.remove('show'); clearTimeout(undoToast._t); };
+  $('#undo-btn').onclick = ()=>{ hide(); restore(); save(); render(); };
+  clearTimeout(undoToast._t);
+  undoToast._t = setTimeout(hide, 5000);
 }
 function copyText(txt){
   if(navigator.clipboard && navigator.clipboard.writeText){

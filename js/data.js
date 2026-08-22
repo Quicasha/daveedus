@@ -254,13 +254,16 @@ async function ghConnect(){
     if(!r.ok) throw new Error('HTTP '+r.status);
     const meta = await r.json();
     if(!meta.private && !confirm(t('ghPublicWarn'))){ if(btn) btn.disabled=false; return; }
-    S.ghRepo = rep; S.ghToken = tk; S.ghDirty = 0;
+    /* a backup already up there is the reason most people connect - offer it.
+       An EMPTY repo is the opposite case: this device holds the only copy, so
+       mark it dirty and push, or connecting would leave the user unbacked. */
+    const has = await ghHasBackup();
+    S.ghRepo = rep; S.ghToken = tk; S.ghDirty = has ? 0 : 1;
     save(); render();
     toast(t('ghOkToast'));
-    /* a backup already up there is the reason most people connect - offer it */
-    if(await ghHasBackup()){
+    if(has){
       if(confirm(t(S.active ? 'bakConfirmActive' : 'ghFoundRestore'))) ghRestore(true);
-    }
+    }else cloudSync();
   }catch(e){
     if(btn) btn.disabled = false;
     toast(t('ghBad'));

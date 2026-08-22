@@ -91,7 +91,8 @@ function hydrate(s){
   s.folders = s.folders.filter(f=>f && typeof f==='object' && typeof f.id==='string');
   /* save-time stamp used by boot to pick the newer of the two on-device copies;
      a future or non-numeric stamp (clock skew) must never win forever */
-  if(typeof s.ts!=='number' || !(s.ts>0) || s.ts > Date.now()+864e5) s.ts = 0;
+  if(typeof s.ts!=='number' || !(s.ts>0)) s.ts = 0;
+  else if(s.ts > Date.now()) s.ts = Date.now(); /* clock skew: demote a future stamp to "now", never below a sibling copy */
   if(!s.mig13 && !s.folders.length && s.templates.length){
     /* one-time recovery of flat-era data: group everything under one program.
        Guarded by mig13 so deleting all programs later does not resurrect them. */
@@ -165,15 +166,14 @@ function load(){
       if(s){ LS_OK = true; return s; }
     }
   }catch(e){}
-  /* unusable blob: never destroy it silently - park it under a side key so the
-     data survives the defaults being saved over the main key */
-  if(raw){ try{ localStorage.setItem(LS_KEY+'.bad', raw); }catch(e){} }
-  /* ...and if a parked copy from an earlier boot IS readable, that beats defaults
-     (boot still consults the IndexedDB mirror and keeps whichever is newer) */
-  try{
-    const bad = localStorage.getItem(LS_KEY+'.bad');
-    if(bad && bad!==raw){ const s = hydrate(JSON.parse(bad)); if(s){ LS_OK = true; return s; } }
-  }catch(e){}
+  /* the main key is unusable. Read the copy parked by an earlier rescue FIRST -
+     it may be the last good state - and park this blob only when nothing
+     readable is parked yet, so a rescue never overwrites what it protects. */
+  let parked = null, parkedOk = null;
+  try{ parked = localStorage.getItem(LS_KEY+'.bad'); }catch(e){}
+  if(parked && parked!==raw){ try{ parkedOk = hydrate(JSON.parse(parked)); }catch(e){} }
+  if(raw && !parkedOk){ try{ localStorage.setItem(LS_KEY+'.bad', raw); }catch(e){} }
+  if(parkedOk){ LS_OK = true; return parkedOk; }
   return defaultState();
 }
 let S = load();
@@ -232,10 +232,12 @@ function save(){
   clearTimeout(idbTimer);
   idbTimer = setTimeout(()=>{ idbTimer = null; idbSet(json); }, 800);
 }
-/* backgrounding flushes BOTH pending writes - the phone may never come back */
+/* backgrounding flushes BOTH pending writes - the phone may never come back,
+   and save() re-arms the IndexedDB timer, so the mirror is written here too */
 function flushSaves(){
   if(lsTimer) save();
-  else if(idbTimer){ clearTimeout(idbTimer); idbTimer = null; idbSet(JSON.stringify(S)); }
+  clearTimeout(idbTimer); idbTimer = null;
+  idbSet(JSON.stringify(S));
 }
 /* debounced save for per-keystroke paths (weight/reps/note typing): S is already
    mutated, only the O(full history) serialize+write waits until typing settles.

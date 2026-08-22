@@ -226,10 +226,12 @@ function startWorkout(tplId){
     if(!confirm(t('woSwitchConfirm'))) return;
   }
   /* on a deload pass with "half sets" picked, plan half the sets (min 1 per exercise) */
-  const dlv = dlForTpl(tpl.id) ? ((dlActive()||{}).vol || 1) : 1;
+  const isDl = dlForTpl(tpl.id);
+  const dlv = isDl ? ((dlActive()||{}).vol || 1) : 1;
   const dls = n => Math.max(1, Math.ceil(n*dlv));
   S.active = {
     tplId: tpl.id, name: tpl.name, startedAt: new Date().toISOString(), rest:null,
+    dl: isDl ? 1 : 0, /* pinned at start: starting or ending a deload mid-session must not re-label THIS session */
     exercises: tpl.ex.map(e => buildActiveEx(e.k, exName(e.k,e.n), dls(e.s), e.r, e.ss, tpl.id, e.alts, e.pnote, e.rt, e.x2, e.id, e.base, e.dp))
   };
   /* one-shot ghosts: extra exercises logged LAST session of this template that are
@@ -267,6 +269,14 @@ function startWorkout(tplId){
   }
   save();
   go('workout');
+}
+/* is the CURRENT session a deload pass? Pinned when the workout started, so
+   starting or ending a deload from Home mid-session never re-labels a session
+   that was already lifted at full (or at reduced) load. Older sessions resumed
+   with Continue have no pin - fall back to the live cycle for those. */
+function woIsDeload(){
+  if(!S.active) return false;
+  return S.active.dl != null ? !!S.active.dl : dlForTpl(S.active.tplId);
 }
 /* ghost = values shown as placeholder / "previous" column */
 function ghostFor(ex, si){
@@ -317,7 +327,7 @@ function cbW(ex, kg){ return scaleLoad(kg, cbFactor(ex)); } /* assisted (negativ
 /* the one place that decides what a ghost SUGGESTS: deload scaling wins
    (it is deliberate and temporary), otherwise comeback easing applies */
 function sugW(ex, isWarm, gkg){
-  const dl = dlForTpl(S.active && S.active.tplId);
+  const dl = woIsDeload();
   if(dl) return isWarm ? gkg : dlW(gkg);
   return cbW(ex, gkg);
 }
@@ -376,19 +386,27 @@ function waveRecommend(k){
      reflect what the lifter lifts NOW, not the pre-break peak */
   const pts = recentSeries(k).slice(-5);
   if(pts.length < 3) return 0;
-  const best = Math.max(...pts.map(p=>p.v));
+  let best = pts[0];
+  for(const p of pts) if(p.v > best.v) best = p;
   /* e1RM is TOTAL load; the wave base lives in the ADDED-load column (what the
-     user types), so body weight / machine base come back off before rounding */
-  const add = lastAddedBase(k);
+     user types), so the body weight / machine base of THAT session comes back
+     off - taking it from any other session would shift the suggestion */
+  const add = addedBaseAt(k, best.ts);
   const su = stepU();
-  const u = Math.round(kg2u(best*0.855 - add)/su)*su;
+  const u = Math.round(kg2u(best.v*0.855 - add)/su)*su;
   return u > 0 ? u2kg(u) : 0;
 }
-/* body weight or machine base recorded on the lift's newest non-deload session */
-function lastAddedBase(k){
+/* body weight / machine base recorded for a lift in the session at ts (or the
+   newest one before it) - matched the same way e1rmSeries matches entries */
+function addedBaseAt(k, ts){
+  const info = exInfo(k);
+  const nm = (info?info.n:k).trim().toLowerCase();
   for(const h of S.history){
     if(h.arch || h.dl) continue;
-    for(const e of h.exercises) if(e.k===k) return (isBwEx(k) ? (e.bw||0) : 0) + (e.mb||0);
+    if(ts && new Date(h.date).getTime() > ts) continue;
+    for(const e of h.exercises)
+      if(e.k===k || (e.name && e.name.trim().toLowerCase()===nm))
+        return (isBwEx(k) ? (e.bw||0) : 0) + (e.mb||0);
   }
   return 0;
 }
@@ -493,7 +511,7 @@ function stopWave(k){
 function dpDue(ex){
   if(!ex.dp || isTimeEx(ex.k)) return false;
   if(S.waves[ex.k]) return false;                          /* the wave owns this lift now */
-  if(dlForTpl(S.active && S.active.tplId)) return false;   /* not on a deload pass */
+  if(woIsDeload()) return false;                            /* not on a deload pass */
   if(cbFactor(ex) < 1) return false;                       /* never offer +weight right after a break */
   if(ex.sets.some(s=>s.done || s.w)) return false;         /* already lifting / typed */
   if(!ex.last || !ex.last.sameTpl) return false;           /* borrowed values don't count */
@@ -530,7 +548,7 @@ function realPrev(ex, si){
 }
 function htmlWorkout(){
   if(!S.active){ V.screen='home'; return htmlHome(); }
-  const dl = dlForTpl(S.active.tplId);
+  const dl = woIsDeload();
   let h = '<div style="height:8px"></div>';
   if(dl){
     const d = dlActive();
@@ -1040,7 +1058,7 @@ function toggleSet(xi,si){
   if(ex.sets.findIndex(x=>!x.done) !== si) return;
   const g = ghostFor(ex,si);                 /* g.weight is kg */
   const tm = isTimeEx(ex.k), bw = isBwEx(ex.k);
-  const dl = dlForTpl(S.active.tplId);
+  const dl = woIsDeload();
   let w = parseNum(s.w), r = parseNum(s.r);  /* w is in the display unit */
   if(isNaN(w) && g) w = kg2u(sugW(ex, s.warm, ghostW(ex,g)));
   if(isNaN(r) && g) r = g.reps;
@@ -1132,7 +1150,8 @@ function toggleWoSS(xi){
 function removeWorkoutEx(xi){
   const ex = S.active.exercises[xi];
   if(!ex) return;
-  const rest = S.active.rest ? Object.assign({}, S.active.rest) : null;
+  const sid = S.active.startedAt; /* the undo must not leak into a different session */
+  const hadRest = S.active.rest ? Object.assign({}, S.active.rest) : null;
   const r = S.active.rest;
   if(r){
     const [rx, rs] = r.key.split('-').map(Number);
@@ -1142,9 +1161,11 @@ function removeWorkoutEx(xi){
   S.active.exercises.splice(xi,1);
   save(); render();
   undoToast(t('woExRemoved',{n:ex.name}), ()=>{
-    if(!S.active) return; /* the session ended meanwhile - nothing to put it back into */
-    S.active.exercises.splice(xi,0,ex);
-    S.active.rest = rest;
+    if(!S.active || S.active.startedAt !== sid) return; /* session ended or a new one started */
+    S.active.exercises.splice(Math.min(xi, S.active.exercises.length), 0, ex);
+    /* only restore the rest clock this deletion actually cleared - never stomp
+       a timer the user has started since */
+    if(hadRest && !S.active.rest) S.active.rest = hadRest;
   });
 }
 function finishWorkout(){
@@ -1182,7 +1203,7 @@ function finishWorkout(){
   const unfinished = S.active.exercises.some(ex=>!ex.ghost && ex.sets.some(s=>!s.done));
   if(unfinished && !confirm(t('woFinishPart'))) return;
   /* detect all-time PRs BEFORE this workout enters history (never on a deload pass) */
-  const isDl = dlForTpl(S.active.tplId);
+  const isDl = woIsDeload();
   const prs = [];
   if(!isDl) for(const e of exercises){
     const work = e.sets.filter(s=>!s.warm && !s.drop);

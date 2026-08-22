@@ -143,7 +143,10 @@ function histRowHtml(w){
         </div>
       </div></div>`;
   }
-  const canCont = !S.active && S.lastActive && S.lastActive.id===w.id;
+  /* Continue is an undo for an accidental Finish, not a time machine: it stops
+     being offered once the session is hours old (its clock keeps running) */
+  const canCont = !S.active && S.lastActive && S.lastActive.id===w.id
+    && (Date.now() - new Date(w.date).getTime()) < 6*3600*1000;
   return `<div class="card histrow" id="hw-${w.id}" style="${w.arch?'opacity:.65':''}" onclick="V.expanded=V.expanded==='${w.id}'?null:'${w.id}'; render()">
     <div class="hd">
       <span class="dt">${fmtDate(w.date)} <span class="tmm">${fmtClock(w.date)}</span></span>
@@ -171,7 +174,8 @@ function continueWorkout(){
      (banner, scaled ghosts, dl tagging) back exactly as it was */
   const du = S.lastActive.dl;
   if(du){
-    const d = S.deloads.find(x=>x.s===du.ds); /* the record the finish touched, not just the newest */
+    /* the record the finish touched; snapshots from before v2.14.1 carry no id */
+    const d = (du.ds && S.deloads.find(x=>x.s===du.ds)) || S.deloads[S.deloads.length-1];
     if(d){
       if(du.closed) d.e = 0;
       if(du.tplId){ const i = d.done.indexOf(du.tplId); if(i>=0) d.done.splice(i,1); }
@@ -312,10 +316,22 @@ function delWeightModal(id){
   const i = S.weights.findIndex(x=>x.id===id);
   if(i<0) return;
   const entry = S.weights[i];
+  const typed = ($('#bwm-input')||{}).value; /* keep whatever is half-entered */
   S.weights.splice(i,1);
   save(); render(); scheduleCloudSync();
+  reopenBw(typed);
+  undoToast(t('bwDelDone'), ()=>{
+    insertByDate(S.weights, entry); scheduleCloudSync();
+    reopenBw(($('#bwm-input')||{}).value); /* only if the sheet is still up */
+  });
+}
+/* redraw the body-weight sheet in place, preserving the typed value - and only
+   while it is actually open, so an Undo tapped from another screen stays put */
+function reopenBw(typed){
+  if(!document.getElementById('bwm-input')) return;
   openBwModal(true);
-  undoToast(t('bwDelDone'), ()=>{ insertByDate(S.weights, entry); scheduleCloudSync(); openBwModal(true); });
+  const i = $('#bwm-input');
+  if(i && typed!=null && typed!=='') i.value = typed;
 }
 function stepBwModal(d){
   const inp = $('#bwm-input');

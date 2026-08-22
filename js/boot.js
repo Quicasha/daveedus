@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
       if(s && (!LS_OK || (s.ts||0) > (S.ts||0))){
         /* the copy being replaced is parked, never destroyed - if the stamp
            lied (clock skew) the real data is still one key away */
-        if(LS_OK){ try{ localStorage.setItem(LS_KEY+'.bad', JSON.stringify(S)); }catch(e){} }
+        if(LS_OK && S.history.length){ try{ localStorage.setItem(LS_KEY+'.bad', JSON.stringify(S)); }catch(e){} }
         S = s; save(); applyTheme();
         if(!LS_OK) toast(t('protRecovered'));
       }
@@ -118,6 +118,9 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 });
 
 /* ===== first-launch intro: three short cards, never shown again ===== */
+/* closing the tour re-renders: step 0 can change the unit, and Home was
+   already drawn before the tour opened */
+function obClose(){ closeModal(); render(); }
 function openOnboarding(){
   S.onboarded = 1; save(); /* even a backdrop dismiss counts as seen */
   V.ob = 0;
@@ -198,7 +201,7 @@ function renderOb(){
   /* step 0: units, theme and skin - every pick applies INSTANTLY, so the sheet
      itself is the live preview before Next is ever pressed */
   if(i===0){
-    openModal(`<h3>Daveedus<button class="x" onclick="closeModal()">✕</button></h3>
+    openModal(`<h3>Daveedus<button class="x" onclick="obClose()">✕</button></h3>
       <div class="card">
         <div class="setline">
           <span class="lb">${t('setUnit')}</span>
@@ -223,7 +226,7 @@ function renderOb(){
   }
   /* step 1: pick who you are today - the welcome card talks back in those words */
   if(i===1){
-    openModal(`<h3>${t('obpT')}<button class="x" onclick="closeModal()">✕</button></h3>
+    openModal(`<h3>${t('obpT')}<button class="x" onclick="obClose()">✕</button></h3>
       <div class="obbody">${t('obpB')}</div>
       <div>${['skinny','fluffy','liar'].map(k=>
         `<button class="btn" onclick="V.obP='${k}';V.ob=2;renderOb()">${t('obp_'+k)}</button>`).join('')}</div>
@@ -235,11 +238,11 @@ function renderOb(){
     ['ob4T','ob4B',2], ['ob5T','ob5B',3], ['ob6T','ob6B',5], ['obBwT','obBwB',6], ['ob3T','ob3B',4]];
   const [tt, bb, dm] = steps[i];
   const lastStep = i === N-1;
-  openModal(`<h3>${t(tt)}<button class="x" onclick="closeModal()">✕</button></h3>
+  openModal(`<h3>${t(tt)}<button class="x" onclick="obClose()">✕</button></h3>
     ${obDemo(dm)}
     <div class="obbody">${t(bb, {p:t('obpi_'+(V.obP||'skinny'))})}</div>
     ${dotRow}
-    <button class="btn primary" onclick="${lastStep?'closeModal()':'V.ob++; renderOb()'}">${lastStep?t('obDone'):t('obNext')}</button>`);
+    <button class="btn primary" onclick="${lastStep?'obClose()':'V.ob++; renderOb()'}">${lastStep?t('obDone'):t('obNext')}</button>`);
 }
 
 /* screens with async bits need a follow-up after each full render */

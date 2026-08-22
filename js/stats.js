@@ -423,17 +423,26 @@ function currentE1rm(k){
   const rp = recentSeries(k);
   return rp.length ? Math.max(...rp.map(p=>p.v)) : 0;
 }
+/* the window a direction call may use: this training BLOCK, i.e. the newest
+   points walking back until a real break (60+ days) - never across a layoff,
+   whatever the session count. A lift nobody has trained in four months gets no
+   window at all, so it shows no arrow and no projected date. */
+function trendWindow(k){
+  const all = e1rmSeries(k);
+  if(!all.length) return [];
+  if(Date.now() - all[all.length-1].ts > 120*864e5) return [];
+  let start = all.length-1;
+  while(start > 0 && all[start].ts - all[start-1].ts <= 60*864e5) start--;
+  return all.slice(start);
+}
 /* passive stall detector: e1RM direction over the last ~6 sessions of a lift -
    rising means the training is working, flat/falling is the honest deload signal.
    Purely computed from history, never asks the user anything. */
 function trendFor(k){
-  /* CURRENT-FORM window first: after a layoff the pre-break sessions must not
-     mix into the direction call (they would fake a 'down' and mute the watch).
-     A lift trained rarely (under 4 sessions in 90 days) falls back to its last
-     6 sessions whatever their age - a slow lift still deserves an arrow. */
-  let rec = recentSeries(k);
-  if(rec.length < 4) rec = e1rmSeries(k);
-  rec = rec.slice(-6).map(p=>p.v);
+  /* CURRENT-FORM window (see trendWindow): after a layoff the pre-break
+     sessions must not mix into the direction call, and a lift nobody trains
+     any more gets no arrow at all */
+  const rec = trendWindow(k).slice(-6).map(p=>p.v);
   if(rec.length < 4) return null; /* too little data to call a direction */
   const half = Math.floor(rec.length/2);
   const a = rec.slice(0,half).reduce((x,y)=>x+y,0)/half;
@@ -447,9 +456,7 @@ function trendFor(k){
    lands within three years - anything else would be a guess, so show nothing */
 function etaFor(k, goalKg){
   if(trendFor(k) !== 'up') return null; /* the date and the trend arrow must agree */
-  let pts = recentSeries(k);
-  if(pts.length < 4) pts = e1rmSeries(k); /* same fallback as trendFor for rare lifts */
-  pts = pts.slice(-10);
+  const pts = trendWindow(k).slice(-10); /* same recency-gated window as the arrow */
   if(pts.length < 4) return null;
   /* a fit needs real calendar span - four sessions in one week (or one day)
      would extrapolate a slope of nonsense */
