@@ -150,7 +150,7 @@ function htmlHome(){
   if(cards.length){
     h += `<h2 class="sec" style="display:flex;align-items:center"><span style="flex:1">${t('homeTemplates')}</span>
       ${dl?'':`<button class="secbtn" onclick="startDeload()">${t('dlBtn')}</button>`}</h2>
-      <div class="splitgrid${cards.length===1?' one':''}">${cards.join('')}</div>`;
+      <div class="splitgrid">${cards.join('')}</div>`;
   }
   const loose = looseTemplates();
   if(loose.length && !pinned.length){
