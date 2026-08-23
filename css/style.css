@@ -472,9 +472,12 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 .noteperm:active{opacity:.6;}
 /* home: grid of split cards with their templates inside */
 .splitgrid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:2px;}
-/* a single program has no neighbour to share the row with - let it use the full
-   width; in a half card the workout name loses room to its own chips */
+/* a single program has no neighbour: the card spans the row and its workouts sit
+   two abreast inside it - compact like the two-card layout, no empty half */
 .splitgrid.one{grid-template-columns:1fr;}
+.splitgrid.one .splitcard{display:grid; grid-template-columns:1fr 1fr; gap:8px; align-content:start;}
+.splitgrid.one .splitcard .sphead{grid-column:1 / -1; margin-bottom:0;}
+.splitgrid.one .splitcard .sprow{margin-top:0;}
 .splitcard{background:var(--card); box-shadow:var(--card-shadow); border-radius:14px; padding:12px; min-width:0;}
 .splitcard .sphead{display:flex; align-items:center; gap:6px; font-size:12px; font-weight:800; letter-spacing:.5px;
   text-transform:uppercase; color:var(--dim); margin:0 2px 6px; cursor:pointer;}
