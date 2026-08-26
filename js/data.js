@@ -295,7 +295,37 @@ function ghDisconnect(){
   S.ghToken = ''; S.ghRepo = ''; S.ghDirty = 0;
   save(); render();
 }
+/* quiet cloud pill for the Home hero row: pending / syncing / synced HH:MM.
+   Tap = push now. Nothing renders when sync is not set up. */
+function syncPillHtml(){
+  if(!ghOn()) return '';
+  let cls = 'ok', txt;
+  if(V.gh==='sync'){ cls = 'busy'; txt = t('ghSyncing'); }
+  else if(S.ghDirty || V.gh==='err'){ cls = 'dirty'; txt = t('syncPending'); }
+  else if(S.ghLast){
+    const d = new Date(S.ghLast);
+    const today = new Date().toDateString()===d.toDateString();
+    txt = t('syncedAt',{t: today ? fmtClock(S.ghLast) : fmtDate(d.toISOString())});
+  }else txt = t('ghNever');
+  return `<button class="syncpill ${cls}" id="home-sync" onclick="syncNowTap()">${txt}</button>`;
+}
+function syncNowTap(){
+  if(!ghOn() || ghBusy) return;
+  S.ghDirty = 1; save();
+  cloudSync();
+}
+/* backgrounding: the debounced push may never get its 4 seconds - try NOW,
+   best effort; if the request dies with the page, ghDirty stays set and the
+   next open retries from boot */
+function flushCloudSync(){
+  if(!ghOn() || !S.ghDirty || ghBusy || !navigator.onLine) return;
+  clearTimeout(ghTimer);
+  cloudSync();
+}
 function updateGhStatus(){
+  /* the Home pill mirrors the Settings line - refresh it wherever it is up */
+  const hp = $('#home-sync');
+  if(hp) hp.outerHTML = syncPillHtml();
   const el = $('#gh-status');
   if(!el) return;
   if(V.gh==='sync'){ el.textContent = t('ghSyncing'); el.style.color = 'var(--dim)'; return; }

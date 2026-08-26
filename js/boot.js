@@ -82,6 +82,8 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   if(navigator.storage && navigator.storage.persist){
     navigator.storage.persist().catch(()=>{});
   }
+  /* a push left pending by a quick close after the last workout goes out now */
+  if(S.ghDirty && navigator.onLine) scheduleCloudSync();
   if(S.active) V.screen = 'workout';
   render();
   stepperInit();

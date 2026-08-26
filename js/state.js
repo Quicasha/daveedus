@@ -235,6 +235,7 @@ function save(){
 /* backgrounding flushes BOTH pending writes - the phone may never come back,
    and save() re-arms the IndexedDB timer, so the mirror is written here too */
 function flushSaves(){
+  if(typeof flushCloudSync==='function') flushCloudSync(); /* pending cloud push too */
   if(lsTimer) save();
   clearTimeout(idbTimer); idbTimer = null;
   idbSet(JSON.stringify(S));

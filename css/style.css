@@ -400,7 +400,13 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 .minibtn.acc{background:var(--accent-bg); color:var(--accent-soft);}
 
 /* ============ home ============ */
-.hero{margin:2px 4px 10px;}
+.hero{margin:2px 4px 10px; display:flex; align-items:center; gap:10px;}
+.hero .date{flex:1; min-width:0;}
+/* quiet cloud pill: ghost when synced, orange while a push is owed */
+.syncpill{flex:none; border:none; background:none; font-size:11px; font-weight:700; color:var(--ghost);
+  padding:4px 0; cursor:pointer; font-variant-numeric:tabular-nums;}
+.syncpill.dirty{color:var(--orange);}
+.syncpill.busy{color:var(--dim);}
 .hero .date{color:var(--dim); font-size:14px; font-weight:500;}
 .statrow{display:flex; gap:10px; margin-bottom:4px;}
 .stat{flex:1; background:var(--card); box-shadow:var(--card-shadow); border-radius:14px; padding:12px 16px;}

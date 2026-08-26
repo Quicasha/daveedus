@@ -20,7 +20,7 @@ function isStandalone(){
 function htmlHome(){
   const dateStr = new Date().toLocaleDateString('en-GB',
     { weekday:'long', month:'long', day:'numeric' });
-  let h = `<div class="hero"><div class="date">${esc(dateStr)}</div></div>`;
+  let h = `<div class="hero"><div class="date">${esc(dateStr)}</div>${syncPillHtml()}</div>`;
   /* browser tab on a phone: nudge once toward Add to Home Screen */
   const iosB = /iPhone|iPad|iPod/.test(navigator.userAgent), andB = /Android/.test(navigator.userAgent);
   if(!S.a2hsOff && !isStandalone() && (iosB || andB)){
