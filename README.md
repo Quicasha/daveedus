@@ -4,6 +4,13 @@
 
 <p align="center"><a href="https://quicasha.github.io/daveedus/"><strong>Open the app</strong></a></p>
 
+<p align="center">
+  <img src="docs/home.png" width="196" alt="Home - week plan and programs">
+  <img src="docs/workout.png" width="196" alt="Active workout - previous session ghosts, warmup ramp, rest timer">
+  <img src="docs/history.png" width="196" alt="History - tracked lifts with trends, goals and projections">
+  <img src="docs/chart.png" width="196" alt="Exercise detail - records and estimated 1RM chart with goal line">
+</p>
+
 ---
 
 ## Install
