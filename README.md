@@ -18,7 +18,7 @@ Takes half a minute. After that it runs full-screen and works fully offline.
 - Logs sets fast - last session's numbers are the placeholders, one tap confirms, green or red shows how it went, the rest clock starts itself
 - Programs with alternatives per exercise - bench taken, swap in one tap; each variant keeps its own history
 - Progression runs quietly in the background - rep-range hints, a 4-week wave for stalled lifts, deloads, eased-in suggestions after a break
-- Records and charts - e1RM trends, rep PRs, tracked lifts with goals
+- Records and charts - estimated 1RM trends, rep records, tracked lifts with goals and projections
 - The gym details covered: warm-ups, drop sets, supersets, rest timers, machine base weight, bodyweight exercises, kg / lb
 - Share a program as a short code
 
@@ -36,13 +36,13 @@ Updates install themselves the next time you open the app.
 
 ## Under the hood
 
-Plain HTML, CSS and vanilla JavaScript - no frameworks, no build step, no dependencies. State lives in `localStorage`, mirrored to `IndexedDB` as a safety net; a service worker makes it offline-first and self-updating.
+Plain HTML, CSS and vanilla JavaScript - no frameworks, no build step, no dependencies. State lives in `localStorage`, mirrored to `IndexedDB` as a safety net: writes are debounced and flushed when the app is backgrounded, on launch the newer of the two copies wins, and a copy that loses is parked rather than destroyed. A service worker makes the app offline-first and self-updating.
 
 The code is split into small per-domain scripts, loaded in dependency order (everything is global by design - inline handlers resolve against global scope):
 
 ```
 index.html              App shell + script load order
-css/style.css           Styles, seven skins x dark / light
+css/style.css           Styles: seven themes, each with dark and light palettes
 js/exercises.js         Built-in exercise database (ids are permanent)
 js/i18n.js              App version + every user-facing string
 js/util.js              Formatting, volume formula, toast, skin registry + theme

@@ -197,7 +197,7 @@ function obDemo(step){
 }
 function renderOb(){
   const i = V.ob||0;
-  const N = 10;
+  const N = 9;
   const dots = Array.from({length:N},(_,j)=>`<span class="obdot${j===i?' on':''}"></span>`).join('');
   const dotRow = `<div style="display:flex;justify-content:center;gap:6px;margin-bottom:16px">${dots}</div>`;
   /* step 0: units, theme and skin - every pick applies INSTANTLY, so the sheet
@@ -226,23 +226,14 @@ function renderOb(){
       <button class="btn primary" onclick="V.ob=1;renderOb()">${t('obNext')}</button>`);
     return;
   }
-  /* step 1: pick who you are today - the welcome card talks back in those words */
-  if(i===1){
-    openModal(`<h3>${t('obpT')}<button class="x" onclick="obClose()">✕</button></h3>
-      <div class="obbody">${t('obpB')}</div>
-      <div>${['skinny','fluffy','liar'].map(k=>
-        `<button class="btn" onclick="V.obP='${k}';V.ob=2;renderOb()">${t('obp_'+k)}</button>`).join('')}</div>
-      ${dotRow}`);
-    return;
-  }
-  const steps = [null, null,
+  const steps = [null,
     ['obwT','obwB','w'], ['ob1T','ob1B',0], ['ob2T','ob2B',1],
     ['ob4T','ob4B',2], ['ob5T','ob5B',3], ['ob6T','ob6B',5], ['obBwT','obBwB',6], ['ob3T','ob3B',4]];
   const [tt, bb, dm] = steps[i];
   const lastStep = i === N-1;
   openModal(`<h3>${t(tt)}<button class="x" onclick="obClose()">✕</button></h3>
     ${obDemo(dm)}
-    <div class="obbody">${t(bb, {p:t('obpi_'+(V.obP||'skinny'))})}</div>
+    <div class="obbody">${t(bb)}</div>
     ${dotRow}
     <button class="btn primary" onclick="${lastStep?'obClose()':'V.ob++; renderOb()'}">${lastStep?t('obDone'):t('obNext')}</button>`);
 }

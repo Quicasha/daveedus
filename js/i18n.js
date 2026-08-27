@@ -5,7 +5,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.16.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.16.1'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 /* UI strings. One flat dictionary - the app is English-only by design. */
@@ -186,10 +186,7 @@ const T = {
   waveOn:'Wave started', waveOff:'Wave stopped',
   waveChipHint:'This week’s wave target - tap to fill the sets',
   waveNextRound:'{n}: new wave round, base {w}',
-  obpT:'First - be honest', obpB:'Which one is you?',
-  obp_skinny:'Skinny bitch', obp_fluffy:'Fatso', obp_liar:'Lying to myself',
-  obpi_skinny:'skinny bitch', obpi_fluffy:'fatso', obpi_liar:'liar',
-  obwT:'Day one', obwB:'So, {p}. Took you long enough - today you finally decided to level up. From here on every set you log is evidence of the new you. Welcome aboard.',
+  obwT:'Day one', obwB:'Today you decided to level up. From here on every set you log is evidence of the new you. Welcome aboard.',
   ob1T:'It remembers last time', ob1B:'The grey numbers are your previous session. Doing it again? Just tap the check - nothing to type.',
   ob2T:'Went heavier? Type it in', ob2B:'Only the change needs typing. Green check - you beat last time. Red - not this time.',
   ob4T:'Bench taken? Swap it', ob4B:'Every exercise keeps alternatives in the ⋯ menu: one tap swaps in the next option, no waiting around. Each variant tracks its own progress.',
