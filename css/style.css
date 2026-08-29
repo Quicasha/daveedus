@@ -433,8 +433,10 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 
 /* ============ workout ============ */
 .exhead{display:flex; align-items:center; gap:8px;}
+/* long level labels ("Ab Wheel (kneeling, half)") wrap to a 2nd line instead of clipping */
 .exname{flex:1; font-family:var(--display); font-size:17px; font-weight:700; letter-spacing:-.01em;
-  color:var(--text); min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;}
+  color:var(--text); min-width:0; overflow:hidden; line-height:1.2;
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2;}
 .extarget{color:var(--dim); font-family:var(--display); font-size:12px; font-weight:700; flex:none; background:var(--input); cursor:pointer;
   border-radius:8px; padding:4px 9px; font-variant-numeric:tabular-nums;}
 /* double-progression offer: all sets hit the range top last time - tap fills weights+step */
@@ -820,8 +822,8 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 .pvnum{flex:none; width:20px; text-align:center; color:var(--ghost); font-size:13px; font-weight:700;
   font-family:var(--display); font-variant-numeric:tabular-nums;}
 .pvname{flex:1; min-width:0; font-size:15px; font-weight:600;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  display:flex; align-items:center; gap:6px;}
+  overflow:hidden; line-height:1.25; /* long level names wrap, never clip */
+  display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
 .pvname .ssic{display:flex; color:var(--accent-soft);}
 .pvname .ssic svg{width:13px; height:13px;}
 .pvsr{flex:none; color:var(--dim); font-size:14px; font-weight:700;

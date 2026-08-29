@@ -79,7 +79,7 @@ function seedAbs(fid){
         pnote:'The bench press for abs: round the back, hips fixed, elbows to the thighs - pull with the abs, not the arms. 3×15 clean twice in a row -> +2.5 kg, back to 10.' }),
       lad(raise,0,{ rt:90, pnote:raiseNote }),
       lad([
-        lv('ab-wheel',3,'6-8','Ab Wheel (kneeling, half)'),
+        lv('ab-wheel',3,'6-8','Ab Wheel (half)'),
         lv('ab-wheel',3,'8-10','Ab Wheel (kneeling)'),
         lv('ab-wheel',3,'6-8','Ab Wheel (2 s pause)'),
         lv('ab-wheel',3,'5-8','Ab Wheel (standing)') ],0,
@@ -105,7 +105,7 @@ function seedAbs(fid){
         lv('lying-leg-raise',3,'10-15','Lying Knee Raise'),
         lv('lying-leg-raise',3,'8-12'),
         lv('reverse-crunch',3,'8-12','Leg Raise + Hip Lift'),
-        lv('reverse-crunch',3,'6-10','Leg Raise + Hip Lift (3 s down)') ],0,
+        lv('reverse-crunch',3,'6-10','Hip Lift (3 s down)') ],0,
         { rt:60, pnote:'Lower back stays pinned - legs go only as low as that allows. 2-3 s lowering beats extra reps.' }),
       lad(hollow,0,{ rt:60, pnote:hollowNote }),
       lad([
