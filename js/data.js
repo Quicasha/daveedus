@@ -24,7 +24,7 @@ function shareTpl(id){
   const d = S.templates.find(x=>x.id===id);
   if(!d) return;
   const payload = { t:'tpl', name:d.name,
-    ex: d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}), ...(e.x2?{x2:1}:{}), ...(e.base?{base:e.base}:{}), ...(e.dp?{dp:e.dp}:{}) })) };
+    ex: d.ex.map(e=>{ lvlSyncBack(e); return { k:e.k, n:e.n||exName(e.k), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}), ...(e.x2?{x2:1}:{}), ...(e.base?{base:e.base}:{}), ...(e.dp?{dp:e.dp}:{}), ...(lvlsOf(e)?{ lvls:e.lvls.map(v=>({ k:v.k, n:v.n||exName(v.k), s:v.s, r:v.r, m:(exInfo(v.k)||{}).m||0 })), lvl:e.lvl||0 }:{}) }; }) };
   const code = encodeShare(payload);
   openModal(`<h3>${t('tplShare')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div style="color:var(--dim);font-size:14px;margin:0 4px 10px">${t('tplShareHint')}</div>
@@ -123,27 +123,47 @@ function openImportModal(kind){
     <button class="btn primary" style="margin-top:12px" onclick="doImport()">${t('tplImportBtn')}</button>`);
   setTimeout(()=>{ const i=$('#import-code'); if(i) i.focus(); }, 50);
 }
+/* resolve a shared exercise key: known id as-is, otherwise match by name or
+   register the friend's custom exercise locally; null = unusable entry */
+function importExKey(k, n, m){
+  if(exInfo(k)) return k;
+  const existing = allExercises().find(x=>x.n.toLowerCase()===String(n||'').toLowerCase());
+  if(existing) return existing.id;
+  if(!n) return null;
+  const info = { id:'custom-'+uid(), n:String(n).slice(0,60), g:'other', e:'other' };
+  if(m==='t') info.m = 't';
+  S.customEx.push(info);
+  return info.id;
+}
 function importTplPayload(d, folderId){
   const tpl = { id:uid(), name:String(d.name||t('tplDefaultName')).slice(0,60),
                 folderId:folderId||null, ex:[] };
   for(const e of (d.ex||[])){
-    let k = e.k;
-    if(!exInfo(k)){
-      /* unknown exercise (friend's custom one) - register it locally */
-      const existing = allExercises().find(x=>x.n.toLowerCase()===String(e.n||'').toLowerCase());
-      if(existing) k = existing.id;
-      else if(e.n){
-        const info = { id:'custom-'+uid(), n:String(e.n).slice(0,60), g:'other', e:'other' };
-        if(e.m==='t') info.m = 't';
-        S.customEx.push(info);
-        k = info.id;
-      } else continue;
-    }
+    const k = importExKey(e.k, e.n, e.m);
+    if(!k) continue;
     const alts = Array.isArray(e.alts) ? e.alts.filter(a=>exInfo(a) && a!==k) : [];
     const rt = (typeof e.rt==='number' && e.rt>=15 && e.rt<=1800) ? Math.round(e.rt/15)*15 : 0;
     const base = (typeof e.base==='number' && e.base>0 && e.base<=500) ? Math.round(e.base*10)/10 : 0;
     const dp = (typeof e.dp==='number' && e.dp>0 && e.dp<=10) ? Math.round(e.dp*1000)/1000 : 0;
-    tpl.ex.push({ id:uid(), k, s:Math.max(1,Math.min(12,e.s|0||3)), r:normReps(e.r, isTimeEx(k)?600:50), ss:!!e.ss, alts, pnote:String(e.pnote||'').slice(0,200), ...(rt?{rt}:{}), ...(e.x2?{x2:true}:{}), ...(base?{base}:{}), ...(dp?{dp}:{}) });
+    const entry = { id:uid(), k, s:Math.max(1,Math.min(12,e.s|0||3)), r:normReps(e.r, isTimeEx(k)?600:50), ss:!!e.ss, alts, pnote:String(e.pnote||'').slice(0,200), ...(rt?{rt}:{}), ...(e.x2?{x2:true}:{}), ...(base?{base}:{}), ...(dp?{dp}:{}) };
+    /* progression ladder: validate each level, keep the sender's current rung */
+    if(Array.isArray(e.lvls) && e.lvls.length>1){
+      const lvls = [];
+      for(const v of (e.lvls||[])){
+        if(!v || typeof v!=='object') continue;
+        const vk = importExKey(v.k, v.n, v.m);
+        if(!vk) continue;
+        const lbl = (v.n && exName(vk)!==v.n) ? String(v.n).slice(0,60) : '';
+        lvls.push({ k:vk, s:Math.max(1,Math.min(12,v.s|0||3)), r:normReps(v.r, isTimeEx(vk)?600:50), ...(lbl?{n:lbl}:{}) });
+      }
+      if(lvls.length>1){
+        const li = Math.max(0, Math.min(lvls.length-1, e.lvl|0));
+        entry.lvls = lvls; entry.lvl = li; entry.lvlN = 0;
+        entry.k = lvls[li].k; entry.s = lvls[li].s; entry.r = lvls[li].r; /* mirror the current level */
+        if(lvls[li].n) entry.n = lvls[li].n;
+      }
+    }
+    tpl.ex.push(entry);
   }
   S.templates.push(tpl);
   return tpl;
@@ -182,7 +202,7 @@ function doImportInner(){
     go('program');
     toast(t('tplImported',{n:tpl.name}));
   }else if(d.t==='folder' && Array.isArray(d.tpls)){
-    const f = { id:uid(), name:String(d.name||t('folderDefault')).slice(0,60), open:true };
+    const f = { id:uid(), name:String(d.name||t('folderDefault')).slice(0,60), open:true, ...(d.free?{free:true}:{}) };
     S.folders.push(f);
     d.tpls.forEach(x=>importTplPayload(x, f.id));
     save(); closeModal();

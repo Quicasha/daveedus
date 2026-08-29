@@ -51,17 +51,84 @@ function seedTemplates(fid){
       tex('overhead-triceps-ext',2,'10-15',['cable-overhead-triceps-ext','triceps-pushdown'],'To failure. Rest 1 min',60) ]}
   ];
 }
+/* Abs split: three place-based variants of the same job (gym cable / bars / floor).
+   Bodyweight slots carry a LEVEL LADDER (lvls + lvl) instead of load progression:
+   the slot's k/s/r always mirror the current level, see lvlApply() in program.js. */
+function seedAbs(fid){
+  const lv = (k,s,r,n) => Object.assign({ k, s, r }, n?{n}:{});
+  const lad = (lvls,i,extra) => Object.assign({ id:uid(),
+    lvls:lvls.map(v=>Object.assign({},v)), lvl:i, lvlN:0,
+    k:lvls[i].k, s:lvls[i].s, r:lvls[i].r }, lvls[i].n?{n:lvls[i].n}:{}, extra||{});
+  const ex = (k,s,r,extra) => Object.assign({ id:uid(), k, s, r }, extra||{});
+  const raise = [
+    lv('captains-chair-knee-raise',3,'8-15'),
+    lv('captains-chair-leg-raise',3,'8-12'),
+    lv('hanging-knee-raise',3,'8-15'),
+    lv('hanging-leg-raise',3,'8-12'),
+    lv('toes-to-bar',3,'6-10') ];
+  const hollow = [
+    lv('hollow-hold',3,'20-30','Hollow Hold (tuck)'),
+    lv('hollow-hold',3,'20-30','Hollow Hold (one leg)'),
+    lv('hollow-hold',3,'30-45'),
+    lv('hollow-rocks',3,'20-30') ];
+  const raiseNote = "Shoulders down first - 'bend the bar', zero swing. 2-3 s lowering. Top of the range on all sets, 2 sessions in a row -> next level.";
+  const hollowNote = 'Lower back PRESSED into the floor. The moment it lifts, the set is over - stop counting there.';
+  return [
+    { id:uid(), name:'Abs · Gym', folderId:fid, ex:[
+      ex('cable-crunch',3,'10-15',{ alts:['machine-crunch'], dp:2.5, rt:90,
+        pnote:'The bench press for abs: round the back, hips fixed, elbows to the thighs - pull with the abs, not the arms. 3×15 clean twice in a row -> +2.5 kg, back to 10.' }),
+      lad(raise,0,{ rt:90, pnote:raiseNote }),
+      lad([
+        lv('ab-wheel',3,'6-8','Ab Wheel (kneeling, half)'),
+        lv('ab-wheel',3,'8-10','Ab Wheel (kneeling)'),
+        lv('ab-wheel',3,'6-8','Ab Wheel (2 s pause)'),
+        lv('ab-wheel',3,'5-8','Ab Wheel (standing)') ],0,
+        { alts:['hollow-hold'], rt:90,
+          pnote:'Brace, tuck the pelvis, roll only as far as the back stays flat. Back arches or hips sag -> the set is over.' }),
+      ex('pallof-press',2,'10-12',{ rt:60,
+        pnote:'Per side. Stand side-on to the cable, press straight out and resist the turn. Easy two sessions -> +2.5 kg or a step further out.' }) ]},
+    { id:uid(), name:'Abs · Bar', folderId:fid, ex:[
+      lad(raise,0,{ rt:90, pnote:raiseNote }),
+      ex('oblique-knee-raise',2,'8-12',{ rt:60,
+        pnote:'Per side - knees up and across, alternate. Slow, packed shoulders, zero swing. 2 sets on purpose: oblique strength without a wider waist.' }),
+      lad([
+        lv('l-sit',3,'10-15','L-Sit (tuck)'),
+        lv('l-sit',3,'10-15','L-Sit (one leg)'),
+        lv('l-sit',3,'15-20','L-Sit (knees to chest)'),
+        lv('l-sit',3,'10-15') ],0,
+        { rt:90, pnote:'Dip bars: arms locked, shoulders pressed down, toes pointed. Only clean seconds count - sagging ends the set.' }),
+      lad(hollow,0,{ rt:60, pnote:hollowNote }) ]},
+    { id:uid(), name:'Abs · Home', folderId:fid, ex:[
+      ex('ab-crunch',3,'10-15',{ alts:['sit-up'], rt:60,
+        pnote:'Backpack with books held behind the head. 3×15 clean twice in a row -> add a book, back to 10. Slow up, slower down.' }),
+      lad([
+        lv('lying-leg-raise',3,'10-15','Lying Knee Raise'),
+        lv('lying-leg-raise',3,'8-12'),
+        lv('reverse-crunch',3,'8-12','Leg Raise + Hip Lift'),
+        lv('reverse-crunch',3,'6-10','Leg Raise + Hip Lift (3 s down)') ],0,
+        { rt:60, pnote:'Lower back stays pinned - legs go only as low as that allows. 2-3 s lowering beats extra reps.' }),
+      lad(hollow,0,{ rt:60, pnote:hollowNote }),
+      lad([
+        lv('side-plank',3,'20-30','Side Plank (knees)'),
+        lv('side-plank',3,'30-45'),
+        lv('side-plank',3,'20-30','Side Plank (leg raised)') ],0,
+        { alts:['plank'], rt:60,
+          pnote:'Per side. Hips high, one straight line, top shoulder stacked. Holds only, no load - keeps the waist tight, not wide.' }) ]}
+  ];
+}
 /* plate calculator: full selectable options and the default "what my gym has" set (per unit) */
 const PLATE_OPTS = { kg:[25,20,15,10,5,2.5,1.25,0.5], lb:[45,35,25,15,10,5,2.5,1.25] };
 const PLATE_DEF  = { kg:[25,20,15,10,5,2.5,1.25],      lb:[45,35,25,10,5,2.5] };
 function defaultState(){
-  const fid = uid();
+  const fid = uid(), fid2 = uid();
   return { unit:'kg', theme:'auto', skin:'locked', keepAwake:true, lastBackup:0, bakSnooze:0, mig13:true,
            restTarget:120, restSound:true, /* restTarget = last picked value in the editor */
            ghRepo:'', ghToken:'', ghLast:0, ghDirty:0, /* cloud sync - device-local, never in share codes */
            lastActive:null, /* resume snapshot of the most recently finished workout */
-           folders:[{ id:fid, name:'Upper / Lower', open:true, pinned:true }],
-           customEx:[], templates:seedTemplates(fid), history:[], weights:[], active:null,
+           folders:[{ id:fid, name:'Upper / Lower', open:true, pinned:true },
+                    /* free = pick-by-place split: no NEXT rotation, no deload, no star */
+                    { id:fid2, name:'Abs', open:true, pinned:true, free:true }],
+           customEx:[], templates:seedTemplates(fid).concat(seedAbs(fid2)), history:[], weights:[], active:null,
            trackedLifts:[], deloads:[], mainFolder:null,
            mbase:{}, /* machine starting weight per exercise key, kg; 0 = switched off on purpose */
            goals:{}, /* tracked-lift targets per exercise key: e1RM in kg */
@@ -264,7 +331,9 @@ function exInfo(k){
   return EX_DB.find(x=>x.id===k) || S.customEx.find(x=>x.id===k) || null;
 }
 function allExercises(){ return EX_DB.concat(S.customEx); }
-function exName(k, fallback){ const i = exInfo(k); return i ? i.n : (fallback || k); }
+/* the explicit per-slot label (level names like "Hollow Hold (tuck)") beats the
+   database name; the database beats a bare key */
+function exName(k, fallback){ const i = exInfo(k); return fallback || (i ? i.n : k); }
 /* time-based exercise (plank etc.): "reps" column means seconds */
 function isTimeEx(k){ const i = exInfo(k); return !!(i && i.m==='t'); }
 /* bodyweight exercise (pull-up, dip...): weight column is ADDED load (empty = BW only) */

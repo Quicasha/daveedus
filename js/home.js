@@ -116,11 +116,27 @@ function htmlHome(){
   const showFolders = pinned.length ? pinned : S.folders;
   /* workout + full-cycle counters since the last deload - the "when to deload" gauge */
   const counts = tplCounts();
-  /* the main-program star only matters when there is a choice */
-  const multi = showFolders.filter(f=>S.templates.some(x=>x.folderId===f.id)).length > 1;
+  /* the main-program star only matters when there is a choice (free splits opt out) */
+  const multi = showFolders.filter(f=>!f.free && S.templates.some(x=>x.folderId===f.id)).length > 1;
   const cards = showFolders.map(f=>{
     const tpls = S.templates.filter(x=>x.folderId===f.id);
     if(!tpls.length) return '';
+    if(f.free){
+      /* pick-by-place split: no rotation, no cycles, no star - the honest numbers
+         are "how many times ever" and "how long ago", per variant */
+      const rows = tpls.map(d=>{
+        const last = S.history.find(h=>h.tplId===d.id && !h.arch);
+        const total = S.history.reduce((a,h)=>a + (h.tplId===d.id && !h.arch && !h.dl ? 1 : 0), 0);
+        const ago = last ? (n=> n<=0 ? t('today') : n+'d')(
+          Math.round((new Date().setHours(0,0,0,0) - new Date(last.date).setHours(0,0,0,0))/864e5)) : '—';
+        return `<button class="sprow" onclick="openWoPreview('${d.id}')">
+          <span class="spn">${esc(d.name)}</span>
+          ${total?`<span class="spcnt">${total}</span>`:''}
+          <span class="spwd">${ago}</span></button>`;
+      }).join('');
+      return `<div class="splitcard">
+        <div class="sphead" onclick="openSplit('${f.id}')"><span class="sphn">${esc(f.name)} ›</span></div>${rows}</div>`;
+    }
     /* weekday plan applies to the STARRED program only (like deload): there a
        workout assigned to TODAY wins; otherwise suggest the one AFTER the most
        recently done in this split (cyclic) */

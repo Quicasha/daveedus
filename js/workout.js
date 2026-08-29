@@ -115,6 +115,8 @@ function makeMainExercise(xi, key){
       if(te.n) delete te.n; /* custom label belonged to the old exercise */
       te.alts = (te.alts||[]).filter(a=>a!==key);
       if(!te.alts.includes(oldBase)) te.alts.push(oldBase);
+      const L = lvlsOf(te); /* on a ladder this rewrites the CURRENT level's movement */
+      if(L && L[te.lvl||0]){ L[te.lvl||0].k = key; delete L[te.lvl||0].n; }
     }
   }
   ex.baseK = key;
@@ -137,6 +139,43 @@ function addAltExercise(xi){
   });
 }
 /* per-exercise action menu - keeps the exercise header uncluttered */
+/* ===== progression ladder in-session: the L-chip opens this sheet =====
+   Tap any level to move there NOW (down when today is not happening, up when
+   it is too easy) - the template remembers, next session starts on that level. */
+function openLvlSheet(xi){
+  const ex = S.active.exercises[xi];
+  const te = (ex && !ex.adhoc) ? tplEntryFor(ex) : null;
+  const L = lvlsOf(te);
+  if(!L) return;
+  const cur = te.lvl||0;
+  const items = L.map((v,i)=>`<div class="swapitem swaprow ${i===cur?'on':''}">
+    <button class="swapmain" onclick="lvlGo(${xi},${i});closeModal()">
+      <span class="sn">L${i+1} · ${esc(exName(v.k,v.n))} <span class="basetag">${v.s}×${v.r}${isTimeEx(v.k)?' s':''}</span></span>
+      ${i===cur?`<span class="chk">${ACT_ICONS.chevron}</span>`:''}
+    </button></div>`).join('');
+  openModal(`<h3>${t('lvlSheetTitle')}<button class="x" onclick="closeModal()">✕</button></h3>
+    <div style="color:var(--dim);font-size:13px;line-height:1.5;margin:0 4px 10px">${te.lvlN?t('lvlStreak',{n:te.lvlN}):t('lvlHint')}</div>
+    <div class="swaplist">${items}</div>`);
+}
+function lvlGo(xi, li){
+  const ex = S.active.exercises[xi];
+  const te = (ex && !ex.adhoc) ? tplEntryFor(ex) : null;
+  const L = lvlsOf(te);
+  if(!L || !L[li] || li===(te.lvl||0)) return;
+  lvlApply(te, li);
+  ex.targetSets = te.s; ex.targetReps = te.r;
+  ex.baseK = te.k;                    /* the new level IS the plan - no "back to" bar */
+  ex.alts = (te.alts||[]).slice();
+  if(te.k !== ex.k){
+    swapExercise(xi, te.k);           /* stash keeps anything already logged on the old level */
+  } else if(!ex.sets.some(s=>s.done)){
+    ex.sets = Array.from({length:ex.targetSets}, ()=>newSet());
+  }
+  ex.name = exName(te.k, te.n);       /* level label, e.g. "Hollow Hold (tuck)" */
+  updateExDone(ex);
+  save(); render();
+  toast(t('lvlSetToast',{n:'L'+(li+1)+' · '+ex.name}));
+}
 function openExMenu(xi){
   const ex = S.active.exercises[xi];
   if(!ex) return;
@@ -575,6 +614,9 @@ function htmlWorkout(){
       <button class="gx" onclick="dismissGhostEx(${xi})" aria-label="dismiss">✕</button>
     </div>`;
     const tm = isTimeEx(ex.k), bw = isBwEx(ex.k);
+    /* progression ladder chip: current level, taps open the level sheet */
+    const lte = (!ex.adhoc && ex.tplId) ? tplEntryFor(ex) : null;
+    const lvlL = lvlsOf(lte);
     const firstNotDone = ex.sets.findIndex(s=>!s.done); /* -1 = all done */
     const wcol = bw ? t('woAddCol') : unitL();
     /* pair-of-dumbbells toggle lives right in the column header - one tap, no menus */
@@ -647,6 +689,7 @@ function htmlWorkout(){
         ${(!tm && !dl && S.waves[ex.k] && !exFullyDone(ex))?(w=>{const wt=waveTarget(w);
           return `<button class="dpchip" onclick="applyWave(${xi})" title="${t('waveChipHint')}">W${w.idx+1} ${fmtW(kg2u(wt.w))}×${wt.r}</button>`;})(S.waves[ex.k]):''}
         ${dpDue(ex)?`<button class="dpchip" onclick="applyDp(${xi})" title="${t('dpChipHint')}">+${fmtW(kg2u(ex.dp))}</button>`:''}
+        ${lvlL?`<button class="dpchip" onclick="openLvlSheet(${xi})" title="${t('lvlSheetTitle')}">L${(lte.lvl||0)+1}/${lvlL.length}</button>`:''}
         <div class="extarget" onclick="openTargetEdit(${xi})">${ex.targetSets}×${ex.targetReps}${tm?'s':''}</div>
         ${ex.adhoc?`<button class="minibtn pinex" onclick="pinToTpl(${xi})" aria-label="${t('pinExLabel')}">${ACT_ICONS.pin}</button>`:''}
         ${(tm||bw)?'':`<button class="minibtn warm${ex.sets.some(s=>s.warm&&!s.done)?' on':''}" onclick="autoWarmup(${xi})" aria-label="${t('warmBtn')}">W</button>`}
@@ -1271,6 +1314,25 @@ function finishWorkout(){
       }
     }
   }
+  /* level ladders: top of the range on every work set, two sessions in a row ->
+     the slot advances a level for next time (manual moves always win, see lvlGo) */
+  const lvlUps = [];
+  if(!isDl) for(const ex of S.active.exercises){
+    if(ex.ghost || ex.adhoc) continue;
+    const te = tplEntryFor(ex);
+    const L = lvlsOf(te);
+    if(!L || ex.k !== te.k) continue;  /* swapped to something else today - no verdict */
+    const work = ex.sets.filter(s=>s.done && !s.warm && !s.drop);
+    if(!work.length) continue;
+    const top = repsParse(ex.targetReps).hi;
+    const clean = work.length >= ex.targetSets && work.every(s=>parseNum(s.r) >= top);
+    if(!clean){ te.lvlN = 0; continue; }
+    te.lvlN = (te.lvlN||0) + 1;
+    if(te.lvlN >= 2 && (te.lvl||0) < L.length-1){
+      lvlApply(te, (te.lvl||0)+1);
+      lvlUps.push('L'+((te.lvl||0)+1)+' · '+exName(te.k, te.n));
+    }
+  }
   /* keep the finished session resurrectable - "Continue" on the newest history
      row undoes an accidental Finish with sets and elapsed time intact */
   S.lastActive = { id:entry.id, act:S.active, waved:waveSnaps, ...(dlUndo?{dl:dlUndo}:{}) };
@@ -1281,6 +1343,7 @@ function finishWorkout(){
   showSummary(dur, vol, exercises.reduce((a,e)=>a+e.sets.length,0), prs, fact);
   if(ended.length) toast(t(ended[0].verdict==='win'?'waveWin':'waveFlat', {n:exName(ended[0].k)}));
   else if(wrapped.length) toast(t('waveNextRound',{n:exName(wrapped[0].k), w:wu(wrapped[0].base,true)}));
+  else if(lvlUps.length) toast(t('lvlUpToast',{n:lvlUps[0]}));
 }
 function showSummary(dur, vol, setsDone, prs, fact){
   const prHtml = prs.length ? `<h2 class="sec" style="margin-top:14px">${t('sumPRs')}</h2>` +

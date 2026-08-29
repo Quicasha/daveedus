@@ -6,6 +6,37 @@
    ============================================================ */
 'use strict';
 
+/* ======================= LEVEL LADDERS =======================
+   A template slot may carry an ordered progression ladder (lvls: [{k,s,r,n?}]
+   + lvl index + lvlN clean-session streak). The slot's k/s/r/n always MIRROR
+   the current level, so the rest of the app (start, share, stats, deload)
+   sees a perfectly normal slot. Moving levels only rewrites the mirror. */
+function lvlsOf(te){ return (te && Array.isArray(te.lvls) && te.lvls.length>1) ? te.lvls : null; }
+/* target edits land on the slot's k/s/r - fold them back into the current level */
+function lvlSyncBack(te){
+  const L = lvlsOf(te);
+  const cur = L && L[te.lvl||0];
+  if(!cur) return;
+  cur.k = te.k; cur.s = te.s; cur.r = te.r;
+  if(te.n) cur.n = te.n; else delete cur.n;
+}
+function lvlApply(te, i){
+  const L = lvlsOf(te);
+  if(!L) return;
+  i = Math.max(0, Math.min(L.length-1, i));
+  lvlSyncBack(te);
+  te.lvl = i; te.lvlN = 0;
+  const v = L[i];
+  te.k = v.k; te.s = v.s; te.r = v.r;
+  if(v.n) te.n = v.n; else delete te.n;
+}
+function setTplLvl(id,i,li){
+  const d = S.templates.find(x=>x.id===id);
+  if(!d || !d.ex[i]) return;
+  lvlApply(d.ex[i], li);
+  save(); render();
+}
+
 /* ======================= PROGRAM (splits + templates) ======================= */
 function tplCardHtml(d){
   const groups = [...new Set(d.ex.map(e=>{ const i=exInfo(e.k); return i?t('g_'+i.g):null; }).filter(Boolean))].slice(0,3).join(', ');
@@ -69,6 +100,12 @@ function htmlSplitView(){
     <div class="card">
       <div style="color:var(--dim);font-size:13px;margin-bottom:6px">${t('folderName')}</div>
       <input class="nameinput" type="text" value="${esc(f.name)}" oninput="renameFolder('${f.id}',this.value)">
+      <div style="color:var(--dim);font-size:13px;margin:12px 0 6px">${t('trkLabel')}</div>
+      <div class="chips" style="padding-bottom:0">
+        <button class="chip ${!f.free?'on':''}" onclick="setFolderFree('${f.id}',0)">${t('trkSeq')}</button>
+        <button class="chip ${f.free?'on':''}" onclick="setFolderFree('${f.id}',1)">${t('trkFree')}</button>
+      </div>
+      <div style="font-size:12px;color:var(--ghost);line-height:1.5;margin-top:8px">${t('trkHint')}</div>
     </div>`;
   h += tpls.map(tplCardHtml).join('') || `<div class="empty">—</div>`;
   h += `<button class="btn ghostbtn" onclick="addTplTo('${f.id}')">${t('tplNew')}</button>
@@ -82,6 +119,14 @@ function addFolder(){
   S.folders.push(f);
   save();
   openSplit(f.id);
+}
+/* free = pick-by-place split: home drops NEXT/cycles, deload and the main star skip it */
+function setFolderFree(id,v){
+  const f = S.folders.find(x=>x.id===id);
+  if(!f) return;
+  if(v) f.free = true; else delete f.free;
+  if(f.free && S.mainFolder===id) S.mainFolder = null;
+  save(); render();
 }
 function renameFolder(id,v){
   const f = S.folders.find(x=>x.id===id);
@@ -107,8 +152,8 @@ function shareFolder(id){
   const f = S.folders.find(x=>x.id===id);
   if(!f) return;
   const tpls = S.templates.filter(x=>x.folderId===id);
-  const payload = { t:'folder', name:f.name,
-    tpls: tpls.map(d=>({ name:d.name, ex:d.ex.map(e=>({ k:e.k, n:exName(e.k,e.n), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}), ...(e.x2?{x2:1}:{}), ...(e.base?{base:e.base}:{}), ...(e.dp?{dp:e.dp}:{}) })) })) };
+  const payload = { t:'folder', name:f.name, ...(f.free?{free:1}:{}),
+    tpls: tpls.map(d=>({ name:d.name, ex:d.ex.map(e=>{ lvlSyncBack(e); return { k:e.k, n:e.n||exName(e.k), s:e.s, r:e.r, ss:e.ss?1:0, m:(exInfo(e.k)||{}).m||0, alts:(e.alts||[]), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}), ...(e.x2?{x2:1}:{}), ...(e.base?{base:e.base}:{}), ...(e.dp?{dp:e.dp}:{}), ...(lvlsOf(e)?{ lvls:e.lvls.map(v=>({ k:v.k, n:v.n||exName(v.k), s:v.s, r:v.r, m:(exInfo(v.k)||{}).m||0 })), lvl:e.lvl||0 }:{}) }; }) })) };
   const code = encodeShare(payload);
   openModal(`<h3>${t('folderShare')}<button class="x" onclick="closeModal()">✕</button></h3>
     <div style="color:var(--dim);font-size:14px;margin:0 4px 10px">${t('folderShareHint')}</div>
@@ -166,6 +211,12 @@ function htmlTplEdit(){
       ? rnum('lo',p.lo) + `<span class="rgdash">-</span>` + rnum('hi',p.hi)
       : rnum('single',p.lo);
     const canSS = i < d.ex.length-1;
+    const L = lvlsOf(e);
+    const lvlRow = L ? `<div class="ctlrow">
+        <span class="clbl">${t('lvlLabel')}</span>
+        ${L.map((v,li)=>`<button class="rangetog ${li===(e.lvl||0)?'acc':''}" onclick="setTplLvl('${d.id}',${i},${li})">L${li+1}</button>`).join('')}
+      </div>
+      <div style="font-size:12px;color:var(--ghost);line-height:1.5;margin:2px 0 4px">${t('lvlHint')}</div>` : '';
     return `<div class="exedit">
       <div class="exhrow">
         <div class="exlabel">
@@ -179,6 +230,7 @@ function htmlTplEdit(){
           <button class="iconbtn2 danger" onclick="delTplEx('${d.id}',${i})" aria-label="delete">${ACT_ICONS.x}</button>
         </div>
       </div>
+      ${lvlRow}
       <div class="ctlrow">
         <span class="clbl">${t('daySets')}</span>
         <div class="numfield">
@@ -239,7 +291,7 @@ function dupTpl(id){
   const d = S.templates.find(x=>x.id===id);
   if(!d) return;
   const copy = { id:uid(), name:(d.name+' '+t('tplDupSuffix')).slice(0,60), folderId:d.folderId,
-    ex: d.ex.map(e=>({ id:uid(), k:e.k, s:e.s, r:e.r, ss:!!e.ss, alts:(e.alts||[]).slice(), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}), ...(e.x2?{x2:true}:{}), ...(e.base?{base:e.base}:{}), ...(e.dp?{dp:e.dp}:{}) })) };
+    ex: d.ex.map(e=>({ id:uid(), k:e.k, s:e.s, r:e.r, ss:!!e.ss, alts:(e.alts||[]).slice(), pnote:e.pnote||'', ...(e.rt?{rt:e.rt}:{}), ...(e.x2?{x2:true}:{}), ...(e.base?{base:e.base}:{}), ...(e.dp?{dp:e.dp}:{}), ...(e.n?{n:e.n}:{}), ...(lvlsOf(e)?{ lvls:e.lvls.map(v=>Object.assign({},v)), lvl:e.lvl||0, lvlN:0 }:{}) })) };
   S.templates.splice(S.templates.indexOf(d)+1, 0, copy);
   save();
   openTpl(copy.id);

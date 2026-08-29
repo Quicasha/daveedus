@@ -43,8 +43,10 @@ function dlLastStart(){
 /* MAIN program: the split deload (and future self-regulation features) anchors to.
    User-picked among the pinned home cards; falls back to the first shown card. */
 function mainFolderId(){
-  const pinned = S.folders.filter(f=>f.pinned);
-  const pool = pinned.length ? pinned : S.folders;
+  /* free (pick-by-place) splits never anchor deload or the weekday plan */
+  const own = S.folders.filter(f=>!f.free);
+  const pinned = own.filter(f=>f.pinned);
+  const pool = pinned.length ? pinned : own;
   if(S.mainFolder && pool.some(f=>f.id===S.mainFolder)) return S.mainFolder;
   return pool.length ? pool[0].id : null;
 }

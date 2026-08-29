@@ -5,7 +5,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.16.1'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.17.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 /* UI strings. One flat dictionary - the app is English-only by design. */
@@ -41,6 +41,12 @@ const T = {
   folderName:'Program name',
   folderShare:'Program code', folderShareHint:'Send this code to a friend - they get the whole program with all workouts.',
   folderImported:'Program “{n}” added ✓', tplFolder:'Program', deleteBtn:'Delete', nextBadge:'NEXT',
+  lvlLabel:'Level', lvlSheetTitle:'Progression',
+  lvlHint:'Top of the rep range on every set, two clean sessions in a row → the next level loads itself. Or move anytime by hand.',
+  lvlStreak:'{n}/2 clean sessions toward the next level.',
+  lvlUpToast:'Level up: {n} ✓', lvlSetToast:'Now {n}',
+  trkLabel:'Tracking', trkSeq:'In order', trkFree:'Free pick',
+  trkHint:'“In order” suggests the NEXT workout in rotation. “Free pick” is for by-place splits (gym / bar / home): no NEXT, no deload - each workout just shows its count and days since.',
   progEmpty:'No programs yet - tap “+ New program” below and build your split.',
   homeNoProg:'No programs - create one in the Programs tab.',
   histEditTitle:'Edit workout',
