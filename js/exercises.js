@@ -137,7 +137,7 @@ const EX_DB = [
   { id:'lying-leg-raise',        n:'Lying Leg Raise',             g:'core', e:'bodyweight' },
   { id:'hanging-knee-raise',     n:'Hanging Knee Raise',          g:'core', e:'bodyweight' },
   { id:'russian-twist',          n:'Russian Twist',               g:'core', e:'bodyweight' },
-  { id:'ab-wheel',               n:'Ab Wheel Rollout',            g:'core', e:'other' },
+  { id:'ab-wheel',               n:'Ab Wheel Rollout',            g:'core', e:'bodyweight' }, /* weight column = ADDED load, empty is fine */
   { id:'sit-up',                 n:'Sit-Up',                      g:'core', e:'bodyweight' },
   { id:'side-plank',             n:'Side Plank',                  g:'core', e:'bodyweight', m:'t' },
   { id:'captains-chair-knee-raise', n:"Captain's Chair Knee Raise", g:'core', e:'bodyweight' },
