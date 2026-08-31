@@ -25,7 +25,7 @@
     <td align="center"><img src="shots/locked-in-settings.gif" width="240" alt="Settings"><br><sub><b>Settings</b></sub></td>
   </tr>
 </table>
-<p align="center"><sub><b>The details</b> - what the training brain does, in Spooderman</sub></p>
+<p align="center"><sub><b>The details</b> - what the training brain does</sub></p>
 <table>
   <tr>
     <td align="center"><img src="shots/spooderman-ladder.gif" width="240" alt="Progression ladder"><br><sub><b>Progression ladder</b></sub></td>
