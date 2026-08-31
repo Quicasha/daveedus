@@ -10,6 +10,23 @@
   <img alt="PWA" src="https://img.shields.io/badge/PWA-offline--first-5a0fc8.svg">
 </p>
 
+<details>
+<summary><b>See it in action</b> - every tab, live (Locked In theme)</summary>
+<br>
+<table>
+  <tr>
+    <td align="center"><img src="shots/locked-in-home.jpg" width="240" alt="Home"><br><sub><b>Home</b></sub></td>
+    <td align="center"><img src="shots/locked-in-workout.gif" width="240" alt="Workout"><br><sub><b>Workout</b></sub></td>
+    <td align="center"><img src="shots/locked-in-programs.gif" width="240" alt="Programs"><br><sub><b>Programs</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="shots/locked-in-exercises.gif" width="240" alt="Exercises"><br><sub><b>Exercises</b></sub></td>
+    <td align="center"><img src="shots/locked-in-history.gif" width="240" alt="History"><br><sub><b>History</b></sub></td>
+    <td align="center"><img src="shots/locked-in-settings.gif" width="240" alt="Settings"><br><sub><b>Settings</b></sub></td>
+  </tr>
+</table>
+</details>
+
 ---
 
 ## Install

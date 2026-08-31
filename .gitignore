@@ -1,0 +1,3 @@
+# raw screen recordings stay local - only the finished GIFs/JPGs ship
+shots/*.mp4
+shots/*.mov
