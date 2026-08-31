@@ -13,17 +13,16 @@
 <details>
 <summary><b>See it in action</b> - every tab, live</summary>
 <br>
-<p align="center"><sub>Click any tab to watch it in motion.</sub></p>
 <table>
   <tr>
     <td align="center"><img src="shots/locked-in-home.jpg" width="240" alt="Home"><br><sub><b>Home</b></sub></td>
-    <td align="center"><a href="shots/locked-in-workout.gif"><img src="shots/locked-in-workout-still.jpg" width="240" alt="Workout"></a><br><sub><b>Workout ▶</b></sub></td>
-    <td align="center"><a href="shots/locked-in-programs.gif"><img src="shots/locked-in-programs-still.jpg" width="240" alt="Programs"></a><br><sub><b>Programs ▶</b></sub></td>
+    <td align="center"><img src="shots/locked-in-workout.gif" width="240" alt="Workout"><br><sub><b>Workout</b></sub></td>
+    <td align="center"><img src="shots/locked-in-programs.gif" width="240" alt="Programs"><br><sub><b>Programs</b></sub></td>
   </tr>
   <tr>
-    <td align="center"><a href="shots/locked-in-exercises.gif"><img src="shots/locked-in-exercises-still.jpg" width="240" alt="Exercises"></a><br><sub><b>Exercises ▶</b></sub></td>
-    <td align="center"><a href="shots/locked-in-history.gif"><img src="shots/locked-in-history-still.jpg" width="240" alt="History"></a><br><sub><b>History ▶</b></sub></td>
-    <td align="center"><a href="shots/locked-in-settings.gif"><img src="shots/locked-in-settings-still.jpg" width="240" alt="Settings"></a><br><sub><b>Settings ▶</b></sub></td>
+    <td align="center"><img src="shots/locked-in-exercises.gif" width="240" alt="Exercises"><br><sub><b>Exercises</b></sub></td>
+    <td align="center"><img src="shots/locked-in-history.gif" width="240" alt="History"><br><sub><b>History</b></sub></td>
+    <td align="center"><img src="shots/locked-in-settings.gif" width="240" alt="Settings"><br><sub><b>Settings</b></sub></td>
   </tr>
 </table>
 </details>
