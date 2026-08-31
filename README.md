@@ -24,8 +24,8 @@ Takes half a minute. After that it runs full-screen and works fully offline.
 - Logs sets fast - last session's numbers are the placeholders, one tap confirms, green or red shows how it went, the rest clock starts itself
 - Programs with alternatives per exercise - bench taken, swap in one tap; each variant keeps its own history
 - Progression runs quietly in the background - rep-range hints, a 4-week wave for stalled lifts, deloads, eased-in suggestions after a break
-- Level ladders for bodyweight work - an exercise slot holds an L1→L5 progression (knee raise → toes-to-bar, half rollout → standing wheel); hit the top of the range two sessions in a row and the next level loads itself, or move by hand mid-workout
-- Two kinds of programs - rotations that suggest what's NEXT, and free-pick splits (gym / bar / home) that skip rotation and deload and just show how often and how long ago
+- Level ladders for bodyweight work - L1→L5 progressions (knee raise → toes-to-bar); two clean sessions at the top of the range and the next level loads itself
+- Rotation programs suggest what's NEXT; free-pick splits (gym / bar / home) skip rotation and deload, showing how often and how long ago instead
 - Records and charts - estimated 1RM trends, rep records, tracked lifts with goals and projections
 - The gym details covered: warm-ups, drop sets, supersets, rest timers, machine base weight, bodyweight exercises, kg / lb
 - Share a program as a short code
