@@ -4,6 +4,11 @@
 
 <p align="center"><a href="https://quicasha.github.io/daveedus/"><strong>Open the app</strong></a></p>
 
+<p align="center">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+  <img alt="Vanilla JS" src="https://img.shields.io/badge/vanilla_JS-no_dependencies-f7df1e.svg">
+  <img alt="PWA" src="https://img.shields.io/badge/PWA-offline--first-5a0fc8.svg">
+</p>
 
 ---
 
@@ -19,6 +24,8 @@ Takes half a minute. After that it runs full-screen and works fully offline.
 - Logs sets fast - last session's numbers are the placeholders, one tap confirms, green or red shows how it went, the rest clock starts itself
 - Programs with alternatives per exercise - bench taken, swap in one tap; each variant keeps its own history
 - Progression runs quietly in the background - rep-range hints, a 4-week wave for stalled lifts, deloads, eased-in suggestions after a break
+- Level ladders for bodyweight work - an exercise slot holds an L1→L5 progression (knee raise → toes-to-bar, half rollout → standing wheel); hit the top of the range two sessions in a row and the next level loads itself, or move by hand mid-workout
+- Two kinds of programs - rotations that suggest what's NEXT, and free-pick splits (gym / bar / home) that skip rotation and deload and just show how often and how long ago
 - Records and charts - estimated 1RM trends, rep records, tracked lifts with goals and projections
 - The gym details covered: warm-ups, drop sets, supersets, rest timers, machine base weight, bodyweight exercises, kg / lb
 - Share a program as a short code
@@ -70,3 +77,7 @@ Weights are stored in kilograms and converted only for display, so switching uni
 **Run locally** - any static file server: `powershell -File serve.ps1`, then open `http://localhost:8317`.
 
 **Deploy** - push to `main`; GitHub Actions publishes to Pages. Bump `APP_VER` in `js/i18n.js` and `CACHE` in `sw.js` on every release so installed devices pick up the new files.
+
+## License
+
+[MIT](LICENSE) - use it, fork it, ship it. Attribution is appreciated, an issue with feedback even more so.
