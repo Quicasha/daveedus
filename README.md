@@ -25,6 +25,19 @@
     <td align="center"><img src="shots/locked-in-settings.gif" width="240" alt="Settings"><br><sub><b>Settings</b></sub></td>
   </tr>
 </table>
+<p align="center"><sub><b>The details</b> - what the training brain does, in Spooderman</sub></p>
+<table>
+  <tr>
+    <td align="center"><img src="shots/spooderman-ladder.gif" width="240" alt="Progression ladder"><br><sub><b>Progression ladder</b></sub></td>
+    <td align="center"><img src="shots/spooderman-deload.gif" width="240" alt="Deload"><br><sub><b>Deload</b></sub></td>
+    <td align="center"><img src="shots/spooderman-wave.gif" width="240" alt="Wave mode"><br><sub><b>Wave mode</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="shots/spooderman-superset.gif" width="240" alt="Superset"><br><sub><b>Superset</b></sub></td>
+    <td align="center"><img src="shots/spooderman-swap.gif" width="240" alt="Swap exercise"><br><sub><b>Swap exercise</b></sub></td>
+    <td align="center"><img src="shots/spooderman-warmup.gif" width="240" alt="Warmup ramp"><br><sub><b>Warmup ramp</b></sub></td>
+  </tr>
+</table>
 </details>
 
 ---
