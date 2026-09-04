@@ -51,7 +51,7 @@ export function makeApp(){
   /* top-level let/const in classic scripts are lexical bindings, invisible as
      context properties - bridge the ones tests need with LIVE accessors, so
      `app.S` always follows the current binding even if app code reassigns it */
-  for (const name of ['S', 'V', 'EX_DB', 'T', 'LB_PER_KG']){
+  for (const name of ['S', 'V', 'EX_DB', 'T', 'T_EN', 'T_LT', 'LB_PER_KG']){
     vm.runInContext(
       `Object.defineProperty(globalThis, '${name}', { get: () => ${name}, set: v => { ${name} = v; }, configurable: true });`,
       ctx);

@@ -67,7 +67,7 @@ function customRange(c){
 }
 /* time buckets for a chart's period setting; bucket size auto-adapts on custom ranges */
 function bucketsFor(c){
-  const loc = 'en-GB';
+  const loc = uiLocale();
   const buckets = [];
   if(c.p==='c'){
     const r = customRange(c);
@@ -330,7 +330,7 @@ function rhythmYearHtml(){
     for(let r=0; r<7; r++){
       const d = new Date(colStart); d.setDate(colStart.getDate()+r);
       const inYear = d.getFullYear()===yr;
-      if(inYear && d.getDate()===1) months.push([c, d.toLocaleDateString('en-GB',{month:'short'})]);
+      if(inYear && d.getDate()===1) months.push([c, d.toLocaleDateString(uiLocale(),{month:'short'})]);
       if(!inYear || d > today){ col += `<i class="yc off"></i>`; continue; }
       const w = map[d.getTime()];
       if(w){ total += w.n; byMonth[d.getMonth()] += w.n; if(w.dl) dlDays++; days++; }
@@ -344,7 +344,7 @@ function rhythmYearHtml(){
   let lastLbl = -3, mh = '';
   for(const [c,l] of months){ if(c-lastLbl >= 3){ mh += `<span style="left:${(c/cols.length*100).toFixed(2)}%">${l}</span>`; lastLbl = c; } }
   const bestI = byMonth.indexOf(Math.max(...byMonth));
-  const best = byMonth[bestI] ? t('rhBest',{m:new Date(yr,bestI,1).toLocaleDateString('en-GB',{month:'long'}), n:byMonth[bestI]}) : '';
+  const best = byMonth[bestI] ? t('rhBest',{m:new Date(yr,bestI,1).toLocaleDateString(uiLocale(),{month:'long'}), n:byMonth[bestI]}) : '';
   const canPrev = yr > first, canNext = yr < now.getFullYear();
   return `<div class="ynav">
       <button class="minibtn" ${canPrev?'':'disabled'} onclick="V.cp.rh.y=${yr-1}; render()">‹</button>
@@ -394,9 +394,9 @@ function rhythmAllHtml(){
     }
     rows += `<div class="mrow"><span class="myr">${y}</span>${cells}</div>`;
   }
-  const mons = Array.from({length:12},(_,i)=>`<span>${new Date(2000,i,1).toLocaleDateString('en-GB',{month:'narrow'})}</span>`).join('');
+  const mons = Array.from({length:12},(_,i)=>`<span>${new Date(2000,i,1).toLocaleDateString(uiLocale(),{month:'narrow'})}</span>`).join('');
   return `<div class="mrow mhead"><span class="myr"></span>${mons}</div>${rows}
-    <div class="ystats">${t('rhTotal',{n:total})} · ${t('rhSince',{d:first.toLocaleDateString('en-GB',{month:'short',year:'numeric'})})}</div>`;
+    <div class="ystats">${t('rhTotal',{n:total})} · ${t('rhSince',{d:first.toLocaleDateString(uiLocale(),{month:'short',year:'numeric'})})}</div>`;
 }
 function rhythmTap(id){
   const idx = S.history.filter(w=>!w.arch).findIndex(w=>w.id===id);
@@ -589,7 +589,7 @@ function trackedHtml(){
       const done = cur >= goal;
       /* honest projection: only shows when the trend really climbs (see etaFor) */
       const eta = done ? null : etaFor(k, goal);
-      const etaTxt = eta ? ` · ${t('goalEta',{d:eta.toLocaleDateString('en-GB',{year:'numeric',month:'short'})})}` : '';
+      const etaTxt = eta ? ` · ${t('goalEta',{d:eta.toLocaleDateString(uiLocale(),{year:'numeric',month:'short'})})}` : '';
       goalHtml = `<div class="goalrow">
         <span class="goalbar"><i style="width:${pct}%${done?';background:var(--green)':''}"></i></span>
         <span class="goaltxt${done?' done':''}">${wu(Math.round(cur*10)/10)} / ${wu(goal,true)} · ${done?t('goalReached'):t('goalLeft',{n:wu(Math.round((goal-cur)*10)/10)})}${etaTxt}</span>

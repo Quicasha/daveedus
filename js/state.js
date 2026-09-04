@@ -121,7 +121,7 @@ const PLATE_OPTS = { kg:[25,20,15,10,5,2.5,1.25,0.5], lb:[45,35,25,15,10,5,2.5,1
 const PLATE_DEF  = { kg:[25,20,15,10,5,2.5,1.25],      lb:[45,35,25,10,5,2.5] };
 function defaultState(){
   const fid = uid(), fid2 = uid();
-  return { unit:'kg', theme:'auto', skin:'locked', keepAwake:true, lastBackup:0, bakSnooze:0, mig13:true,
+  return { unit:'kg', theme:'auto', skin:'locked', lang:'en', keepAwake:true, lastBackup:0, bakSnooze:0, mig13:true,
            restTarget:120, restSound:true, /* restTarget = last picked value in the editor */
            ghRepo:'', ghToken:'', ghLast:0, ghDirty:0, /* cloud sync - device-local, never in share codes */
            lastActive:null, /* resume snapshot of the most recently finished workout */
@@ -184,6 +184,7 @@ function hydrate(s){
   if(typeof s.restTarget!=='number' || !(s.restTarget>=15 && s.restTarget<=1800)) s.restTarget = 120;
   if(typeof s.restSound!=='boolean') s.restSound = true;
   if(!SKIN_META[s.skin]) s.skin = 'locked'; /* util.js loads first; SKIN_META is the skin registry; retired skins land here */
+  if(s.lang!=='lt') s.lang = 'en';
   if(typeof s.ghRepo!=='string') s.ghRepo = '';
   if(typeof s.ghToken!=='string') s.ghToken = '';
   if(typeof s.ghLast!=='number') s.ghLast = 0;

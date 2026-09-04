@@ -27,6 +27,13 @@ function htmlSettings(){
       <span class="lb">${t('setStyle')}</span>
       <button class="btn small" onclick="openSkinPicker()">${t('skin_'+(S.skin||'locked'))} ›</button>
     </div>
+    <div class="setline">
+      <span class="lb">${t('setLang')}</span>
+      <div class="seg">
+        <button class="${(S.lang||'en')==='en'?'on':''}" onclick="setLang('en')">EN</button>
+        <button class="${S.lang==='lt'?'on':''}" onclick="setLang('lt')">LT</button>
+      </div>
+    </div>
   </div>
   <div class="card">
     <div class="setline">
@@ -75,6 +82,7 @@ function htmlSettings(){
   <div style="text-align:center;color:var(--ghost);font-size:12px;margin-top:24px">Daveedus v${APP_VER}</div>`;
 }
 function setTheme(m){ S.theme=m; save(); applyTheme(); render(); }
+function setLang(l){ if(l===S.lang) return; S.lang = l==='lt' ? 'lt' : 'en'; save(); render(); }
 function setSkin(k){ S.skin=k; save(); applyTheme(); render(); scheduleCloudSync(); }
 /* one skin row per entry: swatch (bg + accent dot), name, check on the active one.
    `act` is the onclick body - the pickers differ only in what happens after the tap. */

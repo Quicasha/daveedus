@@ -18,7 +18,7 @@ function isStandalone(){
   return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || !!navigator.standalone;
 }
 function htmlHome(){
-  const dateStr = new Date().toLocaleDateString('en-GB',
+  const dateStr = new Date().toLocaleDateString(uiLocale(),
     { weekday:'long', month:'long', day:'numeric' });
   let h = `<div class="hero"><div class="date">${esc(dateStr)}</div>${syncPillHtml()}</div>`;
   /* browser tab on a phone: nudge once toward Add to Home Screen */

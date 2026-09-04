@@ -206,6 +206,36 @@ describe('weekly sets per muscle', () => {
   });
 });
 
+describe('i18n', () => {
+  test('the Lithuanian dictionary covers every English key', () => {
+    const app = makeApp();
+    const en = Object.keys(app.T_EN).sort();
+    const lt = Object.keys(app.T_LT).sort();
+    const missing = en.filter(k => !lt.includes(k));
+    const extra = lt.filter(k => !en.includes(k));
+    assert.deepEqual(missing, [], 'keys missing in LT: ' + missing.join(', '));
+    assert.deepEqual(extra, [], 'LT keys with no EN twin: ' + extra.join(', '));
+  });
+  test('t() follows S.lang and falls back to English', () => {
+    const app = makeApp();
+    assert.equal(app.t('tabHistory'), 'History');
+    app.S.lang = 'lt';
+    assert.equal(app.t('tabHistory'), 'Istorija');
+    assert.equal(app.t('daysAgo', { n: 3 }), 'prieš 3 d.');
+    assert.equal(app.t('no-such-key'), 'no-such-key');
+    app.S.lang = 'en';
+  });
+  test('placeholders survive translation', () => {
+    const app = makeApp();
+    app.S.lang = 'lt';
+    for (const k of Object.keys(app.T_EN)){
+      const enPh = (app.T_EN[k].match(/\{\w+\}/g) || []).sort();
+      const ltPh = (app.T_LT[k].match(/\{\w+\}/g) || []).sort();
+      assert.deepEqual(ltPh, enPh, `placeholder mismatch in "${k}"`);
+    }
+  });
+});
+
 describe('comeback easing', () => {
   const gapFactor = (app, days) => {
     app.S.history = [workout(days, [exEntry('bench-press', [set(100, 5)])])];

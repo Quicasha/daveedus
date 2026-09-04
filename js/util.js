@@ -48,10 +48,10 @@ function fmtTime(sec){
              : m+':'+String(s).padStart(2,'0');
 }
 function fmtClock(iso){
-  return new Date(iso).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+  return new Date(iso).toLocaleTimeString(uiLocale(), { hour:'2-digit', minute:'2-digit' });
 }
 function fmtDate(iso){
-  return new Date(iso).toLocaleDateString('en-GB',
+  return new Date(iso).toLocaleDateString(uiLocale(),
     { month:'short', day:'numeric', weekday:'short' });
 }
 function daysAgoStr(iso){
