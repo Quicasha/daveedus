@@ -5,6 +5,7 @@
 <p align="center"><a href="https://quicasha.github.io/daveedus/"><strong>Open the app</strong></a></p>
 
 <p align="center">
+  <a href="https://github.com/Quicasha/daveedus/actions/workflows/test.yml"><img alt="Tests" src="https://github.com/Quicasha/daveedus/actions/workflows/test.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Vanilla JS" src="https://img.shields.io/badge/vanilla_JS-no_dependencies-f7df1e.svg">
   <img alt="PWA" src="https://img.shields.io/badge/PWA-offline--first-5a0fc8.svg">
@@ -57,8 +58,10 @@ Takes half a minute. After that it runs full-screen and works fully offline.
 - Level ladders for bodyweight work - L1→L5 progressions (knee raise → toes-to-bar); two clean sessions at the top of the range and the next level loads itself
 - Rotation programs suggest what's NEXT; free-pick splits (gym / bar / home) skip rotation and deload, showing how often and how long ago instead
 - Records and charts - estimated 1RM trends, rep records, tracked lifts with goals and projections
+- Weekly sets per muscle - four weeks side by side against the 10-20 set research band, so the back never quietly falls behind the chest
 - The gym details covered: warm-ups, drop sets, supersets, rest timers, machine base weight, bodyweight exercises, kg / lb
 - Share a program as a short code
+- English and Lithuanian - the full UI, dates included, switchable in Settings
 
 ## Your data
 
@@ -96,6 +99,7 @@ js/history.js           History list, search, editing, body weight, plate calcul
 js/settings.js          Settings screen
 js/data.js              Share/backup codes, import, CSV, GitHub cloud sync
 js/boot.js              Startup, rest signal, wake lock, onboarding
+test/                   node:test suite for the training brain (no DOM, no deps)
 sw.js                   Service worker (offline cache + auto-update)
 manifest.webmanifest    PWA manifest
 icons/                  App icons
@@ -103,6 +107,8 @@ serve.ps1               Zero-dependency local dev server (PowerShell)
 ```
 
 Weights are stored in kilograms and converted only for display, so switching units is lossless. Share and backup codes are Base64-encoded JSON with a `DVD1.` prefix. Cloud sync PUTs a JSON snapshot to a GitHub repo through the Contents API - the token never leaves the device and is never included in backup codes.
+
+**Tests** - `node --test test/` (Node 20+, nothing to install). A vm harness loads the plain script files with a stubbed browser and exercises the training brain: progression ladders, waves, deloads, e1RM, unit conversion, share-code roundtrips, dictionary parity. CI runs the suite on every push.
 
 **Run locally** - any static file server: `powershell -File serve.ps1`, then open `http://localhost:8317`.
 
