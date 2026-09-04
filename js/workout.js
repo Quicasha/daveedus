@@ -973,6 +973,16 @@ function toggleWarm(xi,si){
    so the warmup wakes you up without eating into the work sets. Warmup sets
    are W-typed, so they stay out of records/volume/progress. Tapping W again
    removes the not-yet-done warmups. */
+/* the double-progression verdict for one ladder session: null = nothing logged,
+   true = every planned work set done at the top of the rep range (clean),
+   false = logged but short of that. finishWorkout turns two trues in a row
+   into a level-up; kept pure so the rule itself is testable. */
+function lvlCleanSession(ex){
+  const work = ex.sets.filter(s=>s.done && !s.warm && !s.drop);
+  if(!work.length) return null;
+  const top = repsParse(ex.targetReps).hi;
+  return work.length >= ex.targetSets && work.every(s=>parseNum(s.r) >= top);
+}
 /* completed warmups are folded out of sight; W flips them back for a look */
 function toggleWarmShow(xi){
   const ex = S.active.exercises[xi];
@@ -1336,10 +1346,8 @@ function finishWorkout(){
     const te = tplEntryFor(ex);
     const L = lvlsOf(te);
     if(!L || ex.k !== te.k) continue;  /* swapped to something else today - no verdict */
-    const work = ex.sets.filter(s=>s.done && !s.warm && !s.drop);
-    if(!work.length) continue;
-    const top = repsParse(ex.targetReps).hi;
-    const clean = work.length >= ex.targetSets && work.every(s=>parseNum(s.r) >= top);
+    const clean = lvlCleanSession(ex);
+    if(clean===null) continue;
     if(!clean){ te.lvlN = 0; continue; }
     te.lvlN = (te.lvlN||0) + 1;
     if(te.lvlN >= 2 && (te.lvl||0) < L.length-1){
