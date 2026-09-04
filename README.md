@@ -108,7 +108,7 @@ serve.ps1               Zero-dependency local dev server (PowerShell)
 
 Weights are stored in kilograms and converted only for display, so switching units is lossless. Share and backup codes are Base64-encoded JSON with a `DVD1.` prefix. Cloud sync PUTs a JSON snapshot to a GitHub repo through the Contents API - the token never leaves the device and is never included in backup codes.
 
-**Tests** - `node --test test/` (Node 20+, nothing to install). A vm harness loads the plain script files with a stubbed browser and exercises the training brain: progression ladders, waves, deloads, e1RM, unit conversion, share-code roundtrips, dictionary parity. CI runs the suite on every push.
+**Tests** - `node --test` (Node 20+, nothing to install). A vm harness loads the plain script files with a stubbed browser and exercises the training brain: progression ladders, waves, deloads, e1RM, unit conversion, share-code roundtrips, dictionary parity. CI runs the suite on every push.
 
 **Run locally** - any static file server: `powershell -File serve.ps1`, then open `http://localhost:8317`.
 

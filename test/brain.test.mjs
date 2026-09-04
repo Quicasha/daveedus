@@ -1,6 +1,6 @@
 /* The training brain, under test: every rule that decides what tomorrow's
    workout asks of you. If a change to progression code breaks a rule, one of
-   these screams. Run: node --test test/ */
+   these screams. Run: node --test */
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeApp, iso, set, exEntry, workout } from './harness.mjs';
