@@ -617,6 +617,10 @@ function htmlWorkout(){
     /* progression ladder chip: current level, taps open the level sheet */
     const lte = (!ex.adhoc && ex.tplId) ? tplEntryFor(ex) : null;
     const lvlL = lvlsOf(lte);
+    /* a finished warmup block folds away (stats never counted it) - the W
+       button peeks it back open; history always keeps the full picture */
+    const warmDone = ex.sets.some(s=>s.warm) && ex.sets.every(s=>!s.warm || s.done);
+    const warmHide = warmDone && !ex.warmShow;
     const firstNotDone = ex.sets.findIndex(s=>!s.done); /* -1 = all done */
     const wcol = bw ? t('woAddCol') : unitL();
     /* pair-of-dumbbells toggle lives right in the column header - one tap, no menus */
@@ -635,6 +639,8 @@ function htmlWorkout(){
     let workNum = 0;
     const approx = ex.last && !ex.last.sameTpl ? '* ' : ''; /* values borrowed from another workout */
     const rows = ex.sets.map((s,si)=>{
+      /* folded warmup rows vanish - except the one the rest bar hangs under */
+      if(warmHide && s.warm && !(S.active.rest && S.active.rest.key===xi+'-'+si)) return '';
       const g = ghostFor(ex,si);
       const prevTxt = g ? approx + ghostText({ weight:ghostW(ex,g), reps:g.reps }, tm, bw) : '—';
       if(!s.warm && !s.drop) workNum++;
@@ -692,7 +698,7 @@ function htmlWorkout(){
         ${lvlL?`<button class="dpchip" onclick="openLvlSheet(${xi})" title="${t('lvlSheetTitle')}">L${(lte.lvl||0)+1}/${lvlL.length}</button>`:''}
         <div class="extarget" onclick="openTargetEdit(${xi})">${ex.targetSets}×${ex.targetReps}${tm?'s':''}</div>
         ${ex.adhoc?`<button class="minibtn pinex" onclick="pinToTpl(${xi})" aria-label="${t('pinExLabel')}">${ACT_ICONS.pin}</button>`:''}
-        ${(tm||bw)?'':`<button class="minibtn warm${ex.sets.some(s=>s.warm&&!s.done)?' on':''}" onclick="autoWarmup(${xi})" aria-label="${t('warmBtn')}">W</button>`}
+        ${(tm||bw)?'':`<button class="minibtn warm${warmDone ? (ex.warmShow?' on':'') : (ex.sets.some(s=>s.warm&&!s.done)?' on':'')}" onclick="${warmDone?`toggleWarmShow(${xi})`:`autoWarmup(${xi})`}" aria-label="${t('warmBtn')}">W</button>`}
         <button class="minibtn${isAlt||ex.ss?' acc':''}" onclick="openExMenu(${xi})" aria-label="menu">${ACT_ICONS.more}</button>
       </div>
       ${isAlt?`<div class="altbar" onclick="swapExercise(${xi},'${esc(ex.baseK)}')">${ACT_ICONS.swap}<span>${t('woAltBack')} ${esc(exName(ex.baseK))}</span></div>`:''}
@@ -967,6 +973,13 @@ function toggleWarm(xi,si){
    so the warmup wakes you up without eating into the work sets. Warmup sets
    are W-typed, so they stay out of records/volume/progress. Tapping W again
    removes the not-yet-done warmups. */
+/* completed warmups are folded out of sight; W flips them back for a look */
+function toggleWarmShow(xi){
+  const ex = S.active.exercises[xi];
+  if(!ex) return;
+  ex.warmShow = !ex.warmShow;
+  save(); render();
+}
 function autoWarmup(xi){
   const ex = S.active.exercises[xi];
   if(!ex || isTimeEx(ex.k) || isBwEx(ex.k)) return;
@@ -1157,12 +1170,13 @@ function toggleSet(xi,si){
     const card = document.querySelectorAll('#screen .card')[xi];
     if(card) card.scrollIntoView({ behavior:'smooth', block:'center' });
   }
-  /* focus the next set's weight field only when it must be typed (no ghost to one-tap) */
+  /* focus the next set's weight field only when it must be typed: no ghost to
+     one-tap, nothing prefilled, and never for warmups (the ramp fills those) */
   const fx = (jump>=0) ? jump : xi;
   const fex = S.active.exercises[fx];
   for(let i=0; i<fex.sets.length; i++){
     if(!fex.sets[i].done){
-      if(!ghostFor(fex,i) && fx===xi){
+      if(!ghostFor(fex,i) && !fex.sets[i].warm && !String(fex.sets[i].w).trim() && fx===xi){
         const el = document.getElementById('w-'+fx+'-'+i);
         if(el) el.focus();
       }
