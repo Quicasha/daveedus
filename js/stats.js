@@ -174,6 +174,59 @@ function muscleBalanceHtml(){
   </div>`).join('');
 }
 
+/* ---- weekly sets per muscle: calendar weeks (Monday-anchored), work sets only ----
+   The one question this answers: is the back getting as much as the chest.
+   Warmups never count; the muted 10-20 band is where most hypertrophy research
+   lands - drawn as a guide, never as a grade (no reds, no shaming). */
+function weeklyMuscleSets(nWeeks){
+  const mon = new Date(); mon.setHours(0,0,0,0);
+  mon.setDate(mon.getDate() - ((mon.getDay()+6)%7));   /* this week's Monday */
+  const weeks = [];
+  for(let i=0;i<nWeeks;i++){
+    const s = mon.getTime() - i*7*864e5;
+    weeks.push({ s, e:s + 7*864e5, counts:{} });
+  }
+  const oldest = weeks[weeks.length-1].s;
+  for(const h of S.history){
+    if(h.arch) continue;
+    const ts = new Date(h.date).getTime();
+    if(ts < oldest) continue;
+    const wkb = weeks.find(w=>ts>=w.s && ts<w.e);
+    if(!wkb) continue;
+    for(const e of h.exercises){
+      const info = exInfo(e.k);
+      const g = info ? info.g : 'other';
+      wkb.counts[g] = (wkb.counts[g]||0) + e.sets.filter(s=>!s.warm).length;
+    }
+  }
+  return weeks;
+}
+function weeklySetsHtml(){
+  const weeks = weeklyMuscleSets(5);      /* 4 pickable + 1 more for the comparison */
+  const wi = Math.max(0, Math.min(3, V.wkvol|0));
+  const cur = weeks[wi].counts, prev = weeks[wi+1].counts;
+  /* every group seen anywhere in the window - a muscle at 0 THIS week is the signal */
+  const groups = [...new Set(weeks.flatMap(w=>Object.keys(w.counts)))]
+    .sort((a,b)=>(cur[b]||0)-(cur[a]||0) || (prev[b]||0)-(prev[a]||0));
+  if(!groups.length) return `<div class="empty" style="padding:6px 0 12px">${t('chartNoData')}</div>`;
+  const scale = Math.max(22, ...groups.map(g=>Math.max(cur[g]||0, prev[g]||0)));
+  const pct = n => Math.round(1000*n/scale)/10;
+  const chips = [t('wv0'),t('wv1'),t('wv2'),t('wv3')].map((l,i)=>
+    `<button class="chip ${wi===i?'on':''}" onclick="V.wkvol=${i}; render()">${l}</button>`).join('');
+  const rows = groups.map(g=>{
+    const n = cur[g]||0, p = prev[g]||0;
+    /* down-deltas stay NEUTRAL here - a lighter week is information, not failure */
+    const dlt = n===p ? '' : `<span class="dlt ${n>p?'up':'wv-down'}">${n>p?'▲':'▼'}${Math.abs(n-p)}</span>`;
+    return `<div class="mb-row">
+      <span class="mb-name">${t('g_'+g)}</span>
+      <span class="mb-bar wv-bar"><span class="wv-band" style="left:${pct(10)}%;width:${pct(10)}%"></span><i style="width:${pct(n)}%"></i>${p?`<span class="wv-tick" style="left:${pct(p)}%"></span>`:''}</span>
+      <span class="mb-val">${n}${dlt}</span>
+    </div>`;
+  }).join('');
+  return `<div class="chips" style="padding:0 0 8px">${chips}</div>${rows}
+    <div style="font-size:12px;color:var(--ghost);line-height:1.5;margin-top:8px">${t('wvHint')}</div>`;
+}
+
 /* ---- summary strip: rolling 7-day windows (the user does not train by calendar weeks) ---- */
 function histSummaryHtml(){
   const now = Date.now(), D = 864e5;

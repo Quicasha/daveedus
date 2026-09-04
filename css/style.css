@@ -1010,6 +1010,12 @@ svg.spark{flex:none; width:130px; height:40px;}
 .mb-bar{flex:1; height:10px; background:var(--input); border-radius:5px; overflow:hidden;}
 .mb-bar i{display:block; height:100%; background:var(--accent); border-radius:5px;}
 .mb-val{flex:none; min-width:24px; text-align:right; font-weight:800; font-variant-numeric:tabular-nums;}
+/* weekly sets bar: muted 10-20 guide band under the fill + last week's tick */
+.wv-bar{position:relative; overflow:hidden;}
+.wv-bar .wv-band{position:absolute; top:0; bottom:0; background:var(--dim); opacity:.18; border-radius:3px;}
+.wv-bar i{position:relative; z-index:1;}
+.wv-bar .wv-tick{position:absolute; top:0; bottom:0; width:2px; background:var(--text); opacity:.45; z-index:2;}
+.dlt.wv-down{color:var(--dim);} /* a lighter week is information, not a red mark */
 
 /* ============ history ============ */
 .histrow{cursor:pointer;}

@@ -32,6 +32,10 @@ function htmlHistory(){
     <div class="card">
       <div class="chead"><span class="ct">${t('statsMuscle')}</span>${pchipsHtml('mus',[['7','7 d.'],['30','30 d.']],true)}</div>
       ${rangeBarHtml('mus')}${muscleBalanceHtml()}
+    </div>
+    <div class="card">
+      <div class="chead"><span class="ct">${t('wvTitle')}</span></div>
+      ${weeklySetsHtml()}
     </div>`;
   /* 6. body weight - graph + recent entries; logging via the quick modal */
   const cbw = V.cp.bw;

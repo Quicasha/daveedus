@@ -320,7 +320,7 @@ document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState=
 const V = { screen:'home', editTpl:null, viewFolder:null, exDetail:null, expanded:null,
             pickerCb:null, pickerQ:'', pickerG:'all', exQ:'', exG:'mine',
             exTplFilter:'', exFilterNames:[], exMetric:'w', showArch:false,
-            histLimit:20, histQ:'',
+            histLimit:20, histQ:'', wkvol:0, /* weekly sets view: weeks back (0 = this week) */
             /* per-chart period state: p = 'w'|'m'|'y'|'c' (charts), days|'all'|'c' (muscle/bw);
                f/t = custom from-to as yyyy-mm-dd */
             cp:{ wk:{p:'w',f:'',t:''}, vol:{p:'w',f:'',t:''},

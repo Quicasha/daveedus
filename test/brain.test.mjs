@@ -181,6 +181,31 @@ describe('deload', () => {
   });
 });
 
+describe('weekly sets per muscle', () => {
+  test('buckets by calendar week, counts work sets only, maps through the exercise DB', () => {
+    const app = makeApp();
+    /* Monday of the current week, so "1.5 days after Monday" is always THIS week */
+    const mon = new Date(); mon.setHours(0, 0, 0, 0);
+    mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
+    const daysAgo = ms => (Date.now() - ms) / 864e5;
+    const thisWk = daysAgo(mon.getTime() + 0.2 * 864e5);
+    const lastWk = daysAgo(mon.getTime() - 6.5 * 864e5);
+    app.S.history = [
+      workout(thisWk, [
+        exEntry('bench-press', [set(100, 5), set(100, 5), set(60, 10, { warm: true })]), /* chest 2 */
+        exEntry('barbell-row', [set(80, 8)])                                             /* back 1 */
+      ]),
+      workout(lastWk, [exEntry('bench-press', [set(95, 5)])]),                           /* chest 1, week -1 */
+      workout(lastWk, [exEntry('no-such-lift', [set(10, 10)])], { arch: 1 })             /* archived - out */
+    ];
+    const weeks = app.weeklyMuscleSets(2);
+    assert.equal(weeks[0].counts.chest, 2);       /* warmup not counted */
+    assert.equal(weeks[0].counts.back, 1);
+    assert.equal(weeks[1].counts.chest, 1);
+    assert.equal(weeks[1].counts.other, undefined); /* archived session never lands */
+  });
+});
+
 describe('comeback easing', () => {
   const gapFactor = (app, days) => {
     app.S.history = [workout(days, [exEntry('bench-press', [set(100, 5)])])];
