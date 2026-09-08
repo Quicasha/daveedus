@@ -311,6 +311,134 @@ describe('cloud sync', () => {
   });
 });
 
+describe('volume', () => {
+  test('warmups are out, drop sets and machine base are in, pairs count twice', () => {
+    const app = makeApp();
+    const exs = [
+      exEntry('bench-press', [set(60, 10, { warm: true }), set(100, 5)]),           /* 500 */
+      exEntry('incline-db-press', [set(30, 10)], { x2: 1 }),                        /* 600 */
+      exEntry('leg-press', [set(100, 10)], { mb: 25 }),                             /* 1250 */
+      exEntry('cable-crunch', [set(40, 10), set(20, 10, { drop: true })])           /* 600 */
+    ];
+    assert.equal(app.woVolume(exs), 500 + 600 + 1250 + 600);
+  });
+
+  test('a weighted plank contributes no kg-seconds to the volume number', () => {
+    const app = makeApp();
+    assert.equal(app.woVolume([exEntry('plank', [set(10, 60)])]), 0);
+  });
+
+  test('the CSV export and the in-app volume agree to the kilo', () => {
+    /* the summary, the charts and the exported column must never tell three
+       different stories about the same session */
+    const app = makeApp();
+    app.S.history = [workout(1, [
+      exEntry('bench-press', [set(60, 10, { warm: true }), set(100, 5), set(100, 4)]),
+      exEntry('pull-up', [set(10, 8), set(0, 10)], { bw: 73.3 }),
+      exEntry('incline-db-press', [set(30, 10)], { x2: 1 }),
+      exEntry('leg-press', [set(120, 8)], { mb: 25 })
+    ])];
+    const lines = app.buildSetsCSV().split('\r\n');
+    const head = lines[0].split(',');
+    const vCol = head.indexOf('volume_kg'), tCol = head.indexOf('set_type');
+    /* the CSV keeps one row per set and labels warmups, so the comparable total
+       is the work rows - the same ones woVolume counts */
+    const csvTotal = lines.slice(1).filter(Boolean)
+      .map(r => r.split(','))
+      .filter(c => c[tCol] !== 'warmup')
+      .reduce((a, c) => a + (parseFloat(c[vCol]) || 0), 0);
+    assert.equal(Math.round(csvTotal), Math.round(app.woVolume(app.S.history[0].exercises)));
+  });
+});
+
+describe('edge cases', () => {
+  test('a session where every set is a warmup counts as zero volume, not NaN', () => {
+    const app = makeApp();
+    const w = workout(0, [exEntry('bench-press', [set(60, 10, { warm: true })])]);
+    assert.equal(app.woVolume(w.exercises), 0);
+    assert.equal(app.e1rmSeries('bench-press').length, 0);
+  });
+
+  test('an exercise with an empty set list does not break the totals', () => {
+    const app = makeApp();
+    const w = workout(0, [exEntry('bench-press', []), exEntry('barbell-row', [set(80, 8)])]);
+    assert.equal(app.woVolume(w.exercises), 640);
+    app.S.history = [w];
+    assert.equal(app.weeklyMuscleSets(1)[0].counts.back, 1);
+  });
+
+  test('a 0 kg set is honest work: counted as a set, worth no volume', () => {
+    const app = makeApp();
+    const w = workout(0, [exEntry('ab-wheel', [set(0, 8)])]);
+    assert.equal(app.woVolume(w.exercises), 0);
+    app.S.history = [w];
+    assert.equal(app.weeklyMuscleSets(1)[0].counts.core, 1);
+    assert.equal(app.e1rmSeries('ab-wheel').length, 0); /* no load, no 1RM estimate */
+  });
+
+  test('a bodyweight set with no added load still carries the lifter', () => {
+    const app = makeApp();
+    const w = workout(0, [exEntry('pull-up', [set(0, 10)], { bw: 73.3 })]);
+    app.S.history = [w];
+    assert.equal(Math.round(app.woVolume(w.exercises)), 733,
+      'ten pull-ups move the lifter, not zero kilos');
+    assert.ok(app.e1rmSeries('pull-up')[0].v > 73);
+  });
+
+  test('a big session (40 exercises) stays finite and fast', () => {
+    const app = makeApp();
+    const many = Array.from({ length: 40 }, () => exEntry('bench-press', [set(100, 5), set(100, 5)]));
+    const t0 = Date.now();
+    const v = app.woVolume(many);
+    assert.equal(v, 40 * 2 * 500);
+    assert.ok(Date.now() - t0 < 200);
+  });
+
+  test('an ancient backup with none of the newer fields hydrates', () => {
+    const app = makeApp();
+    /* the shape v1 wrote: no folders, no waves, no plates, no mig13, no ts */
+    const s = app.hydrate({
+      unit: 'kg',
+      templates: [{ id: 'old1', name: 'Full body', ex: [{ k: 'bench-press', s: 3, r: '5' }] }],
+      history: [{ id: 'h1', name: 'Full body', date: iso(3), exercises: [{ k: 'bench-press', name: 'Bench Press', sets: [set(100, 5)] }] }]
+    });
+    assert.ok(s, 'an old backup must never hydrate to null');
+    assert.equal(s.templates.length, 1);
+    assert.equal(s.history.length, 1);
+    assert.equal(s.folders.length, 1, 'flat-era templates get one program to live in');
+    assert.equal(s.templates[0].folderId, s.folders[0].id);
+    assert.deepEqual(plain(s.waves), {});
+    assert.ok(Array.isArray(s.plates.kg) && s.plates.kg.length);
+    assert.equal(s.lang, undefined, 'the retired language flag is dropped');
+  });
+
+  test('a backup restored from another device does not drag its sync setup along', () => {
+    const app = makeApp();
+    app.S.ghRepo = 'me/mine'; app.S.ghToken = 'ghp_mine';
+    app.applyBak({ t: 'bak', s: { history: [], templates: [], folders: [], ghRepo: 'them/theirs', ghToken: 'ghp_theirs' } });
+    assert.equal(app.S.ghRepo, 'me/mine', 'this device keeps its own repo');
+    assert.equal(app.S.ghToken, 'ghp_mine');
+  });
+
+  test('two devices on the same day: the later push wins, nothing is corrupted', async () => {
+    const a = makeApp(), b = makeApp();
+    const ghA = fakeGitHub(a);
+    a.S.history = [workout(0, [exEntry('bench-press', [set(100, 5)])])];
+    a.scheduleCloudSync();
+    await a.cloudSync();
+    /* device B shares the same repo but has its own (older) log */
+    b.__fetch = a.__fetch; b.S.ghRepo = a.S.ghRepo; b.S.ghToken = a.S.ghToken; b.navigator.onLine = true;
+    b.S.history = [workout(0, [exEntry('back-squat', [set(140, 3)])])];
+    b.scheduleCloudSync();
+    await b.cloudSync();
+    const up = ghA.read('backup.json');
+    assert.equal(up.s.history.length, 1);
+    assert.equal(up.s.history[0].exercises[0].k, 'back-squat', 'last writer wins - a whole-state snapshot has no merge');
+    assert.equal(b.S.ghDirty, 0);
+    a.__stopTimers(); b.__stopTimers();
+  });
+});
+
 describe('i18n', () => {
   test('t() fills placeholders and falls back to the key itself', () => {
     const app = makeApp();

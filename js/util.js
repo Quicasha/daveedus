@@ -34,12 +34,19 @@ function normReps(v, max){
   }
   return String(lo);
 }
-/* session volume in kg: work sets only (warmups excluded), external load with
-   x2 pairs doubled and the machine base added - THE one volume formula; the
-   finish summary, history rows and every chart must all agree on it */
+/* session volume in kg: work sets only (warmups excluded), counted on the TOTAL
+   load moved - x2 pairs doubled, machine base and (on bodyweight lifts) the
+   lifter's own weight added. THE one volume formula: the finish summary, history
+   rows, every chart and the CSV export all agree on it.
+   Time-based work is skipped outright - kg x seconds is not a volume. */
 function woVolume(exs){
-  return exs.reduce((a,e)=>a+e.sets.filter(s=>!s.warm)
-    .reduce((b,s)=>b+(s.weight*(e.x2?2:1)+(e.mb||0))*s.reps,0),0);
+  return exs.reduce((a,e)=>{
+    if(isTimeEx(e.k)) return a;
+    const add = (isBwEx(e.k) ? (e.bw||0) : 0) + (e.mb||0);
+    const mul = e.x2 ? 2 : 1;
+    return a + e.sets.filter(s=>!s.warm)
+      .reduce((b,s)=>b+(s.weight*mul+add)*s.reps, 0);
+  }, 0);
 }
 function fmtTime(sec){
   sec = Math.max(0, Math.floor(sec));

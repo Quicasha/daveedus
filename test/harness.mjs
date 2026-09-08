@@ -65,6 +65,13 @@ export function makeApp(){
       `Object.defineProperty(globalThis, '${name}', { get: () => ${name}, set: v => { ${name} = v; }, configurable: true });`,
       ctx);
   }
+  /* the data layer legitimately calls into the screen layer (a restore closes the
+     sheet and goes home). ui.js is not loaded here, so those calls become no-ops
+     and the logic underneath stays testable. */
+  vm.runInContext(`
+    closeModal = () => {}; openModal = () => {}; go = () => {};
+    render = () => {}; toast = () => {}; undoToast = (m, r) => {};
+  `, ctx);
   ctx.__stopTimers = () => { for (const h of timers) clearTimeout(h); timers.clear(); };
   return ctx;
 }
