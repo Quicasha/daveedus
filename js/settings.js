@@ -49,7 +49,7 @@ function htmlSettings(){
       <span id="gh-status" style="font-weight:700;font-size:13px;color:var(--dim)">…</span>
     </div>
     <div class="setctl">
-      <button onclick="S.ghDirty=1; save(); cloudSync()">${t('ghNow')}</button>
+      <button onclick="syncNowTap()">${t('ghNow')}</button>
       <button onclick="ghRestore()">${t('ghRestore')}</button>
       <button onclick="ghDisconnect()">${t('ghOff')}</button>
     </div>` : `

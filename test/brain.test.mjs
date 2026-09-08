@@ -3,7 +3,7 @@
    these screams. Run: node --test */
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeApp, readAppSource, iso, set, exEntry, workout } from './harness.mjs';
+import { makeApp, fakeGitHub, readAppSource, iso, set, exEntry, workout } from './harness.mjs';
 
 const near = (a, b, eps = 0.01) => assert.ok(Math.abs(a - b) <= eps, `${a} !~ ${b}`);
 /* vm-context objects carry another realm's prototypes - flatten before deep compares */
@@ -203,6 +203,111 @@ describe('weekly sets per muscle', () => {
     assert.equal(weeks[0].counts.back, 1);
     assert.equal(weeks[1].counts.chest, 1);
     assert.equal(weeks[1].counts.other, undefined); /* archived session never lands */
+  });
+});
+
+/* The cloud copy is the disaster recovery AND what the journal reads, so these
+   guard two promises: nothing logged is ever marked synced without going up,
+   and the token never travels. */
+describe('cloud sync', () => {
+  const settle = () => new Promise(r => setImmediate(r));
+
+  test('a successful push writes both files and clears the pending flag', async () => {
+    const app = makeApp();
+    const gh = fakeGitHub(app);
+    app.S.history = [workout(1, [exEntry('bench-press', [set(100, 5)])])];
+    app.scheduleCloudSync();
+    await app.cloudSync();
+    const up = gh.read('backup.json');
+    assert.equal(up.t, 'bak');
+    assert.equal(up.s.history.length, 1);
+    assert.ok(gh.files.has('backup-code.txt'));
+    assert.equal(app.S.ghDirty, 0);
+    assert.ok(app.S.ghLast > 0);
+    app.__stopTimers();
+  });
+
+  test('a workout finished DURING an upload stays pending', async () => {
+    const app = makeApp();
+    const gh = fakeGitHub(app);
+    app.scheduleCloudSync();               /* checkpoint 1 */
+    const release = gh.hold();             /* freeze the PUT mid-flight */
+    const flight = app.cloudSync();
+    await settle();
+    app.S.history = [workout(0, [exEntry('back-squat', [set(140, 3)])])];
+    app.scheduleCloudSync();               /* checkpoint 2 lands while uploading */
+    release();
+    await flight;
+    assert.equal(app.S.ghDirty, 1, 'the workout logged mid-upload must still be pending');
+    app.__stopTimers();
+  });
+
+  test('a dropped connection keeps the data pending instead of losing it', async () => {
+    const app = makeApp();
+    fakeGitHub(app, { failPut: true });
+    app.scheduleCloudSync();
+    await app.cloudSync();
+    assert.equal(app.S.ghDirty, 1);
+    assert.equal(app.V.gh, 'err');
+    app.__stopTimers();
+  });
+
+  test('offline does nothing at all - no request, flag untouched', async () => {
+    const app = makeApp();
+    const gh = fakeGitHub(app);
+    app.navigator.onLine = false;
+    app.scheduleCloudSync();
+    await app.cloudSync();
+    assert.equal(gh.puts, 0);
+    assert.equal(app.S.ghDirty, 1);
+    app.__stopTimers();
+  });
+
+  test('the sha read bypasses the cache - a stale one is a rejected write', async () => {
+    const app = makeApp();
+    const gh = fakeGitHub(app);
+    app.scheduleCloudSync();
+    await app.cloudSync();
+    assert.equal(gh.lastGetInit.cache, 'no-store');
+    app.__stopTimers();
+  });
+
+  test('two pushes in a row both land (fresh sha each time)', async () => {
+    const app = makeApp();
+    const gh = fakeGitHub(app);
+    app.scheduleCloudSync();
+    await app.cloudSync();
+    app.S.history = [workout(0, [exEntry('deadlift', [set(180, 1)])])];
+    app.scheduleCloudSync();
+    await app.cloudSync();
+    assert.equal(gh.read('backup.json').s.history.length, 1);
+    assert.equal(app.S.ghDirty, 0);
+    app.__stopTimers();
+  });
+
+  test('the GitHub token never travels in a backup payload', async () => {
+    const app = makeApp();
+    const gh = fakeGitHub(app);
+    app.scheduleCloudSync();
+    await app.cloudSync();
+    const raw = JSON.stringify(gh.read('backup.json'));
+    assert.ok(!raw.includes('ghp_test'), 'token leaked into the cloud payload');
+    assert.equal(gh.read('backup.json').s.ghToken, undefined);
+    app.__stopTimers();
+  });
+
+  test('backup.json keeps the shape the journal reads', async () => {
+    const app = makeApp();
+    const gh = fakeGitHub(app);
+    app.S.weights = [{ id: 'w1', date: iso(0), kg: 73.3 }];
+    app.scheduleCloudSync();
+    await app.cloudSync();
+    const s = gh.read('backup.json').s;
+    for (const field of ['history', 'weights', 'templates', 'folders', 'unit', 'customEx']){
+      assert.ok(s[field] !== undefined, `backup.json lost the "${field}" field`);
+    }
+    assert.equal(s.weights[0].kg, 73.3);
+    app.__stopTimers();
   });
 });
 

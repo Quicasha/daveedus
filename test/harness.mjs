@@ -18,8 +18,17 @@ export function makeApp(){
   const store = new Map();
   const noop = () => {};
   const nullEl = null;
+  /* every timer the app arms is tracked, so a test can stop the clock instead of
+     leaving a 4-second cloud-sync retry keeping the runner alive */
+  const timers = new Set();
   const sandbox = {
-    console, setTimeout, clearTimeout, setInterval, clearInterval,
+    console, setInterval, clearInterval,
+    setTimeout: (fn, ms, ...rest) => { const h = setTimeout(fn, ms, ...rest); timers.add(h); return h; },
+    clearTimeout: h => { timers.delete(h); clearTimeout(h); },
+    /* network: tests install ctx.__fetch to decide what GitHub "replies" */
+    fetch: (...a) => (sandbox.__fetch
+      ? sandbox.__fetch(...a)
+      : Promise.reject(new Error('fetch called with no __fetch stub installed'))),
     btoa: s => Buffer.from(s, 'binary').toString('base64'),
     atob: s => Buffer.from(s, 'base64').toString('binary'),
     escape, unescape,
@@ -56,7 +65,44 @@ export function makeApp(){
       `Object.defineProperty(globalThis, '${name}', { get: () => ${name}, set: v => { ${name} = v; }, configurable: true });`,
       ctx);
   }
+  ctx.__stopTimers = () => { for (const h of timers) clearTimeout(h); timers.clear(); };
   return ctx;
+}
+
+/* a GitHub the app can talk to: remembers the files PUT to it, counts calls and
+   can hold a request open so a test can act while an upload is in flight */
+export function fakeGitHub(app, opts){
+  const o = opts || {};
+  const files = new Map();
+  const state = { puts: 0, gets: 0, files, gate: null };
+  app.S.ghRepo = 'me/daveedus-data';
+  app.S.ghToken = 'ghp_test';
+  app.navigator.onLine = true;
+  state.hold = () => { let release; state.gate = new Promise(r => { release = r; }); return release; };
+  app.__fetch = async (url, init) => {
+    const opt = init || {};
+    const name = String(url).split('/contents/')[1] || '';
+    if (opt.method === 'PUT'){
+      state.puts++;
+      if (state.gate) await state.gate;
+      if (o.failPut) return { ok: false, status: 500, json: async () => ({}) };
+      const body = JSON.parse(opt.body);
+      /* GitHub rejects a PUT whose sha is not the file's current one */
+      const cur = files.get(name);
+      if (cur && body.sha !== cur.sha) return { ok: false, status: 409, json: async () => ({}) };
+      files.set(name, { text: Buffer.from(body.content, 'base64').toString('utf8'), sha: 'sha' + state.puts });
+      return { ok: true, status: 200, json: async () => ({}) };
+    }
+    state.gets++;
+    state.lastGetInit = opt;
+    const f = files.get(name);
+    if (!f) return { ok: false, status: 404, json: async () => ({}) };
+    const raw = /raw/.test(((opt.headers || {}).Accept) || '');
+    /* raw media type hands back the file itself; the default one, its metadata */
+    return { ok: true, status: 200, json: async () => (raw ? JSON.parse(f.text) : { sha: f.sha }) };
+  };
+  state.read = name => { const f = files.get(name); return f ? JSON.parse(f.text) : null; };
+  return state;
 }
 
 /* every app script as one string - for checks that scan the source itself

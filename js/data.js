@@ -222,19 +222,31 @@ function doImportInner(){
    weight log, template edits, imports). The token is entered by the user, lives
    only in this device's storage and is excluded from backup codes. */
 const GH_FILE = 'backup.json';
-let ghTimer = null, ghBusy = false;
+/* ghSeq counts checkpoints. cloudSync remembers the value its payload was built
+   from, so a workout finished WHILE an upload is in flight cannot be marked
+   synced by that upload - see the dirty check at the end of cloudSync. */
+let ghTimer = null, ghBusy = false, ghSeq = 0;
 function ghOn(){ return !!(S.ghToken && S.ghRepo); }
 function ghHdr(){ return { 'Authorization':'Bearer '+S.ghToken, 'Accept':'application/vnd.github+json' }; }
+/* mark: this state must reach the cloud (bumps the checkpoint counter) */
+function ghMark(){
+  ghSeq++;
+  if(!S.ghDirty){ S.ghDirty = 1; save(); }
+}
 function scheduleCloudSync(){
   if(!ghOn()) return;
-  if(!S.ghDirty){ S.ghDirty = 1; save(); }
+  ghMark();
   clearTimeout(ghTimer);
   ghTimer = setTimeout(cloudSync, 4000);
 }
 async function ghPut(path, content){
   const api = 'https://api.github.com/repos/'+S.ghRepo+'/contents/'+path;
   let sha = null;
-  const g = await fetch(api, { headers:ghHdr() });
+  /* GitHub sends authenticated API responses as private/max-age=60: a cached
+     reply here hands back a stale sha, and the PUT that follows is rejected as
+     a conflict. Two syncs inside a minute (finish a workout, log body weight)
+     is completely normal, so this read must always hit the network. */
+  const g = await fetch(api, { headers:ghHdr(), cache:'no-store' });
   if(g.status===200) sha = (await g.json()).sha;
   else if(g.status!==404) throw new Error('HTTP '+g.status);
   const body = { message:'daveedus sync '+new Date().toISOString(),
@@ -246,16 +258,27 @@ async function ghPut(path, content){
 async function cloudSync(){
   if(!ghOn() || ghBusy || !navigator.onLine) { updateGhStatus(); return; }
   ghBusy = true; V.gh = 'sync'; updateGhStatus();
+  const seq = ghSeq;   /* the checkpoint the payload below actually carries */
+  let ok = false;
   try{
     const payload = bakPayload();
     /* two files, same data: JSON for machines, a ready-to-paste DVD1 code for
        disaster recovery - open the repo on any device, copy, Load backup code */
     await ghPut(GH_FILE, JSON.stringify(payload, null, 1));
     await ghPut('backup-code.txt', encodeShare(payload));
-    S.ghDirty = 0; S.ghLast = Date.now(); save();
+    ok = true;
+    /* Clearing the flag unconditionally used to lose a workout: anything logged
+       during these two round trips is not in `payload`, yet the flag said clean
+       and the pill said "synced" - so the cloud (and the journal reading it)
+       silently kept yesterday's data until some later checkpoint. */
+    if(seq === ghSeq) S.ghDirty = 0;
+    S.ghLast = Date.now(); save();
     V.gh = 'ok';
   }catch(e){ V.gh = 'err'; }
   ghBusy = false;
+  /* chase our own tail ONLY after a successful push - a failed one waits for the
+     next checkpoint instead of hammering a dead network every few seconds */
+  if(ok && S.ghDirty){ clearTimeout(ghTimer); ghTimer = setTimeout(cloudSync, 1500); }
   updateGhStatus();
 }
 /* one-time connect: verify the repo is reachable with this token - and NOTHING
@@ -292,7 +315,7 @@ async function ghConnect(){
 /* does the repo already hold a backup? (existence only - nothing is downloaded) */
 async function ghHasBackup(){
   try{
-    const r = await fetch('https://api.github.com/repos/'+S.ghRepo+'/contents/'+GH_FILE, { headers:ghHdr() });
+    const r = await fetch('https://api.github.com/repos/'+S.ghRepo+'/contents/'+GH_FILE, { headers:ghHdr(), cache:'no-store' });
     return r.status === 200;
   }catch(e){ return false; }
 }
@@ -303,7 +326,8 @@ async function ghRestore(skipAsk){
   if(!skipAsk && !confirm(t(S.active ? 'bakConfirmActive' : 'ghRestoreConfirm'))) return;
   try{
     const r = await fetch('https://api.github.com/repos/'+S.ghRepo+'/contents/'+GH_FILE,
-      { headers:{ 'Authorization':'Bearer '+S.ghToken, 'Accept':'application/vnd.github.raw+json' } });
+      { headers:{ 'Authorization':'Bearer '+S.ghToken, 'Accept':'application/vnd.github.raw+json' },
+        cache:'no-store' }); /* never restore a minute-old cached copy */
     if(!r.ok) throw new Error('HTTP '+r.status);
     const d = await r.json();
     if(!d || d.t!=='bak' || !d.s || typeof d.s!=='object') throw new Error('bad payload');
@@ -331,7 +355,7 @@ function syncPillHtml(){
 }
 function syncNowTap(){
   if(!ghOn() || ghBusy) return;
-  S.ghDirty = 1; save();
+  ghMark(); /* an explicit tap is a checkpoint too - it must not ride an in-flight payload */
   cloudSync();
 }
 /* backgrounding: the debounced push may never get its 4 seconds - try NOW,
