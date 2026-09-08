@@ -11,7 +11,8 @@ const root = path.join(path.dirname(url.fileURLToPath(import.meta.url)), '..');
 
 const FILES = [
   'js/exercises.js', 'js/i18n.js', 'js/util.js', 'js/state.js',
-  'js/deload.js', 'js/workout.js', 'js/program.js', 'js/stats.js', 'js/data.js'
+  'js/deload.js', 'js/workout.js', 'js/program.js', 'js/stats.js', 'js/data.js',
+  'js/history.js' /* for the plate maths; its screen builders are never called here */
 ];
 
 export function makeApp(){
@@ -115,7 +116,7 @@ export function fakeGitHub(app, opts){
 /* every app script as one string - for checks that scan the source itself
    (missing i18n keys, forbidden patterns) rather than running it */
 export function readAppSource(){
-  const ui = ['js/ui.js', 'js/home.js', 'js/history.js', 'js/settings.js', 'js/boot.js', 'js/exercises-ui.js'];
+  const ui = ['js/ui.js', 'js/home.js', 'js/settings.js', 'js/boot.js', 'js/exercises-ui.js'];
   return FILES.concat(ui)
     .map(f => fs.readFileSync(path.join(root, f), 'utf8'))
     .join('\n');

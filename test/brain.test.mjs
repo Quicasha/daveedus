@@ -126,6 +126,75 @@ describe('progression ladder', () => {
   });
 });
 
+/* the +2.5 kg offer: the rule that decides when the app dares suggest more
+   weight. Getting this wrong either stalls the lifter or pushes into a break. */
+describe('double progression', () => {
+  const lift = extra => Object.assign({
+    k: 'bench-press', dp: 2.5, targetReps: '4-6',
+    sets: [{ done: false, w: '', warm: false, drop: false }],
+    last: { sameTpl: true, date: iso(3), sets: [set(100, 6), set(100, 6), set(100, 6)] }
+  }, extra || {});
+  const seed = app => { app.S.history = [workout(3, [exEntry('bench-press', [set(100, 6)])])]; };
+
+  test('offered when every working set hit the top of the range', () => {
+    const app = makeApp(); seed(app);
+    assert.equal(app.dpDue(lift()), true);
+  });
+  test('withheld when one set fell short', () => {
+    const app = makeApp(); seed(app);
+    assert.equal(app.dpDue(lift({ last: { sameTpl: true, date: iso(3), sets: [set(100, 6), set(100, 5)] } })), false);
+  });
+  test('warmups and drop sets do not get a vote', () => {
+    const app = makeApp(); seed(app);
+    const last = { sameTpl: true, date: iso(3), sets: [set(60, 10, { warm: true }), set(100, 6), set(80, 12, { drop: true })] };
+    assert.equal(app.dpDue(lift({ last })), true);
+  });
+  test('silent once the lifter is already typing or lifting', () => {
+    const app = makeApp(); seed(app);
+    assert.equal(app.dpDue(lift({ sets: [{ done: true, w: '100', warm: false, drop: false }] })), false);
+    assert.equal(app.dpDue(lift({ sets: [{ done: false, w: '105', warm: false, drop: false }] })), false);
+  });
+  test('silent on values borrowed from another workout', () => {
+    const app = makeApp(); seed(app);
+    assert.equal(app.dpDue(lift({ last: { sameTpl: false, date: iso(3), sets: [set(100, 6)] } })), false);
+  });
+  test('silent right after a layoff - the comeback eases down, it does not add', () => {
+    const app = makeApp();
+    app.S.history = [workout(40, [exEntry('bench-press', [set(100, 6)])])];
+    assert.equal(app.dpDue(lift({ last: { sameTpl: true, date: iso(40), sets: [set(100, 6)] } })), false);
+  });
+  test('the wave owns the lift while it runs', () => {
+    const app = makeApp(); seed(app);
+    app.S.waves['bench-press'] = { base: 100, step: 2.5, idx: 0, startBest: 0, started: 0, rounds: 0 };
+    assert.equal(app.dpDue(lift()), false);
+  });
+  test('applyDp fills the empty sets with last time plus the step', () => {
+    const app = makeApp(); seed(app);
+    app.S.active = { tplId: null, name: 'T', startedAt: new Date().toISOString(), rest: null, dl: 0,
+      exercises: [lift({ id: 'x1', name: 'Bench Press', baseK: 'bench-press', targetSets: 3, stash: {}, alts: [],
+        sets: [{ done: false, w: '', r: '', warm: false, drop: false }, { done: false, w: '', r: '', warm: false, drop: false }] })] };
+    app.applyDp(0);
+    assert.equal(app.S.active.exercises[0].sets[0].w, '102.5');
+    assert.equal(app.S.active.exercises[0].sets[1].w, '102.5');
+  });
+});
+
+describe('plate calculator', () => {
+  test('turning every plate off falls back to a sane set instead of an empty bar', () => {
+    const app = makeApp();
+    app.S.plates.kg = [];
+    const ps = app.plateSet();
+    assert.ok(ps.length > 0, 'an empty plate list must not leave the calculator with nothing');
+    assert.deepEqual(ps, ps.slice().sort((a, b) => b - a), 'plates come biggest first');
+  });
+  test('the bar options follow the unit', () => {
+    const app = makeApp();
+    assert.deepEqual(plain(app.plateBars()), [20, 15, 10]);
+    app.S.unit = 'lb';
+    assert.deepEqual(plain(app.plateBars()), [45, 35, 25]);
+  });
+});
+
 describe('wave cycle', () => {
   test('waveTarget walks A/B/C/D and comes back for the +1 rep attempt', () => {
     const app = makeApp();
