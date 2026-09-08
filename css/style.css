@@ -433,10 +433,14 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 
 /* ============ workout ============ */
 .exhead{display:flex; align-items:center; gap:8px;}
-/* long level labels ("Ab Wheel (kneeling, half)") wrap to a 2nd line instead of clipping */
+/* long level labels ("Ab Wheel (half)") wrap onto a second line instead of being
+   cut. overflow-wrap is what saves a narrow screen: on a 320 px phone the header
+   can squeeze this box under 70 px, and a single long word ("Pushdown") used to
+   be sliced off with no ellipsis to admit it. -webkit-line-clamp is deliberately
+   NOT used here - a flex item never gets display:-webkit-box, so it silently
+   does nothing. */
 .exname{flex:1; font-family:var(--display); font-size:17px; font-weight:700; letter-spacing:-.01em;
-  color:var(--text); min-width:0; overflow:hidden; line-height:1.2;
-  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2;}
+  color:var(--text); min-width:0; overflow:hidden; line-height:1.2; overflow-wrap:break-word;}
 .extarget{color:var(--dim); font-family:var(--display); font-size:12px; font-weight:700; flex:none; background:var(--input); cursor:pointer;
   border-radius:8px; padding:4px 9px; font-variant-numeric:tabular-nums;}
 /* double-progression offer: all sets hit the range top last time - tap fills weights+step */
