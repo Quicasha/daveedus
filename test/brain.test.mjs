@@ -3,7 +3,7 @@
    these screams. Run: node --test */
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeApp, iso, set, exEntry, workout } from './harness.mjs';
+import { makeApp, readAppSource, iso, set, exEntry, workout } from './harness.mjs';
 
 const near = (a, b, eps = 0.01) => assert.ok(Math.abs(a - b) <= eps, `${a} !~ ${b}`);
 /* vm-context objects carry another realm's prototypes - flatten before deep compares */
@@ -207,32 +207,23 @@ describe('weekly sets per muscle', () => {
 });
 
 describe('i18n', () => {
-  test('the Lithuanian dictionary covers every English key', () => {
-    const app = makeApp();
-    const en = Object.keys(app.T_EN).sort();
-    const lt = Object.keys(app.T_LT).sort();
-    const missing = en.filter(k => !lt.includes(k));
-    const extra = lt.filter(k => !en.includes(k));
-    assert.deepEqual(missing, [], 'keys missing in LT: ' + missing.join(', '));
-    assert.deepEqual(extra, [], 'LT keys with no EN twin: ' + extra.join(', '));
-  });
-  test('t() follows S.lang and falls back to English', () => {
+  test('t() fills placeholders and falls back to the key itself', () => {
     const app = makeApp();
     assert.equal(app.t('tabHistory'), 'History');
-    app.S.lang = 'lt';
-    assert.equal(app.t('tabHistory'), 'Istorija');
-    assert.equal(app.t('daysAgo', { n: 3 }), 'prieš 3 d.');
+    assert.equal(app.t('daysAgo', { n: 3 }), '3 days ago');
     assert.equal(app.t('no-such-key'), 'no-such-key');
-    app.S.lang = 'en';
   });
-  test('placeholders survive translation', () => {
+  test('every string the code asks for actually exists in the dictionary', () => {
+    /* catches a t('key') left behind by a removed feature - it would render
+       the raw key to the user instead of a sentence */
     const app = makeApp();
-    app.S.lang = 'lt';
-    for (const k of Object.keys(app.T_EN)){
-      const enPh = (app.T_EN[k].match(/\{\w+\}/g) || []).sort();
-      const ltPh = (app.T_LT[k].match(/\{\w+\}/g) || []).sort();
-      assert.deepEqual(ltPh, enPh, `placeholder mismatch in "${k}"`);
-    }
+    const src = readAppSource();
+    /* only whole literal keys - t('g_'+group) and friends build theirs at
+       runtime, so the quote is followed by "+" rather than "," or ")" */
+    const used = new Set();
+    for (const m of src.matchAll(/\bt\(\s*'([a-zA-Z][\w]*)'\s*[,)]/g)) used.add(m[1]);
+    const missing = [...used].filter(k => app.T[k] == null).sort();
+    assert.deepEqual(missing, [], 'strings referenced but not defined: ' + missing.join(', '));
   });
 });
 

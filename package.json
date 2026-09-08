@@ -1,0 +1,14 @@
+{
+  "name": "daveedus",
+  "version": "2.19.0",
+  "private": true,
+  "description": "Workout tracker PWA - plain HTML/CSS/JS, no build step, no dependencies",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

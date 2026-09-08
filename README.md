@@ -61,7 +61,6 @@ Takes half a minute. After that it runs full-screen and works fully offline.
 - Weekly sets per muscle - four weeks side by side against the 10-20 set research band, so the back never quietly falls behind the chest
 - The gym details covered: warm-ups, drop sets, supersets, rest timers, machine base weight, bodyweight exercises, kg / lb
 - Share a program as a short code
-- English and Lithuanian - the full UI, dates included, switchable in Settings
 
 ## Your data
 
@@ -108,7 +107,7 @@ serve.ps1               Zero-dependency local dev server (PowerShell)
 
 Weights are stored in kilograms and converted only for display, so switching units is lossless. Share and backup codes are Base64-encoded JSON with a `DVD1.` prefix. Cloud sync PUTs a JSON snapshot to a GitHub repo through the Contents API - the token never leaves the device and is never included in backup codes.
 
-**Tests** - `node --test` (Node 20+, nothing to install). A vm harness loads the plain script files with a stubbed browser and exercises the training brain: progression ladders, waves, deloads, e1RM, unit conversion, share-code roundtrips, dictionary parity. CI runs the suite on every push.
+**Tests** - `node --test` (Node 20+, nothing to install). A vm harness loads the plain script files with a stubbed browser and exercises the training brain: progression ladders, waves, deloads, e1RM, unit conversion, share-code roundtrips, cloud-sync bookkeeping. CI runs the suite on every push.
 
 **Run locally** - any static file server: `powershell -File serve.ps1`, then open `http://localhost:8317`.
 
