@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.20.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.21.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 /* UI strings. One flat dictionary - the app is English-only by design. */
@@ -67,6 +67,15 @@ const T = {
   woBwCol:'BW', woAddCol:'Added', woBwHint:'for stats only',
   exCreateMode:'Type', modeReps:'Reps', modeTime:'Time (sec)',
   histUnarch:'Restore', archTitle:'Archive',
+  wpBtn:'Progress', fpPerWeek:'per week',
+  wpSessions:'sessions', wpAvgDur:'avg length', wpEvery:'avg gap',
+  wpSince:'since {d}', wpAvgVol:'{v} {u} per session on average',
+  wpVolPer:'Volume per session',
+  wpExTitle:'Lifts in this workout',
+  wpExHint:'Every number here is measured INSIDE this workout only - the same lift can climb here and stall somewhere else. Tap one to open its full history.',
+  wpNew:'first time', wpExtra:'extra',
+  wpLog:'Sessions',
+  wpEmpty:'No sessions yet. Do this workout once and its own progress starts here.',
   statsMuscle:'Muscle balance',
   wvTitle:'Sets per muscle · weekly',
   wv0:'This wk', wv1:'1 wk ago', wv2:'2 wk', wv3:'3 wk',

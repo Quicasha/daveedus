@@ -58,6 +58,7 @@ Takes half a minute. After that it runs full-screen and works fully offline.
 - Level ladders for bodyweight work - L1→L5 progressions (knee raise → toes-to-bar); two clean sessions at the top of the range and the next level loads itself
 - Rotation programs suggest what's NEXT; free-pick splits (gym / bar / home) skip rotation and deload, showing how often and how long ago instead
 - Records and charts - estimated 1RM trends, rep records, tracked lifts with goals and projections
+- Progress per workout, not just per exercise - open any workout to see its own volume trend, cadence and every lift measured inside that workout alone, so a bench climbing in Upper A cannot hide one stalling in Upper B
 - Weekly sets per muscle - four weeks side by side against the 10-20 set research band, so the back never quietly falls behind the chest
 - The gym details covered: warm-ups, drop sets, supersets, rest timers, machine base weight, bodyweight exercises, kg / lb
 - Share a program as a short code

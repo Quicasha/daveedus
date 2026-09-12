@@ -444,6 +444,32 @@ function sparkSVG(vals){
 /* per-session best e1RM (Epley, TOTAL load) for a lift, oldest -> newest,
    deloads and archived workouts excluded - the shared source for the trend
    arrow, the goal ETA and the stall detector */
+/* best e1RM for one lift inside ONE session (Epley, TOTAL load), 0 when the lift
+   is absent or only warmup/drop sets were logged. THE per-session formula: the
+   lifetime series and the per-workout views must never disagree about a number. */
+function sessionE1rm(w, k, nm){
+  let v = 0;
+  for(const e of w.exercises){
+    if(!(e.k===k || (e.name && e.name.trim().toLowerCase()===nm))) continue;
+    const work = e.sets.filter(s=>!s.warm && !s.drop && s.reps>0);
+    if(!work.length) continue;
+    const add = (isBwEx(e.k) ? (e.bw||0) : 0) + (e.mb||0);
+    const mul = e.x2 ? 2 : 1;
+    v = Math.max(v, ...work.map(s=>(s.weight*mul+add)*(1+s.reps/30)));
+  }
+  return v;
+}
+/* direction of a run of numbers: compare the first half against the last, with
+   a 1.5% dead band so noise does not read as a trend. null = too few points. */
+function seriesTrend(vals){
+  if(vals.length < 4) return null;
+  const half = Math.floor(vals.length/2);
+  const a = vals.slice(0,half).reduce((x,y)=>x+y,0)/half;
+  const b = vals.slice(-half).reduce((x,y)=>x+y,0)/half;
+  if(a <= 0) return null;
+  const pct = (b-a)/a*100;
+  return pct > 1.5 ? 'up' : pct < -1.5 ? 'down' : 'flat';
+}
 function e1rmSeries(k){
   if(isTimeEx(k)) return [];
   const info = exInfo(k);
@@ -455,15 +481,7 @@ function e1rmSeries(k){
     /* ONE point per SESSION: a lift logged twice in a workout (top set + back-off
        slot, an added duplicate) must not count as two sessions - every window
        downstream (trend, stall, fatigue, ETA) is denominated in sessions */
-    let v = 0;
-    for(const e of w.exercises){
-      if(!(e.k===k || (e.name && e.name.trim().toLowerCase()===nm))) continue;
-      const work = e.sets.filter(s=>!s.warm && !s.drop && s.reps>0);
-      if(!work.length) continue;
-      const add = (isBwEx(e.k) ? (e.bw||0) : 0) + (e.mb||0);
-      const mul = e.x2 ? 2 : 1;
-      v = Math.max(v, ...work.map(s=>(s.weight*mul+add)*(1+s.reps/30)));
-    }
+    const v = sessionE1rm(w, k, nm);
     /* v=0 happens on bodyweight lifts logged before any body weight existed -
        an artifact, not form; letting it in fabricates trends and ETAs */
     if(v > 0) pts.push({ ts:new Date(w.date).getTime(), v });
@@ -495,14 +513,7 @@ function trendFor(k){
   /* CURRENT-FORM window (see trendWindow): after a layoff the pre-break
      sessions must not mix into the direction call, and a lift nobody trains
      any more gets no arrow at all */
-  const rec = trendWindow(k).slice(-6).map(p=>p.v);
-  if(rec.length < 4) return null; /* too little data to call a direction */
-  const half = Math.floor(rec.length/2);
-  const a = rec.slice(0,half).reduce((x,y)=>x+y,0)/half;
-  const b = rec.slice(-half).reduce((x,y)=>x+y,0)/half;
-  if(a <= 0) return null;
-  const pct = (b-a)/a*100;
-  return pct > 1.5 ? 'up' : pct < -1.5 ? 'down' : 'flat';
+  return seriesTrend(trendWindow(k).slice(-6).map(p=>p.v));
 }
 /* goal ETA: linear fit over the last <=10 sessions of e1RM; a date only comes
    back when there is enough data, the trend actually climbs and the answer
@@ -688,3 +699,192 @@ function prFeedHtml(){
     </div>`).join('') + `</div>`;
 }
 
+
+/* ======================= per-workout progress =======================
+   The question the per-exercise views cannot answer: is THIS workout working.
+   A lift can climb in Upper A while the same lift stalls in Upper B, and only
+   one template's own session list shows that. Everything here filters history
+   down to a single template, then reuses the lifetime machinery on top. */
+
+/* sessions logged for one template, newest first. Matched by id, with the
+   template NAME as a fallback so a workout that was re-created (new id, same
+   name) keeps its history instead of restarting from zero. Deload passes are
+   out by default - they are deliberately light and would fake a downtrend. */
+function tplSessions(tplId, withDl){
+  const tpl = S.templates.find(x=>x.id===tplId);
+  const nm = tpl ? tpl.name.trim().toLowerCase() : null;
+  return S.history.filter(w=>{
+    if(w.arch) return false;
+    if(w.dl && !withDl) return false;
+    return w.tplId===tplId || (nm && (w.name||'').trim().toLowerCase()===nm);
+  });
+}
+/* headline numbers for one template. avgGap is the real cadence: how many days
+   actually pass between doing this workout, which is what tells you whether a
+   "twice a week" plan is a plan or a wish. */
+function tplProgStats(tplId){
+  const ss = tplSessions(tplId);
+  const n = ss.length;
+  const out = { n, last:null, first:null, avgDur:0, avgVol:0, avgSets:0, avgGap:null, best:0 };
+  if(!n) return out;
+  out.last = ss[0].date;
+  out.first = ss[n-1].date;
+  const durs = ss.map(w=>w.dur||0).filter(d=>d>0);
+  if(durs.length) out.avgDur = Math.round(durs.reduce((a,b)=>a+b,0)/durs.length);
+  const vols = ss.map(w=>woVolume(w.exercises));
+  out.avgVol = vols.reduce((a,b)=>a+b,0)/n;
+  out.best = Math.max.apply(null, vols);
+  out.avgSets = Math.round(ss.reduce((a,w)=>
+    a + w.exercises.reduce((b,e)=>b+e.sets.filter(s=>!s.warm).length,0), 0)/n);
+  if(n >= 2){
+    const span = new Date(ss[0].date).getTime() - new Date(ss[n-1].date).getTime();
+    out.avgGap = Math.round(span/(n-1)/864e5*10)/10;
+  }
+  return out;
+}
+/* volume of each session of this template, oldest -> newest, in {d,w} form for
+   lineChartSVG. A LINE, not bars: session volumes sit in a narrow band (6229 to
+   6636 is a real 6.5% climb) and zero-based bars would draw that as a flat wall,
+   while truncating a bar axis to fix it would be a lie about length. */
+function tplVolSeries(tplId, max){
+  return tplSessions(tplId).slice(0, max||14).reverse()
+    .map(w=>({ d: w.date, w: Math.round(kg2u(woVolume(w.exercises))) }));
+}
+/* one row per exercise this workout has actually trained (plus the ones planned
+   but never logged), each with its progress INSIDE this workout only. */
+function tplExRows(tplId){
+  const ss = tplSessions(tplId);
+  const tpl = S.templates.find(x=>x.id===tplId);
+  const order = [];                       /* template order first, history after */
+  const seen = new Set();
+  const add = k => { if(k && !seen.has(k)){ seen.add(k); order.push(k); } };
+  if(tpl) tpl.ex.forEach(e=>add(e.k));
+  ss.forEach(w=>w.exercises.forEach(e=>add(e.k)));
+  return order.map(k=>{
+    const info = exInfo(k);
+    const nm = (info?info.n:k).trim().toLowerCase();
+    const tm = isTimeEx(k);
+    const pts = [];                       /* oldest -> newest, within this workout */
+    for(let i=ss.length-1; i>=0; i--){
+      const w = ss[i];
+      let v = 0;
+      if(tm){
+        for(const e of w.exercises){
+          if(!(e.k===k || (e.name && e.name.trim().toLowerCase()===nm))) continue;
+          for(const s of e.sets) if(!s.warm && !s.drop) v = Math.max(v, s.reps);
+        }
+      }else v = sessionE1rm(w, k, nm);
+      if(v > 0) pts.push(v);
+    }
+    const n = pts.length;
+    return { k, name: info ? info.n : k, tm, n,
+             first: n ? pts[0] : 0,
+             now:   n ? pts[n-1] : 0,
+             best:  n ? Math.max.apply(null, pts) : 0,
+             pts,
+             trend: seriesTrend(pts.slice(-6)),
+             planned: !!(tpl && tpl.ex.some(e=>e.k===k)) };
+  });
+}
+
+/* ---- the screen: one template's own progress ---- */
+function openWoProg(tplId, from){
+  V.progTpl = tplId;
+  V.progFrom = from || (V.screen==='woprog' ? V.progFrom : V.screen);
+  closeModal();
+  go('woprog');
+}
+function htmlWoProg(){
+  const tpl = S.templates.find(x=>x.id===V.progTpl);
+  if(!tpl){ V.screen='home'; return htmlHome(); }
+  const st = tplProgStats(tpl.id);
+  let h = '<div style="height:8px"></div>';
+  if(!st.n){
+    return h + `<div class="empty">${t('wpEmpty')}</div>
+      <button class="btn primary" onclick="startWorkout('${tpl.id}')">${ACT_ICONS.play} ${t('pvStart')}</button>`;
+  }
+  /* 1. what this workout IS: how often, how long, how far apart */
+  h += `<div class="statrow">
+      <div class="stat"><div class="v">${st.n}</div><div class="l">${t('wpSessions')}</div></div>
+      <div class="stat"><div class="v">${st.avgDur?fmtTime(st.avgDur):'—'}</div><div class="l">${t('wpAvgDur')}</div></div>
+      <div class="stat"><div class="v">${st.avgGap!=null?fmtW(st.avgGap)+' d.':'—'}</div><div class="l">${t('wpEvery')}</div></div>
+    </div>
+    <div style="color:var(--ghost);font-size:12px;line-height:1.5;margin:6px 6px 0">
+      ${t('wpSince',{d:fmtDate(st.first)})} · ${t('wpAvgVol',{v:Math.round(kg2u(st.avgVol)), u:unitL()})}</div>`;
+  /* 2. is the work itself growing */
+  h += `<div class="card" style="margin-top:16px">
+      <div class="chead"><span class="ct">${t('wpVolPer')} (${unitL()})</span></div>
+      ${lineChartSVG(tplVolSeries(tpl.id), unitL(), unitL())}
+    </div>`;
+  /* 3. the money view: every lift of this workout, measured INSIDE it */
+  const withData = tplExRows(tpl.id).filter(r=>r.n>0);
+  if(withData.length){
+    h += `<h2 class="sec">${t('wpExTitle')}</h2>`;
+    h += withData.map(r=>{
+      const pct = (r.n>1 && r.first>0) ? Math.round((r.now-r.first)/r.first*1000)/10 : 0;
+      const arrow = r.trend ? `<i class="wptr ${r.trend}">${r.trend==='up'?'▲':r.trend==='down'?'▼':'▬'}</i>` : '';
+      const now = r.tm ? r.now+' s' : wu(Math.round(r.now*10)/10, true);
+      const chg = r.n<2 ? `<i class="wpnew">${t('wpNew')}</i>`
+        : `<i class="wpdlt ${pct>0?'up':pct<0?'down':''}">${pct>0?'+':''}${fmtW(pct)}%</i>`;
+      return `<button class="wprow" onclick="openExFromTpl('${esc(r.k)}')">
+        <span class="wpn">${esc(r.name)}${r.planned?'':`<i class="wpoff">${t('wpExtra')}</i>`}</span>
+        <span class="wpsp">${sparkSVG(r.pts.slice(-12))}</span>
+        <span class="wpv">${now} ${arrow}<br>${chg}</span>
+      </button>`;
+    }).join('');
+    h += `<div style="color:var(--ghost);font-size:12px;line-height:1.5;margin:8px 6px 0">${t('wpExHint')}</div>`;
+  }
+  /* 4. the sessions themselves */
+  h += `<h2 class="sec">${t('wpLog')}</h2>`;
+  h += tplSessions(tpl.id).slice(0,12).map(w=>{
+    const sets = w.exercises.reduce((a,e)=>a+e.sets.filter(s=>!s.warm).length,0);
+    return `<div class="wplog">
+      <span class="d">${fmtDate(w.date)}</span>
+      <span class="m">${w.dur?fmtTime(w.dur):'—'} · ${sets} ${t('histSets')}</span>
+      <span class="v">${Math.round(kg2u(woVolume(w.exercises)))} ${unitL()}</span>
+    </div>`;
+  }).join('');
+  h += `<button class="btn primary" style="margin-top:16px" onclick="startWorkout('${tpl.id}')">${ACT_ICONS.play} ${t('pvStart')}</button>`;
+  return h;
+}
+/* a lift opened from here lands on its detail already filtered to this workout */
+function openExFromTpl(k){
+  const tpl = S.templates.find(x=>x.id===V.progTpl);
+  openExDetailByKey(k);
+  if(tpl){
+    V.exTplFilter = tpl.name;
+    V.exDetailFrom = 'woprog';
+  }
+  render();
+}
+
+/* ---- program level: a whole folder as one training block ----
+   Answers "how is THIS program going" without mixing in the program you ran
+   before it, which is exactly what the lifetime charts cannot separate. */
+function folderProgStats(fid){
+  const tpls = S.templates.filter(x=>x.folderId===fid);
+  const ids = new Set(tpls.map(x=>x.id));
+  const names = new Set(tpls.map(x=>x.name.trim().toLowerCase()));
+  const ss = S.history.filter(w=>!w.arch && !w.dl &&
+    (ids.has(w.tplId) || names.has((w.name||'').trim().toLowerCase())));
+  const n = ss.length;
+  const out = { n, first:null, last:null, perWeek:null, vol:0 };
+  if(!n) return out;
+  out.last = ss[0].date;
+  out.first = ss[n-1].date;
+  out.vol = ss.reduce((a,w)=>a+woVolume(w.exercises), 0);
+  const weeks = (new Date(out.last).getTime() - new Date(out.first).getTime())/(7*864e5);
+  /* one session is not a rate; from two on, count the span it actually covered */
+  if(weeks > 0.5) out.perWeek = Math.round(n/weeks*10)/10;
+  return out;
+}
+function folderProgHtml(fid){
+  const st = folderProgStats(fid);
+  if(!st.n) return '';
+  return `<div class="statrow" style="margin-bottom:6px">
+      <div class="stat"><div class="v">${st.n}</div><div class="l">${t('wpSessions')}</div></div>
+      <div class="stat"><div class="v">${st.perWeek!=null?fmtW(st.perWeek):'—'}</div><div class="l">${t('fpPerWeek')}</div></div>
+      <div class="stat"><div class="v" style="font-size:16px;padding-top:6px">${daysAgoStr(st.last)}</div><div class="l">${t('exLastDone')}</div></div>
+    </div>
+    <div style="color:var(--ghost);font-size:12px;line-height:1.5;margin:0 6px 12px">${t('wpSince',{d:fmtDate(st.first)})}</div>`;
+}

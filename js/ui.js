@@ -31,6 +31,7 @@ function render(){
   else if(V.screen==='exercises')el.innerHTML = htmlExercises();
   else if(V.screen==='exdetail') el.innerHTML = htmlExDetail();
   else if(V.screen==='history')  el.innerHTML = htmlHistory();
+  else if(V.screen==='woprog')   el.innerHTML = htmlWoProg();
   else if(V.screen==='settings') el.innerHTML = htmlSettings();
   syncWakeLock();
 }
@@ -58,7 +59,15 @@ function renderTopbar(){
     h = `<button class="iconbtn" onclick="go('program')">‹</button><h1>${f?esc(f.name):''}</h1>
          <button class="finishbtn" onclick="go('program')">${ACT_ICONS.check} ${t('saveDone')}</button>`;
   }else if(V.screen==='exdetail'){
-    h = `<button class="iconbtn" onclick="go((V.exDetailFrom==='workout'&&S.active)?'workout':(V.exDetailFrom==='history'?'history':'exercises'))">‹</button><h1>${esc(exName(V.exDetail, V.exDetailName))}</h1>`;
+    /* back lands where the detail was opened from - including the progress
+       screen of one workout, which is a dead end otherwise */
+    const from = (V.exDetailFrom==='workout' && S.active) ? 'workout'
+               : (V.exDetailFrom==='woprog' && V.progTpl) ? 'woprog'
+               : V.exDetailFrom==='history' ? 'history' : 'exercises';
+    h = `<button class="iconbtn" onclick="go('${from}')">‹</button><h1>${esc(exName(V.exDetail, V.exDetailName))}</h1>`;
+  }else if(V.screen==='woprog'){
+    const d = S.templates.find(x=>x.id===V.progTpl);
+    h = `<button class="iconbtn" onclick="go(V.progFrom||'home')">‹</button><h1>${d?esc(d.name):''}</h1>`;
   }else{
     const titles = { home:'Daveedus', program:t('tabProgram'), exercises:t('tabExercises'),
                      history:t('tabHistory'), settings:t('tabSettings') };
@@ -97,11 +106,12 @@ const ACT_ICONS = {
   scale:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.5"/><path d="M8.2 8.5h7.6L18 20a1 1 0 0 1-1 1.2H7A1 1 0 0 1 6 20z"/></svg>',
   more:'<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>',
   check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5L19.5 7"/></svg>',
-  star:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.7 5.6 6.1.8-4.5 4.3 1.1 6L12 16.8 6.6 19.7l1.1-6L3.2 9.4l6.1-.8z"/></svg>'
+  star:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.7 5.6 6.1.8-4.5 4.3 1.1 6L12 16.8 6.6 19.7l1.1-6L3.2 9.4l6.1-.8z"/></svg>',
+  chart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>'
 };
 function renderTabbar(){
   const tabs = [
-    ['home', t('tabHome'), ['home','workout']],
+    ['home', t('tabHome'), ['home','workout','woprog']],
     ['program', t('tabProgram'), ['program','splitview','tpledit']],
     ['exercises', t('tabExercises'), ['exercises','exdetail']],
     ['history', t('tabHistory'), ['history']],

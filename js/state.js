@@ -322,6 +322,7 @@ const V = { screen:'home', editTpl:null, viewFolder:null, exDetail:null, expande
             pickerCb:null, pickerQ:'', pickerG:'all', exQ:'', exG:'mine',
             exTplFilter:'', exFilterNames:[], exMetric:'w', showArch:false,
             histLimit:20, histQ:'', wkvol:0, /* weekly sets view: weeks back (0 = this week) */
+            progTpl:null, progFrom:null, /* per-workout progress screen: which template, and where back goes */
             /* per-chart period state: p = 'w'|'m'|'y'|'c' (charts), days|'all'|'c' (muscle/bw);
                f/t = custom from-to as yyyy-mm-dd */
             cp:{ wk:{p:'w',f:'',t:''}, vol:{p:'w',f:'',t:''},

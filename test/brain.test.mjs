@@ -380,6 +380,136 @@ describe('cloud sync', () => {
   });
 });
 
+/* per-workout progress: the same lift can climb in one workout and stall in
+   another, and only a template-scoped view can tell you which. */
+describe('per-workout progress', () => {
+  const twoTemplates = app => {
+    const fid = app.S.folders[0].id;
+    app.S.templates = [
+      { id: 'tA', name: 'Upper A', folderId: fid, ex: [{ id: 'e1', k: 'bench-press', s: 3, r: '5' }] },
+      { id: 'tB', name: 'Upper B', folderId: fid, ex: [{ id: 'e2', k: 'bench-press', s: 3, r: '5' }] }
+    ];
+  };
+  const sess = (tplId, name, daysAgo, w, extra) =>
+    Object.assign(workout(daysAgo, [exEntry('bench-press', [set(w, 5), set(w, 5)])], extra), { tplId, name });
+
+  test('sessions are scoped to one template, archived and deload passes left out', () => {
+    const app = makeApp(); twoTemplates(app);
+    app.S.history = [
+      sess('tA', 'Upper A', 1, 100),
+      sess('tB', 'Upper B', 3, 90),
+      sess('tA', 'Upper A', 5, 95),
+      sess('tA', 'Upper A', 7, 200, { arch: 1 }),
+      sess('tA', 'Upper A', 9, 60, { dl: 1 })
+    ];
+    assert.equal(app.tplSessions('tA').length, 2);
+    assert.equal(app.tplSessions('tB').length, 1);
+    assert.equal(app.tplSessions('tA', true).length, 3, 'deload passes are available when asked for');
+  });
+
+  test('a re-created workout keeps its history through the name', () => {
+    /* delete a workout, build it again: new id, same name - the log must follow */
+    const app = makeApp(); twoTemplates(app);
+    app.S.history = [sess('OLD-ID', 'Upper A', 4, 100)];
+    assert.equal(app.tplSessions('tA').length, 1);
+  });
+
+  test('the headline numbers describe the workout, not the lifetime', () => {
+    const app = makeApp(); twoTemplates(app);
+    app.S.history = [sess('tA', 'Upper A', 0, 100), sess('tA', 'Upper A', 6, 90), sess('tB', 'Upper B', 1, 200)];
+    const st = app.tplProgStats('tA');
+    assert.equal(st.n, 2);
+    assert.equal(st.avgGap, 6, 'six days between the two sessions');
+    assert.equal(Math.round(st.avgVol), Math.round((100 * 10 + 90 * 10) / 2));
+  });
+
+  test('one session is a count, not a cadence', () => {
+    const app = makeApp(); twoTemplates(app);
+    app.S.history = [sess('tA', 'Upper A', 2, 100)];
+    assert.equal(app.tplProgStats('tA').avgGap, null);
+  });
+
+  test('a workout never done reports nothing rather than breaking', () => {
+    const app = makeApp(); twoTemplates(app);
+    app.S.history = [];
+    const st = app.tplProgStats('tA');
+    assert.equal(st.n, 0);
+    assert.equal(st.last, null);
+    assert.deepEqual(plain(app.tplVolSeries('tA')), []);
+    assert.deepEqual(plain(app.tplExRows('tA')).map(r => r.n), [0]);
+  });
+
+  test('the volume series runs oldest to newest, in display units', () => {
+    const app = makeApp(); twoTemplates(app);
+    app.S.history = [sess('tA', 'Upper A', 1, 110), sess('tA', 'Upper A', 8, 100)];
+    const v = app.tplVolSeries('tA');
+    assert.equal(v.length, 2);
+    assert.equal(v[0].w, 1000, 'oldest first');
+    assert.equal(v[1].w, 1100);
+    app.S.unit = 'lb';
+    assert.ok(app.tplVolSeries('tA')[0].w > 2000, 'volume follows the display unit');
+  });
+
+  test('THE point: one lift, climbing in Upper A and flat in Upper B', () => {
+    const app = makeApp(); twoTemplates(app);
+    app.S.history = [
+      sess('tA', 'Upper A', 1, 115), sess('tA', 'Upper A', 8, 110),
+      sess('tA', 'Upper A', 15, 105), sess('tA', 'Upper A', 22, 100),
+      sess('tB', 'Upper B', 2, 90), sess('tB', 'Upper B', 9, 90),
+      sess('tB', 'Upper B', 16, 90), sess('tB', 'Upper B', 23, 90)
+    ];
+    const a = app.tplExRows('tA').find(r => r.k === 'bench-press');
+    const b = app.tplExRows('tB').find(r => r.k === 'bench-press');
+    assert.equal(a.trend, 'up');
+    assert.equal(b.trend, 'flat');
+    assert.ok(a.now > a.first, 'Upper A moved');
+    assert.equal(b.now, b.first, 'Upper B did not');
+    /* and the lifetime view cannot separate them - which is why this exists */
+    assert.equal(app.e1rmSeries('bench-press').length, 8);
+  });
+
+  test('a lift logged but not planned is shown and flagged as extra', () => {
+    const app = makeApp(); twoTemplates(app);
+    app.S.history = [Object.assign(workout(1, [
+      exEntry('bench-press', [set(100, 5)]),
+      exEntry('cable-fly', [set(20, 12)])
+    ]), { tplId: 'tA', name: 'Upper A' })];
+    const rows = app.tplExRows('tA');
+    assert.equal(rows.find(r => r.k === 'bench-press').planned, true);
+    assert.equal(rows.find(r => r.k === 'cable-fly').planned, false);
+  });
+
+  test('time-based work is measured in seconds, not in estimated kilos', () => {
+    const app = makeApp();
+    app.S.templates = [{ id: 'tP', name: 'Core', folderId: app.S.folders[0].id, ex: [{ id: 'e1', k: 'plank', s: 2, r: '60' }] }];
+    app.S.history = [
+      Object.assign(workout(1, [exEntry('plank', [set(0, 75)])]), { tplId: 'tP', name: 'Core' }),
+      Object.assign(workout(8, [exEntry('plank', [set(0, 60)])]), { tplId: 'tP', name: 'Core' })
+    ];
+    const r = app.tplExRows('tP')[0];
+    assert.equal(r.tm, true);
+    assert.equal(r.first, 60);
+    assert.equal(r.now, 75, 'a 0 kg hold still has progress - the clock');
+  });
+
+  test('a program sums up its own workouts and nobody else’s', () => {
+    const app = makeApp();
+    const fid = app.S.folders[0].id, other = app.S.folders[1].id;
+    app.S.templates = [
+      { id: 'tA', name: 'Upper A', folderId: fid, ex: [] },
+      { id: 'tZ', name: 'Abs', folderId: other, ex: [] }
+    ];
+    app.S.history = [
+      sess('tA', 'Upper A', 1, 100), sess('tA', 'Upper A', 15, 100),
+      sess('tZ', 'Abs', 3, 50)
+    ];
+    const st = app.folderProgStats(fid);
+    assert.equal(st.n, 2);
+    assert.equal(app.folderProgStats(other).n, 1);
+    assert.equal(st.perWeek, 1, 'two sessions across two weeks');
+  });
+});
+
 describe('volume', () => {
   test('warmups are out, drop sets and machine base are in, pairs count twice', () => {
     const app = makeApp();

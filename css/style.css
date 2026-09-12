@@ -1204,3 +1204,31 @@ button:focus-visible, .chip:focus-visible, .switch:focus-visible{
   border-radius:999px; min-height:32px; padding:0 14px; margin-left:12px;
   font-weight:800; font-size:13px; cursor:pointer;}
 #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+/* ============ per-workout progress ============ */
+/* one lift, measured inside a single workout: name, its shape over the last
+   sessions, where it stands now and how far it moved since the first time */
+.wprow{display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+  background:var(--card); border:1px solid var(--edge); box-shadow:var(--card-shadow);
+  border-radius:12px; padding:10px 12px; margin-bottom:8px; color:inherit; font:inherit; cursor:pointer;}
+.wprow:active{opacity:.7;}
+.wpn{flex:1; min-width:0; font-weight:700; font-size:14px; overflow-wrap:break-word;}
+.wpoff{display:inline-block; font-style:normal; font-size:10px; font-weight:800; letter-spacing:.4px;
+  text-transform:uppercase; color:var(--dim); background:var(--input);
+  padding:1px 6px; border-radius:5px; margin-left:6px; vertical-align:1px;}
+.wpsp{flex:none; display:flex; align-items:center; opacity:.85;}
+.wpsp svg{width:80px; height:26px;}
+.wpv{flex:none; text-align:right; font-family:var(--display); font-weight:800; font-size:14px;
+  font-variant-numeric:tabular-nums; line-height:1.35; white-space:nowrap;}
+.wptr{font-style:normal; font-size:11px; vertical-align:1px;}
+.wptr.up{color:var(--green);} .wptr.down{color:var(--red);} .wptr.flat{color:var(--dim);}
+.wpdlt{font-style:normal; font-size:12px; font-weight:700; color:var(--dim);}
+.wpdlt.up{color:var(--green);} .wpdlt.down{color:var(--red);}
+.wpnew{font-style:normal; font-size:11px; font-weight:700; color:var(--ghost);}
+/* the session list: date, what it cost, what it moved */
+.wplog{display:flex; align-items:baseline; gap:10px; padding:9px 12px; font-size:13px;
+  border-bottom:1px solid var(--edge);}
+.wplog:last-child{border-bottom:none;}
+.wplog .d{flex:1; min-width:0; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.wplog .m{flex:none; color:var(--dim); font-size:12px;}
+.wplog .v{flex:none; font-weight:800; font-variant-numeric:tabular-nums; min-width:64px; text-align:right;}

@@ -46,6 +46,7 @@ function tplCardHtml(d){
       <div class="ct">${t('tplExCount',{n:d.ex.length})}${groups?' · '+esc(groups):''}</div>
     </div>
     <div class="rowacts">
+      <button class="iconbtn2" onclick="openWoProg('${d.id}')" aria-label="progress">${ACT_ICONS.chart}</button>
       <button class="iconbtn2" onclick="openTpl('${d.id}')" aria-label="edit">${ACT_ICONS.edit}</button>
       <button class="iconbtn2 danger" onclick="delTpl('${d.id}')" aria-label="delete">${ACT_ICONS.x}</button>
       <button class="iconbtn2 play" onclick="startWorkout('${d.id}')" aria-label="start">${ACT_ICONS.play}</button>
@@ -96,7 +97,7 @@ function htmlSplitView(){
   const f = S.folders.find(x=>x.id===V.viewFolder);
   if(!f){ V.screen='program'; return htmlProgram(); }
   const tpls = S.templates.filter(x=>x.folderId===f.id);
-  let h = `<div style="height:8px"></div>
+  let h = `<div style="height:8px"></div>` + folderProgHtml(f.id) + `
     <div class="card">
       <div style="color:var(--dim);font-size:13px;margin-bottom:6px">${t('folderName')}</div>
       <input class="nameinput" type="text" value="${esc(f.name)}" oninput="renameFolder('${f.id}',this.value)">

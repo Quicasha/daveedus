@@ -256,7 +256,8 @@ function openWoPreview(id){
   openModal(`<h3>${esc(d.name)}<button class="x" onclick="closeModal()">✕</button></h3>
     <div class="pvsub">${last?daysAgoStr(last.date)+' '+fmtClock(last.date):t('never')} · ${t('tplExCount',{n:d.ex.length})}${dlDue?` · <span class="pvdl">${t('dlBadge')}</span>`:''}</div>
     <div class="pvlist">${rows || `<div class="empty" style="padding:14px">—</div>`}</div>
-    <button class="btn primary" style="margin-top:14px" onclick="closeModal();startWorkout('${d.id}')">${ACT_ICONS.play} ${t('pvStart')}</button>`);
+    <button class="btn primary" style="margin-top:14px" onclick="closeModal();startWorkout('${d.id}')">${ACT_ICONS.play} ${t('pvStart')}</button>
+    <button class="btn" onclick="openWoProg('${d.id}')">${ACT_ICONS.chart} ${t('wpBtn')}</button>`);
 }
 function startWorkout(tplId){
   const tpl = S.templates.find(d=>d.id===tplId);
