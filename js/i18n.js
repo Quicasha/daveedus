@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.21.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.22.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 /* UI strings. One flat dictionary - the app is English-only by design. */
@@ -68,6 +68,11 @@ const T = {
   exCreateMode:'Type', modeReps:'Reps', modeTime:'Time (sec)',
   histUnarch:'Restore', archTitle:'Archive',
   wpBtn:'Progress', fpPerWeek:'per week',
+  cmpBtn:'Compare programs', cmpTitle:'Compare programs',
+  cmpWeeks:'weeks', cmpAvgDur:'avg length', cmpAvgVol:'avg volume', cmpLifts:'Shared lifts',
+  cmpLiftHint:'Start and end e1RM inside each program, and the change per week - the number that makes a short block and a long one comparable.',
+  cmpEmpty:'Compare needs two programs with sessions. When you start a new one, it will line up against this one here.',
+  cmpNoShared:'No lift appears in two programs yet.',
   wpSessions:'sessions', wpAvgDur:'avg length', wpEvery:'avg gap',
   wpSince:'since {d}', wpAvgVol:'{v} {u} per session on average',
   wpVolPer:'Volume per session',

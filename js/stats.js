@@ -861,21 +861,57 @@ function openExFromTpl(k){
 /* ---- program level: a whole folder as one training block ----
    Answers "how is THIS program going" without mixing in the program you ran
    before it, which is exactly what the lifetime charts cannot separate. */
-function folderProgStats(fid){
+/* every session that belongs to one program: its workouts by id, with the
+   name fallback so a re-created workout stays in the block */
+function folderSessions(fid){
   const tpls = S.templates.filter(x=>x.folderId===fid);
   const ids = new Set(tpls.map(x=>x.id));
   const names = new Set(tpls.map(x=>x.name.trim().toLowerCase()));
-  const ss = S.history.filter(w=>!w.arch && !w.dl &&
+  return S.history.filter(w=>!w.arch && !w.dl &&
     (ids.has(w.tplId) || names.has((w.name||'').trim().toLowerCase())));
+}
+function folderProgStats(fid){
+  const ss = folderSessions(fid);
   const n = ss.length;
-  const out = { n, first:null, last:null, perWeek:null, vol:0 };
+  const out = { n, first:null, last:null, perWeek:null, weeks:0, vol:0, avgVol:0, avgDur:0 };
   if(!n) return out;
   out.last = ss[0].date;
   out.first = ss[n-1].date;
   out.vol = ss.reduce((a,w)=>a+woVolume(w.exercises), 0);
-  const weeks = (new Date(out.last).getTime() - new Date(out.first).getTime())/(7*864e5);
+  out.avgVol = out.vol/n;
+  const durs = ss.map(w=>w.dur||0).filter(d=>d>0);
+  if(durs.length) out.avgDur = Math.round(durs.reduce((a,b)=>a+b,0)/durs.length);
+  out.weeks = Math.round((new Date(out.last).getTime() - new Date(out.first).getTime())/(7*864e5)*10)/10;
   /* one session is not a rate; from two on, count the span it actually covered */
-  if(weeks > 0.5) out.perWeek = Math.round(n/weeks*10)/10;
+  if(out.weeks > 0.5) out.perWeek = Math.round(n/out.weeks*10)/10;
+  return out;
+}
+/* every lift a program trained, with where it started and ended INSIDE that
+   program. perWeek is the fair number between programs of different length:
+   a 6-week block that added 5% and a 20-week one that added 8% did not move
+   the lift equally fast. */
+function folderLifts(fid){
+  const ss = folderSessions(fid);
+  const series = new Map();               /* k -> [{ts, v}] oldest -> newest */
+  for(let i=ss.length-1; i>=0; i--){
+    const w = ss[i];
+    const seen = new Set();
+    for(const e of w.exercises){
+      if(seen.has(e.k) || isTimeEx(e.k)) continue;
+      const v = sessionE1rm(w, e.k, exName(e.k).trim().toLowerCase());
+      if(v <= 0) continue;
+      seen.add(e.k);
+      if(!series.has(e.k)) series.set(e.k, []);
+      series.get(e.k).push({ ts:new Date(w.date).getTime(), v });
+    }
+  }
+  const out = {};
+  for(const [k, pts] of series){
+    const n = pts.length, first = pts[0].v, last = pts[n-1].v;
+    const weeks = n > 1 ? (pts[n-1].ts - pts[0].ts)/(7*864e5) : 0;
+    const pct = first > 0 ? (last-first)/first*100 : 0;
+    out[k] = { n, first, last, weeks, pct, perWeek: weeks >= 1 ? pct/weeks : null };
+  }
   return out;
 }
 function folderProgHtml(fid){
@@ -887,4 +923,44 @@ function folderProgHtml(fid){
       <div class="stat"><div class="v" style="font-size:16px;padding-top:6px">${daysAgoStr(st.last)}</div><div class="l">${t('exLastDone')}</div></div>
     </div>
     <div style="color:var(--ghost);font-size:12px;line-height:1.5;margin:0 6px 12px">${t('wpSince',{d:fmtDate(st.first)})}</div>`;
+}
+
+/* ---- the screen: programs side by side ----
+   One column per program that has sessions. The top block is the shape of each
+   block (how long, how often, how heavy); the bottom is every lift that shows
+   up in at least two of them, with its change per week in each - the one
+   number that lets a 6-week block and a 20-week block answer the same
+   question: which program moved this lift faster. */
+function htmlProgCmp(){
+  const cols = S.folders.map(f=>({ f, st:folderProgStats(f.id), lifts:folderLifts(f.id) }))
+    .filter(c=>c.st.n>0);
+  let h = '<div style="height:8px"></div>';
+  if(cols.length < 2) return h + `<div class="empty">${t('cmpEmpty')}</div>`;
+  const head = `<tr><th></th>${cols.map(c=>`<th>${esc(c.f.name)}</th>`).join('')}</tr>`;
+  const row = (label, fn) => `<tr><td>${label}</td>${cols.map(c=>`<td>${fn(c)}</td>`).join('')}</tr>`;
+  h += `<div class="card cmpwrap"><table class="cmptbl">${head}
+    ${row(t('wpSessions'), c=>c.st.n)}
+    ${row(t('cmpWeeks'), c=>c.st.weeks ? fmtW(c.st.weeks) : '—')}
+    ${row(t('fpPerWeek'), c=>c.st.perWeek!=null ? fmtW(c.st.perWeek) : '—')}
+    ${row(t('cmpAvgDur'), c=>c.st.avgDur ? fmtTime(c.st.avgDur) : '—')}
+    ${row(t('cmpAvgVol')+' ('+unitL()+')', c=>Math.round(kg2u(c.st.avgVol)))}
+  </table></div>`;
+  /* lifts present in two or more programs, most-shared first */
+  const count = {};
+  cols.forEach(c=>Object.keys(c.lifts).forEach(k=>{ count[k]=(count[k]||0)+1; }));
+  const shared = Object.keys(count).filter(k=>count[k]>=2)
+    .sort((a,b)=>count[b]-count[a] || exName(a).localeCompare(exName(b)));
+  h += `<h2 class="sec">${t('cmpLifts')}</h2>`;
+  if(!shared.length) return h + `<div class="empty">${t('cmpNoShared')}</div>`;
+  const cell = L => {
+    if(!L) return '<span class="cmpna">—</span>';
+    const dl = L.pct > 0.05 ? 'up' : L.pct < -0.05 ? 'down' : '';
+    const rate = L.perWeek!=null ? `<i class="cmprate ${dl}">${L.perWeek>0?'+':''}${fmtW(Math.round(L.perWeek*100)/100)}%/wk</i>` : `<i class="cmprate">${t('wpNew')}</i>`;
+    return `<b>${fmtW(Math.round(kg2u(L.first)))} → ${fmtW(Math.round(kg2u(L.last)))}</b><br>${rate}`;
+  };
+  h += `<div class="card cmpwrap"><table class="cmptbl lifts">${head}
+    ${shared.map(k=>row(esc(exName(k)), c=>cell(c.lifts[k]))).join('')}
+  </table></div>
+  <div style="color:var(--ghost);font-size:12px;line-height:1.5;margin:8px 6px 0">${t('cmpLiftHint')}</div>`;
+  return h;
 }

@@ -32,6 +32,7 @@ function render(){
   else if(V.screen==='exdetail') el.innerHTML = htmlExDetail();
   else if(V.screen==='history')  el.innerHTML = htmlHistory();
   else if(V.screen==='woprog')   el.innerHTML = htmlWoProg();
+  else if(V.screen==='progcmp')  el.innerHTML = htmlProgCmp();
   else if(V.screen==='settings') el.innerHTML = htmlSettings();
   syncWakeLock();
 }
@@ -68,6 +69,8 @@ function renderTopbar(){
   }else if(V.screen==='woprog'){
     const d = S.templates.find(x=>x.id===V.progTpl);
     h = `<button class="iconbtn" onclick="go(V.progFrom||'home')">‹</button><h1>${d?esc(d.name):''}</h1>`;
+  }else if(V.screen==='progcmp'){
+    h = `<button class="iconbtn" onclick="go('program')">‹</button><h1>${t('cmpTitle')}</h1>`;
   }else{
     const titles = { home:'Daveedus', program:t('tabProgram'), exercises:t('tabExercises'),
                      history:t('tabHistory'), settings:t('tabSettings') };
@@ -112,7 +115,7 @@ const ACT_ICONS = {
 function renderTabbar(){
   const tabs = [
     ['home', t('tabHome'), ['home','workout','woprog']],
-    ['program', t('tabProgram'), ['program','splitview','tpledit']],
+    ['program', t('tabProgram'), ['program','splitview','tpledit','progcmp']],
     ['exercises', t('tabExercises'), ['exercises','exdetail']],
     ['history', t('tabHistory'), ['history']],
     ['settings', t('tabSettings'), ['settings']]

@@ -575,16 +575,47 @@ function applyDp(xi){
   });
   save(); render();
 }
-/* comparison target = same working set of the previous session */
-function realPrev(ex, si){
-  const prev = ex.last ? ex.last.sets : null;
-  if(!prev) return null;
-  const cur = ex.sets[si];
-  if(cur.warm || cur.drop) return null;
-  const prevWork = prev.filter(s=>!s.warm && !s.drop);
-  if(!prevWork.length) return null;
-  let wi = 0; for(let i=0;i<si;i++) if(!ex.sets[i].warm && !ex.sets[i].drop) wi++;
-  return prevWork[wi] || null;
+/* The colour of a finished set: everything done THROUGH this set against the
+   previous session through the same set - never one set against one set.
+   Set-against-set punished the right behaviour: a heavier first set almost
+   guarantees a lighter second one, and that second set went red although the
+   lifter had just got stronger.
+   Two things are tallied on the way to this set, and beating last time on
+   EITHER is a win: total work (load times reps, summed) and best strength shown
+   (the top e1RM so far). 105x5 then 105x4 is less tonnage than 100x5 twice but
+   a clearly stronger top set, so it stays green; 100x5 then 100x4 against two
+   sets of 100x5 is less work at the same strength, and that is honestly red.
+   Load is TOTAL - added weight plus body weight plus machine base - so a heavier
+   sled or a heavier lifter compare on one scale. Time-based sets tally seconds
+   (total held, longest single hold). Returns win / even / loss, or none when
+   last time simply had no set this far. */
+function setVerdict(ex, si, wkg, reps){
+  const prev = ex.last ? ex.last.sets.filter(s=>!s.warm && !s.drop) : null;
+  if(!prev || !prev.length) return 'none';
+  const tm = isTimeEx(ex.k), bw = isBwEx(ex.k);
+  const todayAdd = (bw ? (ex.bw||0) : 0) + (ex.base||0);
+  const prevAdd  = (bw ? (ex.last.bw||0) : 0) + (ex.last.mb||0);
+  /* one set's contribution: [work, strength] */
+  const tally = (kg, r, add) => tm ? [r, r] : [(kg+add)*r, (kg+add)*(1+r/30)];
+  let work = 0, best = 0, wi = -1;
+  for(let i=0; i<=si; i++){
+    const x = ex.sets[i];
+    if(x.warm || x.drop) continue;
+    wi++;
+    const [w, b] = i===si ? tally(wkg, reps, todayAdd)
+                          : tally(u2kg(parseNum(x.w))||0, parseNum(x.r)||0, todayAdd);
+    work += w; best = Math.max(best, b);
+  }
+  if(wi >= prev.length) return 'none';
+  let refWork = 0, refBest = 0;
+  for(let i=0; i<=wi; i++){
+    const [w, b] = tally(prev[i].weight, prev[i].reps, prevAdd);
+    refWork += w; refBest = Math.max(refBest, b);
+  }
+  const eps = 1e-6;
+  if(work > refWork+eps || best > refBest+eps) return 'win';
+  if(work < refWork-eps || best < refBest-eps) return 'loss';
+  return 'even';
 }
 function htmlWorkout(){
   if(!S.active){ V.screen='home'; return htmlHome(); }
@@ -1134,15 +1165,8 @@ function toggleSet(xi,si){
   if(!bw && w<0){ toast(t('woEmptyVals')); return; } /* only assisted bodyweight may be negative */
   const wkg = u2kg(w);
   s.w = fmtW(w); s.r = String(Math.round(r)); s.done = true;
-  const real = realPrev(ex,si);              /* kg */
-  /* compare TOTAL loads: when the machine base changed between sessions the
-     logged plates-only numbers live on different scales */
-  const mbd = ((ex.last && ex.last.mb) || 0) - (ex.base || 0);
-  const rw = real ? real.weight + mbd : 0;
-  if(!real || s.warm || s.drop || dl) s.cls = 'none'; /* no win/loss judgment on a deload */
-  else if(wkg>rw || (wkg===rw && r>real.reps)) s.cls='win';
-  else if(wkg===rw && r===real.reps) s.cls='even';
-  else s.cls='loss';
+  /* no win/loss judgment on warmups, drops or a deload pass */
+  s.cls = (s.warm || s.drop || dl) ? 'none' : setVerdict(ex, si, wkg, r);
   updateExDone(ex);
   /* out-of-order training: on an exercise's first set it floats (with its whole
      superset group) up right below the exercises already under way, so the card

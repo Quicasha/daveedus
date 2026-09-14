@@ -52,13 +52,14 @@ Takes half a minute. After that it runs full-screen and works fully offline.
 
 ## What it does
 
-- Logs sets fast - last session's numbers are the placeholders, one tap confirms, green or red shows how it went, the rest clock starts itself
+- Logs sets fast - last session's numbers are the placeholders, one tap confirms, the rest clock starts itself. Green or red judges the session so far, never one set against one set: push the first set heavier and a shorter second set stays green, because you are ahead
 - Programs with alternatives per exercise - bench taken, swap in one tap; each variant keeps its own history
 - Progression runs quietly in the background - rep-range hints, a 4-week wave for stalled lifts, deloads, eased-in suggestions after a break
 - Level ladders for bodyweight work - L1→L5 progressions (knee raise → toes-to-bar); two clean sessions at the top of the range and the next level loads itself
 - Rotation programs suggest what's NEXT; free-pick splits (gym / bar / home) skip rotation and deload, showing how often and how long ago instead
 - Records and charts - estimated 1RM trends, rep records, tracked lifts with goals and projections
 - Progress per workout, not just per exercise - open any workout to see its own volume trend, cadence and every lift measured inside that workout alone, so a bench climbing in Upper A cannot hide one stalling in Upper B
+- Programs side by side - once a second program has sessions, compare blocks on length, cadence, volume and every shared lift's change per week, so a 6-week block and a 20-week one answer the same question
 - Weekly sets per muscle - four weeks side by side against the 10-20 set research band, so the back never quietly falls behind the chest
 - The gym details covered: warm-ups, drop sets, supersets, rest timers, machine base weight, bodyweight exercises, kg / lb
 - Share a program as a short code

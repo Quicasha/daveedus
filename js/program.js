@@ -81,6 +81,10 @@ function htmlProgram(){
   h += `<div style="height:8px"></div>
         <button class="btn ghostbtn" onclick="addFolder()">${t('folderNew')}</button>
         <button class="btn" onclick="openImportModal('tpl')">${ACT_ICONS.dl} ${t('tplImport')}</button>`;
+  /* two programs with sessions is when "which one worked better" becomes a question */
+  if(S.folders.filter(f=>folderProgStats(f.id).n>0).length >= 2){
+    h += `<button class="btn" onclick="go('progcmp')">${ACT_ICONS.chart} ${t('cmpBtn')}</button>`;
+  }
   return h;
 }
 function openSplit(id){

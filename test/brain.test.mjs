@@ -126,6 +126,79 @@ describe('progression ladder', () => {
   });
 });
 
+/* the colour of a finished set: cumulative work through this set against the
+   previous session through the same set - not set against set */
+describe('set verdict', () => {
+  /* today's sets carry display-unit strings, last time's carry kg numbers,
+     exactly as the live session and history hold them */
+  const today = (...rows) => rows.map(([w, r, f]) => ({ w: String(w), r: String(r), done: true, warm: !!(f && f.warm), drop: !!(f && f.drop) }));
+  const last = (rows, extra) => Object.assign({ sets: rows.map(([w, r, f]) => set(w, r, f)) }, extra || {});
+  const lift = (k, sets, prev, extra) => Object.assign({ k, sets, last: prev }, extra || {});
+
+  test('THE case: a heavier first set keeps a shorter second one green', () => {
+    const app = makeApp();
+    /* went up 5 kg, lost a rep on set 2: 945 kg of work is LESS than last
+       time's 1000, but the top set is clearly stronger - that is progress */
+    const ex = lift('bench-press', today([105, 5], [105, 4]), last([[100, 5], [100, 5]]));
+    assert.equal(app.setVerdict(ex, 0, 105, 5), 'win');
+    assert.equal(app.setVerdict(ex, 1, 105, 4), 'win');
+  });
+  test('the owner’s exact case: pushed set 1, dropped back for set 2 and lost a rep', () => {
+    const app = makeApp();
+    /* set-against-set called 100x4 a loss against last time's 100x5 - the red
+       that made going heavier feel like a mistake. Cumulatively the top set is
+       stronger, so the session is ahead. */
+    const ex = lift('bench-press', today([105, 5], [100, 4]), last([[100, 5], [100, 5]]));
+    assert.equal(app.setVerdict(ex, 1, 100, 4), 'win');
+  });
+  test('more work at a lighter weight is also a win', () => {
+    const app = makeApp();
+    const ex = lift('bench-press', today([90, 8]), last([[100, 5]]));
+    assert.equal(app.setVerdict(ex, 0, 90, 8), 'win', '720 kg moved beats 500, even if the top set is lighter');
+  });
+  test('the same work at the same strength is even', () => {
+    const app = makeApp();
+    const same = lift('bench-press', today([100, 5], [100, 5]), last([[100, 5], [100, 5]]));
+    assert.equal(app.setVerdict(same, 1, 100, 5), 'even');
+  });
+  test('same weight, a rep short on set 2: less work at the same strength is honestly red', () => {
+    const app = makeApp();
+    const behind = lift('bench-press', today([100, 5], [100, 4]), last([[100, 5], [100, 5]]));
+    assert.equal(app.setVerdict(behind, 0, 100, 5), 'even');
+    assert.equal(app.setVerdict(behind, 1, 100, 4), 'loss');
+  });
+  test('a set last time never had gets no colour', () => {
+    const app = makeApp();
+    const ex = lift('bench-press', today([100, 5], [100, 5], [100, 5]), last([[100, 5], [100, 5]]));
+    assert.equal(app.setVerdict(ex, 2, 100, 5), 'none');
+    assert.equal(app.setVerdict(lift('bench-press', today([100, 5]), null), 0, 100, 5), 'none');
+  });
+  test('warmups and drops are skipped when lining sets up', () => {
+    const app = makeApp();
+    const ex = lift('bench-press',
+      today([60, 10, { warm: true }], [100, 5], [80, 10, { drop: true }], [100, 5]),
+      last([[100, 5], [100, 4]]));
+    assert.equal(app.setVerdict(ex, 3, 100, 5), 'win', 'second work set beat last time by one rep');
+  });
+  test('bodyweight with nothing added: more reps is more work', () => {
+    const app = makeApp();
+    const ex = lift('pull-up', today([0, 9]), last([[0, 8]], { bw: 73 }), { bw: 73 });
+    assert.equal(app.setVerdict(ex, 0, 0, 9), 'win');
+  });
+  test('time-based work compares seconds, not kilos', () => {
+    const app = makeApp();
+    const ex = lift('plank', today([0, 70]), last([[0, 60]]));
+    assert.equal(app.setVerdict(ex, 0, 0, 70), 'win');
+    assert.equal(app.setVerdict(lift('plank', today([0, 50]), last([[0, 60]])), 0, 0, 50), 'loss');
+  });
+  test('a machine whose base went up counts the whole load', () => {
+    const app = makeApp();
+    /* same plates as last time, but the sled itself is heavier now */
+    const ex = lift('leg-press', today([100, 10]), last([[100, 10]], { mb: 25 }), { base: 30 });
+    assert.equal(app.setVerdict(ex, 0, 100, 10), 'win');
+  });
+});
+
 /* the +2.5 kg offer: the rule that decides when the app dares suggest more
    weight. Getting this wrong either stalls the lifter or pushes into a break. */
 describe('double progression', () => {
@@ -490,6 +563,25 @@ describe('per-workout progress', () => {
     assert.equal(r.tm, true);
     assert.equal(r.first, 60);
     assert.equal(r.now, 75, 'a 0 kg hold still has progress - the clock');
+  });
+
+  test('two programs, one lift: the per-week rate says which block moved it faster', () => {
+    const app = makeApp();
+    const fA = app.S.folders[0].id, fB = app.S.folders[1].id;
+    app.S.templates = [
+      { id: 'tA', name: 'Old plan', folderId: fA, ex: [] },
+      { id: 'tB', name: 'New plan', folderId: fB, ex: [] }
+    ];
+    /* old plan: 100 -> 105 over 10 weeks; new plan: 105 -> 110 over 4 weeks */
+    app.S.history = [
+      sess('tB', 'New plan', 0, 110), sess('tB', 'New plan', 28, 105),
+      sess('tA', 'Old plan', 35, 105), sess('tA', 'Old plan', 105, 100)
+    ];
+    const a = app.folderLifts(fA)['bench-press'], b = app.folderLifts(fB)['bench-press'];
+    assert.equal(Math.round(a.pct), 5);
+    assert.equal(Math.round(b.pct), 5, 'same total gain...');
+    assert.ok(b.perWeek > a.perWeek * 2, '...but the new plan earned it in less than half the time');
+    assert.equal(app.folderLifts(fA)['plank'], undefined, 'time work has no e1RM to compare');
   });
 
   test('a program sums up its own workouts and nobody else’s', () => {
