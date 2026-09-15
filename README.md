@@ -61,7 +61,7 @@ Takes half a minute. After that it runs full-screen and works fully offline.
 - Progress per workout, not just per exercise - open any workout to see its own volume trend, cadence and every lift measured inside that workout alone, so a bench climbing in Upper A cannot hide one stalling in Upper B
 - Programs side by side - once a second program has sessions, compare blocks on length, cadence, volume and every shared lift's change per week, so a 6-week block and a 20-week one answer the same question
 - Weekly sets per muscle - four weeks side by side against the 10-20 set research band, so the back never quietly falls behind the chest
-- The gym details covered: one-tap warm-ups that load the bar the way you do (empty bar, then big plates only - 20 / 60 / 80 on the way to 100, 45 / 135 / 185 on the way to 225 lb), drop sets, supersets, rest timers, machine base weight, bodyweight exercises, kg / lb
+- The gym details covered: one-tap warm-ups that load the bar the way you do and taper the way the evidence says (empty bar, then big plates only, the last set a short one at or under 90% - 20 / 60 / 80 / 90 on the way to 100, 20 / 60 / 80 / 100 / 120 on the way to 140, 45 / 135 / 165 / 195 on the way to 225 lb), drop sets, supersets, rest timers, machine base weight, bodyweight exercises, kg / lb
 - Share a program as a short code
 
 ## Your data

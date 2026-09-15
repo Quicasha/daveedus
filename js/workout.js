@@ -1022,41 +1022,60 @@ function toggleWarmShow(xi){
   ex.warmShow = !ex.warmShow;
   save(); render();
 }
-/* Warmup loads for a barbell, built the way a bar actually gets loaded: the
-   empty bar, then only plates a lifter would bother with before a working set
-   (10 and up - nobody slides a pair of 1.25s on to hit 67.5). The first loaded
-   set starts at one standard plate a side (20 kg -> 60, 45 lb -> 135) whenever
-   that is still a warmup (<= 70% of the target); the 40/60/80% candidates snap
-   to the nearest total those plates can make, ties going up; duplicates and
-   anything at or past the target fall away. 100 kg gives 20 / 60 / 80, 225 lb
-   gives 45 / 135 / 185. All arguments and results are in the display unit.
-   `plates` is what the gym has (per side), `std` the plate everyone means by
-   "a plate" - used as the floor only when the gym actually has it. */
+/* Warmup loads for a barbell, built the way a bar actually gets loaded and
+   shaped the way the evidence says a ramp should be.
+   Plates: only ones a lifter would bother with before a working set (10 and
+   up, from the gym's own set) - nobody slides a pair of 1.25s on to hit 67.5.
+   Shape: the empty bar; then the first loaded set at one standard plate a
+   side (20 kg -> 60, 45 lb -> 135) whenever that is still a warmup (<= 70%);
+   then the LAST warmup as the heaviest big-plate load at or under 90% of the
+   target - specific-warm-up studies put that set at 80-90% of the working
+   load and coaching practice at 85-90%, so the final jump into the work is a
+   rehearsal, not a surprise; and between those two, enough evenly spaced
+   steps that no jump exceeds 20% of the target, which is what scales the
+   ramp with the weight (100 gives 20/60/80/90, 140 gives 20/60/80/100/120,
+   225 lb gives 45/135/165/195). Intermediate steps snap to the nearest
+   achievable load, ties going up. All arguments and results are in the
+   display unit; `std` is the plate everyone means by "a plate", used as the
+   floor only when the gym actually has it. */
 function warmupLoads(target, bar, plates, std){
   if(!(target > bar)) return [];
   const big = plates.filter(p=>p>=10).sort((a,b)=>b-a);
   if(!big.length) return [bar];
-  /* every per-side load the big plates can build, up to what fits under the target */
+  /* every per-side load the big plates can build under the target */
   const maxSide = (target - bar)/2;
   const can = new Set([0]);
   for(const p of big) for(const s of [...can]){
     for(let v = s+p; v <= maxSide+1e-9; v += p) can.add(Math.round(v*100)/100);
   }
-  const totals = [...can].filter(s=>s>0).map(s=>bar+2*s).sort((a,b)=>a-b);
+  const totals = [...can].filter(s=>s>0).map(s=>bar+2*s).filter(tt=>tt<target).sort((a,b)=>a-b);
   if(!totals.length) return [bar];
   const nearest = x => totals.reduce((b,tt)=>
     (b===null || Math.abs(tt-x) < Math.abs(b-x) || (Math.abs(tt-x)===Math.abs(b-x) && tt>b)) ? tt : b, null);
   const floorPlate = big.includes(std) ? std : big[0];
   const floor = bar + 2*floorPlate;
+  const base = floor <= target*0.7 ? floor : bar;
+  const top = totals.filter(tt=>tt <= target*0.9).pop();
   const out = [bar];
-  for(const p of [0.4,0.6,0.8]){
-    let w = nearest(target*p);
-    if(w < floor && floor <= target*0.7) w = floor;
-    if(w >= target || w <= out[out.length-1]) continue;
-    out.push(w);
+  if(base > bar) out.push(base);
+  if(top!=null && top > base){
+    /* a step is at least a pair of the smallest big plates - on light targets a
+       pure 20% rule would hand out five ten-kilo hops on the way to 80 */
+    const jump = Math.max(target*0.2, 2*big[big.length-1]);
+    const span = top - base, jumps = Math.min(4, Math.max(1, Math.ceil(span/jump - 1e-9)));
+    for(let i=1; i<jumps; i++){
+      const w = nearest(base + span*i/jumps);
+      if(w > out[out.length-1] && w < top) out.push(w);
+    }
+    out.push(top);
   }
   return out;
 }
+/* reps for the loaded warmup sets, by how many there are: volume stays low and
+   tapers into the working set, ending on a single when the ramp is long enough
+   to reach near-working load - the potentiation literature wants that last
+   set heavy and short */
+const WARM_REPS = { 1:[3], 2:[5,2], 3:[5,3,1], 4:[6,4,2,1], 5:[6,5,3,2,1] };
 function autoWarmup(xi){
   const ex = S.active.exercises[xi];
   if(!ex || isTimeEx(ex.k) || isBwEx(ex.k)) return;
@@ -1091,7 +1110,7 @@ function autoWarmup(xi){
     /* big plates only, see warmupLoads. Reps taper towards the working set:
        the bar gets 10, the last warmup 2, whatever sits between fills 6 / 4. */
     const loads = warmupLoads(w, bar, plateSet(), S.unit==='lb' ? 45 : 20);
-    const reps = [10].concat([6,4,2].slice(3-(loads.length-1)));
+    const reps = [10].concat(WARM_REPS[Math.min(5, loads.length-1)] || []);
     loads.forEach((ww,i)=>ramp.push({ w:ww, r:reps[i] }));
   }else [[0.4,6],[0.6,4],[0.8,2]].forEach(([p,r])=>{
     /* dumbbells, pin stacks, plate-loaded sleds: the plain step ramp */

@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.23.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.24.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 /* UI strings. One flat dictionary - the app is English-only by design. */

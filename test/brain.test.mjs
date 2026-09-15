@@ -258,23 +258,41 @@ describe('warmup ramp', () => {
   const kg = t => { const app = makeApp(); return plain(app.warmupLoads(t, 20, KG, 20)); };
   const lb = t => { const app = makeApp(); return plain(app.warmupLoads(t, 45, LB, 45)); };
 
-  test('the owner’s ramp: bar, 60, 80 for a 100 kg bench', () => {
-    assert.deepEqual(kg(100), [20, 60, 80]);
+  test('100 kg: bar, one plate, then a rehearsal single at 90%', () => {
+    assert.deepEqual(kg(100), [20, 60, 80, 90]);
   });
   test('a 2.5 on the working set never leaks a 1.25 into the warmup', () => {
-    assert.deepEqual(kg(102.5), [20, 60, 80]);
-    assert.deepEqual(kg(107.5), [20, 60, 90]);
+    assert.deepEqual(kg(102.5), [20, 60, 80, 90]);
+    assert.deepEqual(kg(107.5), [20, 60, 80, 90]);
+  });
+  test('140 kg no longer jumps 110 -> 140: evenly spaced, last set at 120', () => {
+    assert.deepEqual(kg(140), [20, 60, 80, 100, 120]);
   });
   test('heavier targets earn more steps, still big plates only', () => {
-    assert.deepEqual(kg(160), [20, 60, 100, 130]);
-    for (const t of [80, 100, 120, 140, 160, 180, 200]){
-      for (const w of kg(t).slice(1)){
+    assert.deepEqual(kg(160), [20, 60, 90, 110, 140]);
+    assert.deepEqual(kg(200), [20, 60, 100, 140, 180]);
+    assert.deepEqual(kg(80), [20, 40, 50, 70], 'a light target gets plate-sized steps, not a staircase');
+  });
+  test('the ramp respects both evidence limits at every weight', () => {
+    for (const t of [80, 90, 100, 110, 120, 140, 160, 180, 200, 220]){
+      const r = kg(t);
+      const last = r[r.length - 1];
+      assert.ok(last <= t * 0.9 + 1e-9, `${t}: last warmup ${last} is past 90%`);
+      assert.ok(t - last <= t * 0.2 + 1e-9, `${t}: final jump from ${last} exceeds 20%`);
+      /* the 20% rule is applied to the ideal targets; snapping both ends of a
+         step to the 10 kg big-plate grid can stretch it by one grid step */
+      for (let i = 2; i < r.length; i++){
+        assert.ok(r[i] - r[i - 1] <= t * 0.2 + 10 + 1e-9, `${t}: jump ${r[i - 1]} -> ${r[i]} too big`);
+      }
+      for (const w of r.slice(1)){
         assert.equal(((w - 20) / 2) % 5, 0, `${w} on the way to ${t} needs a plate under 10`);
       }
+      assert.ok(r.length <= 6, `${t}: more than five loaded warmups`);
     }
   });
-  test('the canonical pounds ramp: 45, 135, 185 on the way to 225', () => {
-    assert.deepEqual(lb(225), [45, 135, 185]);
+  test('the pounds ramp: 45, 135, then evenly up to 195 on the way to 225', () => {
+    assert.deepEqual(lb(225), [45, 135, 165, 195]);
+    for (const w of lb(225).slice(1)) assert.equal(((w - 45) / 2) % 5, 0, `${w} lb needs a plate under 10`);
   });
   test('light targets skip the one-plate floor rather than warm up past 70%', () => {
     const r = kg(60);
@@ -291,7 +309,7 @@ describe('warmup ramp', () => {
   test('a gym without 20s floors on the biggest plate it does have', () => {
     const app = makeApp();
     /* 25s only: the first loaded set is one 25 a side */
-    assert.deepEqual(plain(app.warmupLoads(120, 20, [25, 10], 20)), [20, 70, 100]);
+    assert.deepEqual(plain(app.warmupLoads(120, 20, [25, 10], 20)), [20, 70, 90, 100]);
   });
 });
 
