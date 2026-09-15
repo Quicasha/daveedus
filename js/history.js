@@ -181,9 +181,21 @@ function continueWorkout(){
     /* the record the finish touched; snapshots from before v2.14.1 carry no id */
     const d = (du.ds && S.deloads.find(x=>x.s===du.ds)) || S.deloads[S.deloads.length-1];
     if(d){
-      if(du.closed) d.e = 0;
+      /* reopen only while it is still the newest record - a cycle started since
+         owns "active" now, and an older one flipped open would never close again */
+      if(du.closed && d===S.deloads[S.deloads.length-1]) d.e = 0;
       if(du.tplId){ const i = d.done.indexOf(du.tplId); if(i>=0) d.done.splice(i,1); }
     }
+  }
+  /* level ladders roll back to their pre-finish rung and streak, so the
+     resumed session is judged once when it is finished again */
+  const tpl = S.templates.find(x=>x.id===S.active.tplId);
+  if(tpl) for(const snap of (S.lastActive.lvls||[])){
+    const te = snap && tpl.ex.find(e=>e.id===snap.teId);
+    if(!te || !lvlsOf(te)) continue;
+    te.lvl = snap.lvl; te.lvlN = snap.lvlN;
+    te.k = snap.k; te.s = snap.s; te.r = snap.r;
+    if(snap.n) te.n = snap.n; else delete te.n;
   }
   S.lastActive = null;
   save(); scheduleCloudSync();
@@ -193,7 +205,7 @@ function toggleArch(id){
   const w = S.history.find(x=>x.id===id);
   if(!w) return;
   w.arch = !w.arch;
-  save(); render();
+  save(); render(); scheduleCloudSync();
 }
 function delHist(id){
   const i = S.history.findIndex(w=>w.id===id);
@@ -203,10 +215,11 @@ function delHist(id){
   const clearedLast = S.lastActive && S.lastActive.id===id;
   if(clearedLast) S.lastActive = null;
   V.expanded = null;
-  save(); render();
+  save(); render(); scheduleCloudSync();
   undoToast(t('histDelDone'), ()=>{
     insertByDate(S.history, entry); /* by date, not index - a workout may have finished meanwhile */
     if(clearedLast && !S.lastActive) S.lastActive = lastAct; /* never clobber a newer resume snapshot */
+    scheduleCloudSync();
   });
 }
 /* keep a newest-first array ordered when re-inserting a deleted entry */
@@ -253,7 +266,7 @@ function editHistSet(id,ei,si,f,v){
   const n = parseNum(v);
   if(!isNaN(n) && (f==='reps' ? n>=0 : true)){
     w.exercises[ei].sets[si][f] = f==='reps' ? Math.round(n) : u2kg(n);
-    save();
+    save(); scheduleCloudSync();
   }
 }
 function delHistSet(id,ei,si){
@@ -265,10 +278,10 @@ function delHistSet(id,ei,si){
     /* last set of the last exercise deleted - the workout itself is gone */
     S.history = S.history.filter(x=>x.id!==id);
     V.expanded = null;
-    save(); closeModal(); render();
+    save(); closeModal(); render(); scheduleCloudSync();
     return;
   }
-  save();
+  save(); scheduleCloudSync();
   const b = $('#he-body');
   if(b) b.innerHTML = histEditBody(id);
 }
@@ -433,7 +446,7 @@ function renderPlates(){
   if(side <= 0){ out.innerHTML = `<div class="empty" style="padding:12px">${t('platesEmpty')} (${V.plateBar} ${unitL()})</div>`; return; }
   const used = [];
   let rem = side;
-  for(const p of plateSet()){ while(rem >= p - 1e-9){ used.push(p); rem -= p; } }
+  for(const p of plateSet()){ if(!(p > 0)) continue; while(rem >= p - 1e-9){ used.push(p); rem -= p; } }
   rem = Math.round(rem*100)/100;
   let html = `<div style="font-size:13px;color:var(--dim);font-weight:600;margin-bottom:8px">${t('platesSide')} - ${fmtW(side)} ${unitL()}:</div>`;
   html += used.length

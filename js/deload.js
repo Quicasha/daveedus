@@ -117,7 +117,7 @@ function confirmDeload(){
   if(!tpls.length){ closeModal(); return; }
   const o = V.dlm || { pct:DL_FACTOR, vol:1 };
   S.deloads.push({ s:Date.now(), e:0, tpls, done:[], pct:o.pct, vol:o.vol });
-  closeModal(); save(); render();
+  closeModal(); save(); render(); scheduleCloudSync();
   toast(t('dlOn'));
 }
 function endDeload(){
@@ -125,7 +125,7 @@ function endDeload(){
   if(!d) return;
   if(!confirm(t('dlEndConfirm'))) return;
   d.e = Date.now();
-  save(); render();
+  save(); render(); scheduleCloudSync();
 }
 /* ===== passive deload advisor: purely computed, never asks anything =====
    Research-tuned thresholds:

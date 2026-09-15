@@ -109,7 +109,12 @@ serve.ps1               Zero-dependency local dev server (PowerShell)
 
 Weights are stored in kilograms and converted only for display, so switching units is lossless. Share and backup codes are Base64-encoded JSON with a `DVD1.` prefix. Cloud sync PUTs a JSON snapshot to a GitHub repo through the Contents API - the token never leaves the device and is never included in backup codes.
 
-**Tests** - `node --test` (Node 20+, nothing to install). A vm harness loads the plain script files with a stubbed browser and exercises the training brain: progression ladders, waves, deloads, e1RM, unit conversion, share-code roundtrips, cloud-sync bookkeeping. CI runs the suite on every push.
+**Tests** - `node --test` (Node 20+, nothing to install). A vm harness loads the plain script files with a stubbed browser and exercises the training brain: progression ladders, waves, deloads, e1RM, unit conversion, share-code roundtrips, cloud-sync bookkeeping, and the finish / continue / finish bookkeeping around a session. CI runs the suite on every push.
+
+**Why the numbers are what they are** - every rule the training brain runs on is traced to its evidence, with the caveats and the exact thresholds, in two documents:
+
+- [`docs/RESEARCH-TRAINING.md`](docs/RESEARCH-TRAINING.md) - volume, effort, frequency, rest, estimated 1RM and its noise floor, waves, deloads, layoffs, warm-ups, ladders: what the studies show, for whom, and where each finding lands in the code
+- [`docs/RESEARCH-APP.md`](docs/RESEARCH-APP.md) - why people stop logging, what feedback does to motivation, what a set row must get right, and what is deliberately left out (streaks, points, per-set effort ratings)
 
 **Run locally** - any static file server: `powershell -File serve.ps1`, then open `http://localhost:8317`.
 

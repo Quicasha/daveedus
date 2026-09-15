@@ -173,6 +173,7 @@ function lvlGo(xi, li){
   }
   ex.name = exName(te.k, te.n);       /* level label, e.g. "Hollow Hold (tuck)" */
   updateExDone(ex);
+  scheduleCloudSync();                /* the template's rung changed - the snapshot must follow */
   save(); render();
   toast(t('lvlSetToast',{n:'L'+(li+1)+' · '+ex.name}));
 }
@@ -343,18 +344,21 @@ function ghostFor(ex, si){
 /* ===== comeback easing: after a long gap on a lift the SUGGESTED weights come
    back a notch lower and ramp up by themselves (each comeback session becomes
    the new "last", so the factor decays session by session).
-   Numbers follow the detraining evidence for trained lifters: 1RM is largely
-   kept ~3 weeks (Hwang 2017, Ogasawara 2013), ~5-10% gone by 6-8 weeks
-   (Encarnacao 2022), more later (Halonen 2024) - and the reload sits a notch
-   below what was lost because connective tissue re-adapts slower than muscle
-   and load spikes after low-load periods are the injury window (Gabbett 2016). */
+   Numbers follow the detraining evidence for trained lifters (docs/RESEARCH-
+   TRAINING.md, section 11): nothing measurable is lost inside two weeks
+   (Hwang 2017; Ogasawara 2013 cycled 3-week breaks with no cost), a few
+   percent by 3-4 weeks, roughly 5-10% by 6-8 weeks (Encarnacao 2022), more
+   later but regained within about 5 weeks even after a 10-week break
+   (Halonen 2024). The reload sits a notch below what was lost because
+   connective tissue re-adapts slower than muscle, and it applies to the
+   SUGGESTION only - the lifter who feels fine types the old number. */
 function cbFactor(ex){
   if(!ex || !ex.last) return 1;
   /* ex.last skips deload sessions, so measure the gap from the last time the
      lift was TRAINED at all (deload passes included) - a deload week is not a
      layoff and must not earn a second reduction on top of itself */
   const d = (Date.now() - lastTrainedTs(ex.k, ex.last.date))/864e5;
-  return d<10 ? 1 : d<14 ? .95 : d<21 ? .9 : d<28 ? .85 : d<56 ? .75 : d<84 ? .65 : d<180 ? .55 : .5;
+  return d<14 ? 1 : d<21 ? .95 : d<28 ? .9 : d<56 ? .8 : d<84 ? .7 : d<180 ? .6 : .5;
 }
 function lastTrainedTs(k, fallbackIso){
   for(const h of S.history){
@@ -791,6 +795,9 @@ function saveBase(xi){
 /* ===== quick sets x reps editor: tap the "3x10" chip on a workout card =====
    Changes apply to this session AND (for template exercises) the template. */
 function tplEntryFor(ex){
+  /* a session-only addition has no slot - a duplicate of a template lift added
+     for today must never edit that lift's slot through the key fallback */
+  if(!ex || ex.adhoc) return null;
   const tpl = S.templates.find(t=>t.id===S.active.tplId);
   if(!tpl) return null;
   /* slot id first - exact even with duplicate exercise keys; key match as fallback */
@@ -799,7 +806,11 @@ function tplEntryFor(ex){
 function syncTargetToTpl(ex){
   if(ex.adhoc) return;
   const te = tplEntryFor(ex);
-  if(te){ te.s = ex.targetSets; te.r = ex.targetReps; }
+  if(!te) return;
+  te.r = ex.targetReps;
+  /* a half-volume deload pass plans half the sets - that count is the pass's,
+     not the program's, so it never overwrites the template's set count */
+  if(!(woIsDeload() && ((dlActive()||{}).vol||1) < 1)) te.s = ex.targetSets;
 }
 function openTargetEdit(xi){ V.tgtXi = xi; renderTargetEdit(); }
 function renderTargetEdit(){
@@ -1240,6 +1251,7 @@ function toggleSet(xi,si){
   if(gb > ga){
     for(let step=1; step<=gb-ga; step++){
       const j = ga + ((xi-ga+step) % (gb-ga+1));
+      if(S.active.exercises[j].ghost) continue;
       if(!exFullyDone(S.active.exercises[j])){ jump = j; break; }
     }
   }
@@ -1295,6 +1307,7 @@ function removeSet(xi){
 }
 function toggleWoSS(xi){
   if(xi >= S.active.exercises.length-1) return;
+  if(S.active.exercises[xi+1].ghost) return; /* a suggestion is not a partner */
   S.active.exercises[xi].ss = !S.active.exercises[xi].ss;
   save(); render();
 }
@@ -1303,7 +1316,7 @@ function removeWorkoutEx(xi){
   if(!ex) return;
   const sid = S.active.startedAt; /* the undo must not leak into a different session */
   const hadRest = S.active.rest ? Object.assign({}, S.active.rest) : null;
-  const r = S.active.rest;
+  const r = S.active.rest; /* kept by identity: the undo may only touch THIS clock */
   if(r){
     const [rx, rs] = r.key.split('-').map(Number);
     if(rx===xi) S.active.rest = null;              /* rest belonged to the removed exercise */
@@ -1314,9 +1327,9 @@ function removeWorkoutEx(xi){
   undoToast(t('woExRemoved',{n:ex.name}), ()=>{
     if(!S.active || S.active.startedAt !== sid) return; /* session ended or a new one started */
     S.active.exercises.splice(Math.min(xi, S.active.exercises.length), 0, ex);
-    /* only restore the rest clock this deletion actually cleared - never stomp
-       a timer the user has started since */
-    if(hadRest && !S.active.rest) S.active.rest = hadRest;
+    /* only restore the rest clock this deletion actually cleared or shifted -
+       never stomp a timer the user has started since */
+    if(hadRest && (!S.active.rest || S.active.rest===r)) S.active.rest = hadRest;
   });
 }
 function finishWorkout(){
@@ -1424,7 +1437,7 @@ function finishWorkout(){
   }
   /* level ladders: top of the range on every work set, two sessions in a row ->
      the slot advances a level for next time (manual moves always win, see lvlGo) */
-  const lvlUps = [];
+  const lvlUps = [], lvlSnaps = [];
   if(!isDl) for(const ex of S.active.exercises){
     if(ex.ghost || ex.adhoc) continue;
     const te = tplEntryFor(ex);
@@ -1432,6 +1445,9 @@ function finishWorkout(){
     if(!L || ex.k !== te.k) continue;  /* swapped to something else today - no verdict */
     const clean = lvlCleanSession(ex);
     if(clean===null) continue;
+    /* snapshot BEFORE the streak moves: Continue must roll the ladder back too,
+       or Finish -> Continue -> Finish would count one session twice */
+    lvlSnaps.push({ teId:te.id, lvl:te.lvl||0, lvlN:te.lvlN||0, k:te.k, s:te.s, r:te.r, n:te.n });
     if(!clean){ te.lvlN = 0; continue; }
     te.lvlN = (te.lvlN||0) + 1;
     if(te.lvlN >= 2 && (te.lvl||0) < L.length-1){
@@ -1441,7 +1457,7 @@ function finishWorkout(){
   }
   /* keep the finished session resurrectable - "Continue" on the newest history
      row undoes an accidental Finish with sets and elapsed time intact */
-  S.lastActive = { id:entry.id, act:S.active, waved:waveSnaps, ...(dlUndo?{dl:dlUndo}:{}) };
+  S.lastActive = { id:entry.id, act:S.active, waved:waveSnaps, lvls:lvlSnaps, ...(dlUndo?{dl:dlUndo}:{}) };
   S.active = null;
   save();
   scheduleCloudSync();

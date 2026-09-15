@@ -818,12 +818,17 @@ describe('comeback easing', () => {
     return app.cbFactor({ k: 'bench-press', last: { date: iso(days) } });
   };
   test('short gaps cost nothing, long ones ease the suggestions down', () => {
+    /* the ladder follows docs/RESEARCH-TRAINING.md section 11: nothing is lost
+       inside two weeks, a notch per week after, half after six months */
     const app = makeApp();
     assert.equal(gapFactor(app, 5), 1);
-    assert.equal(gapFactor(app, 12), 0.95);
-    assert.equal(gapFactor(app, 24), 0.85);
-    assert.equal(gapFactor(app, 30), 0.75);
-    assert.equal(gapFactor(app, 100), 0.55);
+    assert.equal(gapFactor(app, 12), 1);
+    assert.equal(gapFactor(app, 15), 0.95);
+    assert.equal(gapFactor(app, 24), 0.9);
+    assert.equal(gapFactor(app, 30), 0.8);
+    assert.equal(gapFactor(app, 60), 0.7);
+    assert.equal(gapFactor(app, 100), 0.6);
+    assert.equal(gapFactor(app, 400), 0.5);
   });
   test('no history at all means no easing (nothing to ease from)', () => {
     const app = makeApp();

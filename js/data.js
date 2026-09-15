@@ -70,7 +70,9 @@ function buildSetsCSV(){
       const tm = isTimeEx(e.k), bw = isBwEx(e.k);
       e.sets.forEach((s,si)=>{
         const type = s.warm ? 'warmup' : s.drop ? 'dropset' : s.fail ? 'failure' : 'work';
-        const total = bw ? s.weight + (e.bw||0) : s.weight*(e.x2?2:1) + (e.mb||0);
+        /* THE total-load formula, same as woVolume / sessionE1rm: paired dumbbells
+           doubled, machine base and (on bodyweight lifts) the body weight added */
+        const total = s.weight*(e.x2?2:1) + (bw ? (e.bw||0) : 0) + (e.mb||0);
         rows.push([w.date, w.name, w.dl?1:0, w.arch?1:0, w.dur||'',
           e.name, e.k||'', info?info.g:'', info?info.e:'', ei+1, e.order||'',
           si+1, type, tm?1:0, e.x2?1:0, kg2u(s.weight), s.reps,
@@ -143,7 +145,9 @@ function importTplPayload(d, folderId){
     if(!k) continue;
     const alts = Array.isArray(e.alts) ? e.alts.filter(a=>exInfo(a) && a!==k) : [];
     const rt = (typeof e.rt==='number' && e.rt>=15 && e.rt<=1800) ? Math.round(e.rt/15)*15 : 0;
-    const base = (typeof e.base==='number' && e.base>0 && e.base<=500) ? Math.round(e.base*10)/10 : 0;
+    /* a machine base belongs to a machine - on a bodyweight or timed lift it would
+       count twice (base plus body) everywhere totals are summed */
+    const base = (typeof e.base==='number' && e.base>0 && e.base<=500 && !isBwEx(k) && !isTimeEx(k)) ? Math.round(e.base*10)/10 : 0;
     const dp = (typeof e.dp==='number' && e.dp>0 && e.dp<=10) ? Math.round(e.dp*1000)/1000 : 0;
     const entry = { id:uid(), k, s:Math.max(1,Math.min(12,e.s|0||3)), r:normReps(e.r, isTimeEx(k)?600:50), ss:!!e.ss, alts, pnote:String(e.pnote||'').slice(0,200), ...(rt?{rt}:{}), ...(e.x2?{x2:true}:{}), ...(base?{base}:{}), ...(dp?{dp}:{}) };
     /* progression ladder: validate each level, keep the sender's current rung */

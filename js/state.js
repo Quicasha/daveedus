@@ -148,9 +148,22 @@ function hydrate(s){
   try{ delete s.__proto__; }catch(e){} /* harden against crafted import codes */
   if(!Array.isArray(s.templates)) s.templates = [];
   s.templates = s.templates.filter(tp=>tp && typeof tp==='object' && Array.isArray(tp.ex));
+  s.templates.forEach(tp=>{
+    if(typeof tp.name!=='string') tp.name = '';
+    tp.ex = tp.ex.filter(e=>e && typeof e==='object' && typeof e.k==='string');
+  });
   if(!Array.isArray(s.history)) s.history = [];
+  /* every field the render code reads without a guard is checked here: a
+     date the year grid can place, a name the search can lowercase, a key per
+     exercise the stats can name */
   s.history = s.history.filter(w=>w && typeof w==='object' && Array.isArray(w.exercises)
+    && typeof w.date==='string' && !isNaN(Date.parse(w.date))
     && w.exercises.every(e=>e && Array.isArray(e.sets)));
+  s.history.forEach(w=>{
+    if(typeof w.name!=='string') w.name = '';
+    /* an exercise with no key is still a logged set - it just has no name to show */
+    w.exercises.forEach(e=>{ if(typeof e.k!=='string') e.k = ''; if(typeof e.name!=='string') e.name = ''; });
+  });
   if(!Array.isArray(s.customEx)) s.customEx = [];
   s.customEx = s.customEx.filter(x=>x && typeof x.id==='string' && typeof x.n==='string');
   /* migration: older data had no program folders */
@@ -170,6 +183,7 @@ function hydrate(s){
   s.mig13 = true;
   s.folders.forEach(f=>{ if(typeof f.pinned==='undefined') f.pinned = true; });
   if(!Array.isArray(s.weights)) s.weights = [];
+  s.weights = s.weights.filter(x=>x && typeof x.kg==='number' && x.kg>0 && typeof x.date==='string');
   if(!Array.isArray(s.trackedLifts)) s.trackedLifts = [];
   s.trackedLifts = s.trackedLifts.filter(k=>typeof k==='string');
   if(!Array.isArray(s.deloads)) s.deloads = [];
@@ -190,9 +204,16 @@ function hydrate(s){
   if(typeof s.ghLast!=='number') s.ghLast = 0;
   s.ghDirty = s.ghDirty ? 1 : 0;
   if(!s.lastActive || typeof s.lastActive!=='object' || typeof s.lastActive.id!=='string'
-     || !s.lastActive.act || !Array.isArray(s.lastActive.act.exercises)) s.lastActive = null;
+     || !s.lastActive.act || !Array.isArray(s.lastActive.act.exercises)
+     || !s.lastActive.act.exercises.every(e=>e && typeof e==='object' && Array.isArray(e.sets))) s.lastActive = null;
   if(!s.plates || !Array.isArray(s.plates.kg) || !Array.isArray(s.plates.lb)){
     s.plates = { kg:PLATE_DEF.kg.slice(), lb:PLATE_DEF.lb.slice() };
+  }
+  /* a plate is a positive number a gym could own - a 0 would spin the plate
+     calculator forever; an emptied list falls back to the default set */
+  for(const u of ['kg','lb']){
+    s.plates[u] = s.plates[u].filter(p=>typeof p==='number' && p>0 && p<=100);
+    if(!s.plates[u].length) s.plates[u] = PLATE_DEF[u].slice();
   }
   /* machine base memory: keep only sane key -> kg entries (0 = explicitly off) */
   if(!s.mbase || typeof s.mbase!=='object' || Array.isArray(s.mbase)) s.mbase = {};

@@ -34,7 +34,7 @@ function setTplLvl(id,i,li){
   const d = S.templates.find(x=>x.id===id);
   if(!d || !d.ex[i]) return;
   lvlApply(d.ex[i], li);
-  save(); render();
+  save(); render(); scheduleCloudSync();
 }
 
 /* ======================= PROGRAM (splits + templates) ======================= */
@@ -183,8 +183,8 @@ function delTpl(id){
   if(i<0) return;
   const d = S.templates[i];
   S.templates.splice(i,1);
-  save(); render();
-  undoToast(t('tplDelDone',{n:d.name}), ()=>S.templates.splice(i,0,d));
+  save(); render(); scheduleCloudSync();
+  undoToast(t('tplDelDone',{n:d.name}), ()=>{ S.templates.splice(i,0,d); scheduleCloudSync(); });
 }
 function htmlTplEdit(){
   const d = S.templates.find(x=>x.id===V.editTpl);
@@ -436,10 +436,11 @@ function delTplEx(id,i){
   if(!d || !d.ex[i]) return;
   const e = d.ex[i];
   d.ex.splice(i,1);
-  save(); render();
+  save(); render(); scheduleCloudSync();
   undoToast(t('woExRemoved',{n:exName(e.k,e.n)}), ()=>{
     const dd = S.templates.find(x=>x.id===id);
     if(dd) dd.ex.splice(Math.min(i, dd.ex.length), 0, e);
+    scheduleCloudSync();
   });
 }
 

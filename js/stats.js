@@ -38,13 +38,18 @@ function pchipsHtml(cid, opts, withCustom){
 function setPd(cid, p){
   const c = V.cp[cid];
   c.p = p;
-  if(p==='c' && !c.f){ /* sensible starting range: last 30 days */
+  if(p==='c' && !c.f){ /* sensible starting range: last 30 days, in LOCAL dates -
+                          a UTC date at half past midnight would drop today */
     const d = new Date();
-    c.t = d.toISOString().slice(0,10);
+    c.t = localYmd(d);
     d.setDate(d.getDate()-29);
-    c.f = d.toISOString().slice(0,10);
+    c.f = localYmd(d);
   }
   render();
+}
+/* yyyy-mm-dd of a Date in the device's own calendar (what <input type=date> reads) */
+function localYmd(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 function setPdD(cid, which, val){
   if(val) V.cp[cid][which] = val;
@@ -183,8 +188,11 @@ function weeklyMuscleSets(nWeeks){
   mon.setDate(mon.getDate() - ((mon.getDay()+6)%7));   /* this week's Monday */
   const weeks = [];
   for(let i=0;i<nWeeks;i++){
-    const s = mon.getTime() - i*7*864e5;
-    weeks.push({ s, e:s + 7*864e5, counts:{} });
+    /* calendar arithmetic, not 7*24h: a DST change makes one week 167 or 169
+       hours, and a fixed span would push a late-Sunday session into the wrong week */
+    const s = new Date(mon); s.setDate(mon.getDate() - 7*i);
+    const e = new Date(s); e.setDate(s.getDate() + 7);
+    weeks.push({ s:s.getTime(), e:e.getTime(), counts:{} });
   }
   const oldest = weeks[weeks.length-1].s;
   for(const h of S.history){
@@ -311,7 +319,7 @@ function rhythmFirst(){
 function rhythmYearHtml(){
   const now = new Date();
   const f0 = rhythmFirst();
-  const first = f0 ? Math.min(f0.getFullYear(), now.getFullYear()) : now.getFullYear();
+  const first = (f0 && !isNaN(f0.getTime())) ? Math.min(f0.getFullYear(), now.getFullYear()) : now.getFullYear();
   const yr = Math.min(now.getFullYear(), Math.max(first, V.cp.rh.y || now.getFullYear()));
   V.cp.rh.y = yr;
   const map = rhythmDayMap();
@@ -624,12 +632,12 @@ function trackAdd(){
   openPicker(info=>{
     if(S.trackedLifts.includes(info.id)){ toast(t('trackedDup')); return; }
     S.trackedLifts.push(info.id);
-    save(); closeModal(); render();
+    save(); closeModal(); render(); scheduleCloudSync();
   });
 }
 function trackRemove(k){
   S.trackedLifts = S.trackedLifts.filter(x=>x!==k);
-  save(); render();
+  save(); render(); scheduleCloudSync();
 }
 /* target e1RM for a tracked lift (kg stored, edited in the display unit) */
 function openGoalEdit(k){
