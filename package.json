@@ -1,6 +1,6 @@
 {
   "name": "daveedus",
-  "version": "2.22.0",
+  "version": "2.23.0",
   "private": true,
   "description": "Workout tracker PWA - plain HTML/CSS/JS, no build step, no dependencies",
   "license": "MIT",

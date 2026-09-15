@@ -252,6 +252,49 @@ describe('double progression', () => {
   });
 });
 
+/* the warmup ramp: loaded the way a bar is actually loaded, big plates only */
+describe('warmup ramp', () => {
+  const KG = [25, 20, 15, 10, 5, 2.5, 1.25], LB = [45, 35, 25, 10, 5, 2.5];
+  const kg = t => { const app = makeApp(); return plain(app.warmupLoads(t, 20, KG, 20)); };
+  const lb = t => { const app = makeApp(); return plain(app.warmupLoads(t, 45, LB, 45)); };
+
+  test('the owner’s ramp: bar, 60, 80 for a 100 kg bench', () => {
+    assert.deepEqual(kg(100), [20, 60, 80]);
+  });
+  test('a 2.5 on the working set never leaks a 1.25 into the warmup', () => {
+    assert.deepEqual(kg(102.5), [20, 60, 80]);
+    assert.deepEqual(kg(107.5), [20, 60, 90]);
+  });
+  test('heavier targets earn more steps, still big plates only', () => {
+    assert.deepEqual(kg(160), [20, 60, 100, 130]);
+    for (const t of [80, 100, 120, 140, 160, 180, 200]){
+      for (const w of kg(t).slice(1)){
+        assert.equal(((w - 20) / 2) % 5, 0, `${w} on the way to ${t} needs a plate under 10`);
+      }
+    }
+  });
+  test('the canonical pounds ramp: 45, 135, 185 on the way to 225', () => {
+    assert.deepEqual(lb(225), [45, 135, 185]);
+  });
+  test('light targets skip the one-plate floor rather than warm up past 70%', () => {
+    const r = kg(60);
+    assert.equal(r[0], 20);
+    assert.ok(r.every(w => w < 60));
+    assert.ok(!r.includes(60), 'a set equal to the target is not a warmup');
+  });
+  test('nothing to ramp: at or under the bar, or a gym with no big plates', () => {
+    const app = makeApp();
+    assert.deepEqual(plain(app.warmupLoads(20, 20, KG, 20)), []);
+    assert.deepEqual(plain(app.warmupLoads(15, 20, KG, 20)), []);
+    assert.deepEqual(plain(app.warmupLoads(100, 20, [5, 2.5], 20)), [20], 'bar only when only small plates exist');
+  });
+  test('a gym without 20s floors on the biggest plate it does have', () => {
+    const app = makeApp();
+    /* 25s only: the first loaded set is one 25 a side */
+    assert.deepEqual(plain(app.warmupLoads(120, 20, [25, 10], 20)), [20, 70, 100]);
+  });
+});
+
 describe('plate calculator', () => {
   test('turning every plate off falls back to a sane set instead of an empty bar', () => {
     const app = makeApp();

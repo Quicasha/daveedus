@@ -1022,6 +1022,41 @@ function toggleWarmShow(xi){
   ex.warmShow = !ex.warmShow;
   save(); render();
 }
+/* Warmup loads for a barbell, built the way a bar actually gets loaded: the
+   empty bar, then only plates a lifter would bother with before a working set
+   (10 and up - nobody slides a pair of 1.25s on to hit 67.5). The first loaded
+   set starts at one standard plate a side (20 kg -> 60, 45 lb -> 135) whenever
+   that is still a warmup (<= 70% of the target); the 40/60/80% candidates snap
+   to the nearest total those plates can make, ties going up; duplicates and
+   anything at or past the target fall away. 100 kg gives 20 / 60 / 80, 225 lb
+   gives 45 / 135 / 185. All arguments and results are in the display unit.
+   `plates` is what the gym has (per side), `std` the plate everyone means by
+   "a plate" - used as the floor only when the gym actually has it. */
+function warmupLoads(target, bar, plates, std){
+  if(!(target > bar)) return [];
+  const big = plates.filter(p=>p>=10).sort((a,b)=>b-a);
+  if(!big.length) return [bar];
+  /* every per-side load the big plates can build, up to what fits under the target */
+  const maxSide = (target - bar)/2;
+  const can = new Set([0]);
+  for(const p of big) for(const s of [...can]){
+    for(let v = s+p; v <= maxSide+1e-9; v += p) can.add(Math.round(v*100)/100);
+  }
+  const totals = [...can].filter(s=>s>0).map(s=>bar+2*s).sort((a,b)=>a-b);
+  if(!totals.length) return [bar];
+  const nearest = x => totals.reduce((b,tt)=>
+    (b===null || Math.abs(tt-x) < Math.abs(b-x) || (Math.abs(tt-x)===Math.abs(b-x) && tt>b)) ? tt : b, null);
+  const floorPlate = big.includes(std) ? std : big[0];
+  const floor = bar + 2*floorPlate;
+  const out = [bar];
+  for(const p of [0.4,0.6,0.8]){
+    let w = nearest(target*p);
+    if(w < floor && floor <= target*0.7) w = floor;
+    if(w >= target || w <= out[out.length-1]) continue;
+    out.push(w);
+  }
+  return out;
+}
 function autoWarmup(xi){
   const ex = S.active.exercises[xi];
   if(!ex || isTimeEx(ex.k) || isBwEx(ex.k)) return;
@@ -1052,10 +1087,15 @@ function autoWarmup(xi){
   const baseU = kg2u(ex.base||0);
   if(isNaN(w) || w+baseU<=0){ toast(t('warmNeedW')); return; }
   const ramp = [];
-  if(barbell && w > bar) ramp.push({ w:bar, r:10 });
-  [[0.4,6],[0.6,4],[0.8,2]].forEach(([p,r])=>{
-    let ww = Math.round(((w+baseU)*p - baseU)/step)*step;
-    if(barbell) ww = Math.max(ww, bar);
+  if(barbell){
+    /* big plates only, see warmupLoads. Reps taper towards the working set:
+       the bar gets 10, the last warmup 2, whatever sits between fills 6 / 4. */
+    const loads = warmupLoads(w, bar, plateSet(), S.unit==='lb' ? 45 : 20);
+    const reps = [10].concat([6,4,2].slice(3-(loads.length-1)));
+    loads.forEach((ww,i)=>ramp.push({ w:ww, r:reps[i] }));
+  }else [[0.4,6],[0.6,4],[0.8,2]].forEach(([p,r])=>{
+    /* dumbbells, pin stacks, plate-loaded sleds: the plain step ramp */
+    const ww = Math.round(((w+baseU)*p - baseU)/step)*step;
     if(ww<0 || (ww===0 && !baseU) || ww>=w) return;
     if(ramp.length && ww<=ramp[ramp.length-1].w) return; /* keep the ramp strictly increasing */
     ramp.push({ w:ww, r });
