@@ -55,8 +55,8 @@ band where most people land", never as a rule the owner is failing.
 over time. This is not controversial. What IS open is how: load, reps, sets or
 something else.
 
-**Moderate (load vs reps).** Plotkin et al. (2022) trained 43 people for 8 weeks with
-either load progression or repetition progression at matched effort. Both grew;
+**Moderate (load vs reps).** Plotkin et al. (2022) trained about forty people for 8
+weeks with either load progression or repetition progression at matched effort. Both grew;
 strength favoured load progression slightly, one quadriceps head favoured rep
 progression slightly, and the authors call the differences of questionable practical
 significance. So "add reps, then add weight" (double progression) is as good as any
@@ -294,7 +294,7 @@ in one place.
 **Moderate (periodization in general).** Varying load and reps over time beats never
 varying them, in trained people. Undulating versus linear: for hypertrophy no
 difference (Grgic et al. 2017, meta-analysis); for strength in trained lifters a small
-edge to undulating models (Monteiro et al. 2009; a 2026 meta-analysis in Frontiers in
+edge to undulating models (Prestes et al. 2009; a 2026 meta-analysis in Frontiers in
 Public Health agrees), with differences that shrink when volume is equated.
 
 **Folk (the specific wave shape).** "Wave loading" (5 / 4 / 3, back to 6, up a step)
@@ -327,7 +327,7 @@ comes every **5.6 ± 2.3 weeks**, is planned in advance, cuts volume by reducing
 per set and sets per week, and **keeps frequency unchanged**.
 
 **Moderate, and it cuts the other way (whether it is needed).** Coleman et al. (2024),
-the only controlled trial: 39 trained people, 9 weeks, half took a full week off at the
+the only controlled trial: trained lifters, 9 weeks, half took a full week off at the
 midpoint. No difference in hypertrophy, power or endurance, and the continuous group
 gained slightly MORE lower-body strength. Over a 9-week block a deload that nobody
 needed carried a small cost.
@@ -559,7 +559,7 @@ Estimated 1RM
 
 Periodization
 - Grgic et al. 2017, linear vs undulating and hypertrophy, [PMC5571788](https://pmc.ncbi.nlm.nih.gov/articles/PMC5571788/)
-- Monteiro et al. 2009, linear vs daily undulating in trained men, [PubMed 19910831](https://pubmed.ncbi.nlm.nih.gov/19910831/)
+- Prestes et al. 2009, linear vs daily undulating in trained men, [PubMed 19910831](https://pubmed.ncbi.nlm.nih.gov/19910831/)
 - 2026 meta-analysis, linear vs undulating, [Frontiers](https://www.frontiersin.org/journals/public-health/articles/10.3389/fpubh.2026.1707627/full)
 
 Deloads
