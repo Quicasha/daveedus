@@ -75,7 +75,8 @@ function htmlSettings(){
   <div style="text-align:center;color:var(--ghost);font-size:12px;margin-top:24px">Daveedus v${APP_VER}</div>`;
 }
 function setTheme(m){ S.theme=m; save(); applyTheme(); render(); }
-function setSkin(k){ S.skin=k; save(); applyTheme(); render(); scheduleCloudSync(); }
+/* a look, not data: it rides along with the next real sync instead of making a commit of its own */
+function setSkin(k){ S.skin=k; save(); applyTheme(); render(); }
 /* one skin row per entry: swatch (bg + accent dot), name, check on the active one.
    `act` is the onclick body - the pickers differ only in what happens after the tap. */
 function skinRowsHtml(act){
@@ -124,8 +125,10 @@ function updatePersistStatus(){
   }else el.textContent = '—';
 }
 function wipeAll(){
-  if(!confirm(t('setWipeConfirm'))) return;
-  if(!confirm(t('setWipeConfirm'))) return;
+  ask(t('setWipeConfirm'), t('setWipeOk'),
+    ()=>ask(t('setWipeConfirm2'), t('setWipeOk'), wipeNow, { danger:true }), { danger:true });
+}
+function wipeNow(){
   /* wipe everything, including snapshots and the IndexedDB mirror */
   Object.keys(localStorage).filter(k=>k.startsWith('daveedus.')).forEach(k=>localStorage.removeItem(k));
   idbSet(null);

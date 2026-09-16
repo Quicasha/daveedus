@@ -13,6 +13,7 @@ function openModal(html){
 function closeModal(){
   $('#modal').classList.remove('show');
   V.pickerCb = null;
+  V.ask = null; /* a question dismissed by the backdrop is answered "no" */
 }
 function openPicker(cb){
   V.pickerCb = cb; V.pickerQ='';

@@ -123,9 +123,12 @@ function confirmDeload(){
 function endDeload(){
   const d = dlActive();
   if(!d) return;
-  if(!confirm(t('dlEndConfirm'))) return;
-  d.e = Date.now();
-  save(); render(); scheduleCloudSync();
+  ask(t('dlEndConfirm'), t('dlEndOk'), ()=>{
+    const cur = dlActive();
+    if(!cur) return;
+    cur.e = Date.now();
+    save(); render(); scheduleCloudSync();
+  });
 }
 /* ===== passive deload advisor: purely computed, never asks anything =====
    Research-tuned thresholds:

@@ -3,6 +3,7 @@
    rendered - only the pure logic (units, progression, deload, waves, codes)
    is exercised. ui.js / boot.js / home.js are deliberately not loaded. */
 import fs from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import vm from 'node:vm';
 import url from 'node:url';
@@ -13,7 +14,8 @@ const FILES = [
   'js/exercises.js', 'js/i18n.js', 'js/util.js', 'js/state.js',
   'js/deload.js', 'js/workout.js', 'js/program.js', 'js/stats.js', 'js/data.js',
   'js/history.js', /* for the plate maths; its screen builders are never called here */
-  'js/exercises-ui.js' /* the record tables (exStats, repMaxRows) that finishing a session reads */
+  'js/exercises-ui.js', /* the record tables (exStats, repMaxRows) that finishing a session reads */
+  'js/settings.js'     /* theme and skin setters */
 ];
 
 export function makeApp(){
@@ -31,6 +33,7 @@ export function makeApp(){
     fetch: (...a) => (sandbox.__fetch
       ? sandbox.__fetch(...a)
       : Promise.reject(new Error('fetch called with no __fetch stub installed'))),
+    crypto: globalThis.crypto, TextEncoder, /* WebCrypto: the cloud sync compares git blob shas */
     btoa: s => Buffer.from(s, 'binary').toString('base64'),
     atob: s => Buffer.from(s, 'base64').toString('binary'),
     escape, unescape,
@@ -74,24 +77,46 @@ export function makeApp(){
     closeModal = () => {}; openModal = () => {}; go = () => {};
     render = () => {}; toast = () => {}; undoToast = (m, r) => {};
     unlockAudio = () => {}; /* boot.js: the rest-timer sound needs a real tap */
+    /* ui.js ask(): the in-app yes/no sheet. Every question is recorded; the
+       answer is __askAnswer - true (the main button), 'alt' (the second
+       button) or false (Back) */
+    __asks = []; __askAnswer = true;
+    ask = (msg, okLabel, onYes, opts) => {
+      __asks.push(msg);
+      if (__askAnswer === 'alt'){ if (opts && opts.alt) opts.alt.fn(); }
+      else if (__askAnswer) onYes();
+    };
   `, ctx);
   ctx.__stopTimers = () => { for (const h of timers) clearTimeout(h); timers.clear(); };
   return ctx;
 }
 
+/* the sha git (and so the GitHub Contents API) reports for a file with this text */
+export const blobSha = text => createHash('sha1')
+  .update(`blob ${Buffer.byteLength(text)}\0`).update(text).digest('hex');
+
 /* a GitHub the app can talk to: remembers the files PUT to it, counts calls and
-   can hold a request open so a test can act while an upload is in flight */
+   can hold a request open so a test can act while an upload is in flight.
+   Like the real one it only answers the right repo with the right token (a
+   request built before the repo is known gets a 404), reports real blob shas,
+   and can share its files with a second app to play a second device. */
 export function fakeGitHub(app, opts){
   const o = opts || {};
-  const files = new Map();
-  const state = { puts: 0, gets: 0, files, gate: null };
-  app.S.ghRepo = 'me/daveedus-data';
-  app.S.ghToken = 'ghp_test';
+  const files = o.files || new Map();
+  const REPO = 'me/daveedus-data', TOKEN = 'ghp_test';
+  const state = { puts: 0, gets: 0, files, gate: null, repo: REPO, token: TOKEN };
+  app.S.ghRepo = REPO;
+  app.S.ghToken = TOKEN;
   app.navigator.onLine = true;
   state.hold = () => { let release; state.gate = new Promise(r => { release = r; }); return release; };
+  const notFound = { ok: false, status: 404, json: async () => ({ message: 'Not Found' }) };
   app.__fetch = async (url, init) => {
     const opt = init || {};
-    const name = String(url).split('/contents/')[1] || '';
+    const u = String(url), base = 'https://api.github.com/repos/' + REPO;
+    if (((opt.headers || {}).Authorization || '') !== 'Bearer ' + TOKEN) return { ok: false, status: 401, json: async () => ({}) };
+    if (u === base){ state.gets++; return { ok: true, status: 200, json: async () => ({ private: !o.public }) }; }
+    if (!u.startsWith(base + '/contents/')) return notFound;
+    const name = u.split('/contents/')[1] || '';
     if (opt.method === 'PUT'){
       state.puts++;
       if (state.gate) await state.gate;
@@ -100,13 +125,14 @@ export function fakeGitHub(app, opts){
       /* GitHub rejects a PUT whose sha is not the file's current one */
       const cur = files.get(name);
       if (cur && body.sha !== cur.sha) return { ok: false, status: 409, json: async () => ({}) };
-      files.set(name, { text: Buffer.from(body.content, 'base64').toString('utf8'), sha: 'sha' + state.puts });
+      const text = Buffer.from(body.content, 'base64').toString('utf8');
+      files.set(name, { text, sha: blobSha(text) });
       return { ok: true, status: 200, json: async () => ({}) };
     }
     state.gets++;
     state.lastGetInit = opt;
     const f = files.get(name);
-    if (!f) return { ok: false, status: 404, json: async () => ({}) };
+    if (!f) return notFound;
     const raw = /raw/.test(((opt.headers || {}).Accept) || '');
     /* raw media type hands back the file itself; the default one, its metadata */
     return { ok: true, status: 200, json: async () => (raw ? JSON.parse(f.text) : { sha: f.sha }) };

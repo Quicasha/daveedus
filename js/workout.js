@@ -272,11 +272,12 @@ function openWoPreview(id){
     <button class="btn primary" style="margin-top:14px" onclick="closeModal();startWorkout('${d.id}')">${ACT_ICONS.play} ${t('pvStart')}</button>
     <button class="btn" onclick="openWoProg('${d.id}')">${ACT_ICONS.chart} ${t('wpBtn')}</button>`);
 }
-function startWorkout(tplId){
+function startWorkout(tplId, replace){
   const tpl = S.templates.find(d=>d.id===tplId);
   if(!tpl) return;
-  if(S.active){
-    if(!confirm(t('woSwitchConfirm'))) return;
+  if(S.active && !replace){
+    ask(t('woSwitchConfirm'), t('woSwitchOk'), ()=>startWorkout(tplId, true), { danger:true });
+    return;
   }
   /* on a deload pass with "half sets" picked, plan half the sets (min 1 per exercise) */
   const isDl = dlForTpl(tpl.id);
@@ -1511,7 +1512,8 @@ function removeWorkoutEx(xi){
     if(hadRest && (!S.active.rest || S.active.rest===r)) S.active.rest = hadRest;
   });
 }
-function finishWorkout(){
+/* asked = the lifter already said yes to finishing with sets left */
+function finishWorkout(asked){
   if(!S.active) return;
   /* each exercise slot may hold several performed variants (planned + alternatives);
      every variant with logged sets becomes its own history entry, tracked separately */
@@ -1539,14 +1541,14 @@ function finishWorkout(){
     });
   });
   if(!exercises.length){
-    if(confirm(t('woFinishEmpty'))){ S.active=null; save(); go('home'); }
+    ask(t('woFinishEmpty'), t('woDiscard'), ()=>{ S.active=null; save(); go('home'); }, { danger:true });
     return;
   }
   /* "unfinished sets?" looks only at each slot's CURRENT variant - sets sitting
      in a swapped-away variant's stash are not work that was left undone */
   /* an attempt nobody needed (the test ended on a miss, or on a best) is not unfinished work */
   const unfinished = S.active.exercises.some(ex=>!ex.ghost && ex.sets.some(s=>!s.done && !(ex.max && !s.warm)));
-  if(unfinished && !confirm(t('woFinishPart'))) return;
+  if(unfinished && asked!==true){ ask(t('woFinishPart'), t('woFinishSave'), ()=>finishWorkout(true)); return; }
   /* detect all-time PRs BEFORE this workout enters history - never on a deload
      pass, except a max test done on one */
   const isDl = woIsDeload();
@@ -1688,10 +1690,11 @@ function confetti(){
   setTimeout(()=>box.remove(), 3400);
 }
 function cancelWorkout(){
-  if(!confirm(t('woCancelConfirm'))) return;
-  S.active = null;
-  save();
-  go('home');
+  ask(t('woCancelConfirm'), t('woCancel'), ()=>{
+    S.active = null;
+    save();
+    go('home');
+  }, { danger:true });
 }
 
 /* ============== quick ±weight steppers (shown while a weight input is focused) ============== */

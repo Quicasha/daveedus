@@ -6,6 +6,28 @@
    ============================================================ */
 'use strict';
 
+/* ======================= questions =======================
+   The app's own yes/no sheet. window.confirm cannot be relied on: some
+   browsers and embedded webviews (the Claude desktop preview, Chrome after
+   "prevent this page from creating additional dialogs") answer Cancel at once
+   and show nothing, which turned Restore, Finish and Cancel into silent
+   no-ops. Every question goes through here instead.
+   opts: danger (red main button), alt { label, fn } (a second choice). */
+function ask(msg, okLabel, onYes, opts){
+  const o = opts || {};
+  V.ask = { yes:onYes, alt:o.alt ? o.alt.fn : null };
+  openModal(`<div class="askmsg">${esc(msg)}</div>
+    <button class="btn ${o.danger?'danger':'primary'}" onclick="askAnswer('yes')">${esc(okLabel)}</button>
+    ${o.alt?`<button class="btn danger" onclick="askAnswer('alt')">${esc(o.alt.label)}</button>`:''}
+    <button class="btn ghostbtn" onclick="askAnswer('')">${t('askBack')}</button>`);
+}
+function askAnswer(which){
+  const a = V.ask; V.ask = null;
+  closeModal();
+  const fn = a && a[which];
+  if(typeof fn==='function') fn();
+}
+
 /* ======================= render core ======================= */
 function go(screen){
   if(screen!==V.screen && screen==='history') V.histLimit = 20;

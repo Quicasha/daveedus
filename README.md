@@ -70,7 +70,7 @@ Takes half a minute. After that it runs full-screen and works fully offline.
 Everything is stored on the device, in two places at once - if one breaks, the app restores from the other.
 
 - **Backup code** - copy it once in a while and keep it somewhere safe; it's the one thing that survives a lost phone
-- **Cloud sync** (optional) - every finished workout is pushed to your own private GitHub repo automatically. Your repo, your token; without it nothing ever leaves the device. On a new phone, connect and tap **Restore from cloud** - everything comes back
+- **Cloud sync** (optional) - every finished workout is pushed to your own private GitHub repo automatically. Your repo, your token; without it nothing ever leaves the device. On a new phone, connect and tap **Restore from cloud** - everything comes back. A device that has never synced never replaces a backup that is already there without asking, and the repo only gets a commit when your data actually changed
 - **CSV export** - tidy per-set data for Excel or anything else
 
 Updates install themselves the next time you open the app.

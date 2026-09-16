@@ -778,8 +778,11 @@ describe('edge cases', () => {
     a.S.history = [workout(0, [exEntry('bench-press', [set(100, 5)])])];
     a.scheduleCloudSync();
     await a.cloudSync();
-    /* device B shares the same repo but has its own (older) log */
+    /* device B shares the same repo, has synced with it before, and has its own
+       (older) log. A device that NEVER synced is asked first instead - see
+       test/sync.test.mjs, "a device that never synced asks..." */
     b.__fetch = a.__fetch; b.S.ghRepo = a.S.ghRepo; b.S.ghToken = a.S.ghToken; b.navigator.onLine = true;
+    b.S.ghLast = Date.now() - 3600e3;
     b.S.history = [workout(0, [exEntry('back-squat', [set(140, 3)])])];
     b.scheduleCloudSync();
     await b.cloudSync();

@@ -243,12 +243,11 @@ describe('a max test inside a normal workout', () => {
   });
   test('unused attempts do not trigger the "unfinished sets" question', () => {
     const app = finishable(makeApp());
-    let asked = 0;
-    app.confirm = () => { asked++; return true; };
+    app.__asks = [];
     app.openMaxTest('bench-press');
     attempt(app, true, 120);                            /* two planned attempts left untouched */
     app.finishWorkout();
-    assert.equal(asked, 0);
+    assert.equal(app.__asks.length, 0);
     assert.equal(app.S.history[0].exercises[0].sets.length, 1);
   });
   test('a max card nobody touched is not remembered as a suggestion', () => {

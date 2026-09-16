@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.26.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.27.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 /* UI strings. One flat dictionary - the app is English-only by design. */
@@ -223,7 +223,7 @@ const T = {
   a2hsIos:'Safari: Share → Add to Home Screen. Works offline, full screen.',
   a2hsAnd:'Chrome: ⋮ menu → Install app. Works offline, full screen.',
   ghRestore:'Restore from cloud', ghRestoreConfirm:'Download the latest backup from the cloud? Current data will be replaced.',
-  ghRestoreFail:'Could not download the cloud backup',
+  ghRestoreFail:'Could not download the cloud backup: {why}',
   histSearch:'Search by workout or exercise...', histNoMatch:'No matches',
   wkS:'wk',
   /* v2.12: comeback easing, mastery fact, passive deload advisor */
@@ -240,7 +240,17 @@ const T = {
   maxBtn:'Test a max', maxBadge:'MAX', maxTitle:'Max attempts', maxTested:'Tested 1RM',
   maxSess:'Max test', maxHere:'This lift already has a max test here',
   maxAdd:'+ Attempt', maxRemove:'− Attempt', maxMiss:'Missed', maxPlanCol:'Plan',
-  maxHint:'W warms you up to the first attempt. Then ✓ made or ✕ missed - 4 min rest between attempts.'
+  maxHint:'W warms you up to the first attempt. Then ✓ made or ✕ missed - 4 min rest between attempts.',
+  /* v2.27: in-app questions, safer cloud sync */
+  askBack:'Back',
+  woFinishSave:'Finish and save', woDiscard:'Discard workout', woSwitchOk:'Discard and start new',
+  dlEndOk:'End deload', ghRestoreOk:'Restore', ghPublicOk:'Connect anyway', bakRestoreOk:'Restore',
+  setWipeOk:'Delete everything', setWipeConfirm2:'Last check: this cannot be undone. Delete everything?',
+  ghRestoring:'Downloading the cloud backup…',
+  ghWhyAuth:'the token was refused', ghWhyNone:'there is no backup in this repo yet',
+  ghWhyOffline:'you are offline', ghWhyBad:'the file is not a Daveedus backup',
+  ghConflict:'This repo already holds a backup from another device, and this device has never synced with it. Restore that backup here, or replace it with what is on this device?',
+  ghConflictUpload:'Replace it with this device'
 };
 
 function t(k, vars){

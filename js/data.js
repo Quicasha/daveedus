@@ -175,8 +175,11 @@ function importTplPayload(d, folderId){
   return tpl;
 }
 /* replace all data from a bak payload (backup code or cloud backup.json);
-   this device's cloud-sync setup survives - backup payloads never carry it */
-function applyBak(d){
+   this device's cloud-sync setup survives - backup payloads never carry it.
+   fromCloud: the data IS the cloud copy, so the device is in sync afterwards -
+   nothing pending, nothing pushed back (that push made an empty commit). A
+   backup CODE is different: the cloud still holds the old data, so it syncs. */
+function applyBak(d, fromCloud){
   /* everything below is validation-tolerant: hydrate() repairs/validates every
      field (arrays filtered, objects checked), so a malformed backup can neither
      throw here nor brick the app; only the pre-folder migration is done first */
@@ -186,12 +189,16 @@ function applyBak(d){
     d.s.templates.forEach(tp=>{ if(tp && !tp.folderId) tp.folderId=fid; });
   }
   const gh = { ghRepo:S.ghRepo, ghToken:S.ghToken, ghLast:S.ghLast, ghDirty:S.ghDirty };
+  if(fromCloud){ gh.ghDirty = 0; gh.ghLast = Date.now(); }
   const next = hydrate(Object.assign({}, d.s, { active:null, onboarded:1 }, gh));
   if(!next){ toast(t('codeBad')); return; }
   /* the state being replaced is parked, not destroyed - a wrong restore is undoable by hand */
   try{ localStorage.setItem(LS_KEY+'.bad', JSON.stringify(S)); }catch(e){}
   S = next;
-  save(); scheduleCloudSync(); applyTheme(); closeModal();
+  save();
+  if(!fromCloud) scheduleCloudSync();
+  else updateGhStatus();
+  applyTheme(); closeModal();
   go('home');
   toast(t('bakDone'));
 }
@@ -215,8 +222,7 @@ function doImportInner(){
     go('program');
     toast(t('folderImported',{n:f.name}));
   }else if(d.t==='bak' && d.s && typeof d.s==='object'){
-    if(!confirm(t(S.active ? 'bakConfirmActive' : 'bakConfirm'))) return;
-    applyBak(d);
+    ask(t(S.active ? 'bakConfirmActive' : 'bakConfirm'), t('bakRestoreOk'), ()=>applyBak(d), { danger:true });
   }else{
     toast(t('codeBad'));
   }
@@ -245,6 +251,20 @@ function scheduleCloudSync(){
   clearTimeout(ghTimer);
   ghTimer = setTimeout(cloudSync, 4000);
 }
+/* the sha git - and so the Contents API - reports for a file holding exactly this
+   text. Equal shas mean the cloud already has this snapshot. null when the
+   browser has no WebCrypto (an insecure context): then we simply upload. */
+async function gitBlobSha(text){
+  try{
+    const enc = new TextEncoder();
+    const body = enc.encode(text), head = enc.encode('blob '+body.length+'\0');
+    const buf = new Uint8Array(head.length + body.length);
+    buf.set(head); buf.set(body, head.length);
+    const h = await crypto.subtle.digest('SHA-1', buf);
+    return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('');
+  }catch(e){ return null; }
+}
+/* upload one file; false = the cloud already held exactly this, no commit made */
 async function ghPut(path, content){
   const api = 'https://api.github.com/repos/'+S.ghRepo+'/contents/'+path;
   let sha = null;
@@ -255,18 +275,40 @@ async function ghPut(path, content){
   const g = await fetch(api, { headers:ghHdr(), cache:'no-store' });
   if(g.status===200) sha = (await g.json()).sha;
   else if(g.status!==404) throw new Error('HTTP '+g.status);
+  /* a sync with nothing new used to make an empty commit - after a restore,
+     a retry, a Sync now tap. The repo should only move when the data does. */
+  if(sha && sha === await gitBlobSha(content)) return false;
   const body = { message:'daveedus sync '+new Date().toISOString(),
     content: btoa(unescape(encodeURIComponent(content))) };
   if(sha) body.sha = sha;
   const p = await fetch(api, { method:'PUT', headers:ghHdr(), body:JSON.stringify(body) });
   if(!p.ok) throw new Error('HTTP '+p.status);
+  return true;
 }
-async function cloudSync(){
+/* force = the lifter chose to replace the cloud backup with this device's data */
+async function cloudSync(force){
   if(!ghOn() || ghBusy || !navigator.onLine) { updateGhStatus(); return; }
   ghBusy = true; V.gh = 'sync'; updateGhStatus();
   const seq = ghSeq;   /* the checkpoint the payload below actually carries */
   let ok = false;
   try{
+    /* A device that has never synced with this repo must not replace a backup
+       that is already there - a fresh device holding nothing once emptied the
+       cloud copy. Ask instead (once per session): restore it here, or
+       replace it on purpose. Unknown (network trouble) counts as "do not". */
+    if(!S.ghLast && force!==true){
+      const has = await ghHasBackup(S.ghRepo, S.ghToken);
+      if(has !== false){
+        ghBusy = false;
+        V.gh = 'err'; updateGhStatus();
+        if(has === true && !V.ghConflictAsked){
+          V.ghConflictAsked = true;
+          ask(t('ghConflict'), t('ghRestoreOk'), ()=>ghRestore(true),
+            { alt:{ label:t('ghConflictUpload'), fn:()=>cloudSync(true) } });
+        }
+        return;
+      }
+    }
     const payload = bakPayload();
     /* two files, same data: JSON for machines, a ready-to-paste DVD1 code for
        disaster recovery - open the repo on any device, copy, Load backup code */
@@ -302,48 +344,74 @@ async function ghConnect(){
       { headers:{ 'Authorization':'Bearer '+tk, 'Accept':'application/vnd.github+json' } });
     if(!r.ok) throw new Error('HTTP '+r.status);
     const meta = await r.json();
-    if(!meta.private && !confirm(t('ghPublicWarn'))){ if(btn) btn.disabled=false; return; }
-    /* a backup already up there is the reason most people connect - offer it.
-       An EMPTY repo is the opposite case: this device holds the only copy, so
-       mark it dirty and push, or connecting would leave the user unbacked. */
-    const has = await ghHasBackup();
-    S.ghRepo = rep; S.ghToken = tk; S.ghDirty = has ? 0 : 1;
-    save(); render();
-    toast(t('ghOkToast'));
-    if(has){
-      if(confirm(t(S.active ? 'bakConfirmActive' : 'ghFoundRestore'))) ghRestore(true);
-    }else cloudSync();
+    if(!meta.private){
+      if(btn) btn.disabled = false;
+      ask(t('ghPublicWarn'), t('ghPublicOk'), ()=>ghFinishConnect(rep, tk).catch(()=>toast(t('ghBad'))), { danger:true });
+      return;
+    }
+    await ghFinishConnect(rep, tk);
   }catch(e){
     if(btn) btn.disabled = false;
     toast(t('ghBad'));
   }
 }
-/* does the repo already hold a backup? (existence only - nothing is downloaded) */
-async function ghHasBackup(){
+/* a backup already up there is the reason most people connect - offer it, and
+   upload nothing. An EMPTY repo is the opposite case: this device holds the only
+   copy, so push it. The check runs with the repo and token just typed - it once
+   ran before they were stored, asked GitHub about "repos//", always heard "no
+   backup", and uploaded the new device's data over the real one. */
+async function ghFinishConnect(rep, tk){
+  const has = await ghHasBackup(rep, tk);
+  if(has === null) throw new Error('backup check failed'); /* unknown is not "empty" */
+  S.ghRepo = rep; S.ghToken = tk; S.ghDirty = has ? 0 : 1;
+  save(); render();
+  toast(t('ghOkToast'));
+  if(has) ask(t(S.active ? 'bakConfirmActive' : 'ghFoundRestore'), t('ghRestoreOk'), ()=>ghRestore(true), { danger:true });
+  else cloudSync(true);
+}
+/* does the repo already hold a backup? true / false, or null when GitHub could
+   not be asked (offline, token refused) - callers must never read null as "no" */
+async function ghHasBackup(repo, token){
   try{
-    const r = await fetch('https://api.github.com/repos/'+S.ghRepo+'/contents/'+GH_FILE, { headers:ghHdr(), cache:'no-store' });
-    return r.status === 200;
-  }catch(e){ return false; }
+    const r = await fetch('https://api.github.com/repos/'+repo+'/contents/'+GH_FILE,
+      { headers:{ 'Authorization':'Bearer '+token, 'Accept':'application/vnd.github+json' }, cache:'no-store' });
+    return r.status === 200 ? true : r.status === 404 ? false : null;
+  }catch(e){ return null; }
 }
 /* new phone / reinstall: pull the latest cloud backup and restore it in one tap.
    skipAsk = the caller already asked (the connect flow) */
 async function ghRestore(skipAsk){
-  if(!ghOn()) return;
-  if(!skipAsk && !confirm(t(S.active ? 'bakConfirmActive' : 'ghRestoreConfirm'))) return;
+  if(!ghOn() || V.ghRestoring) return;
+  if(!skipAsk){
+    ask(t(S.active ? 'bakConfirmActive' : 'ghRestoreConfirm'), t('ghRestoreOk'), ()=>ghRestore(true), { danger:true });
+    return;
+  }
+  V.ghRestoring = true;
+  toast(t('ghRestoring')); /* a download takes a moment - never let a tap look like nothing */
   try{
+    if(!navigator.onLine) throw new Error('offline');
     const r = await fetch('https://api.github.com/repos/'+S.ghRepo+'/contents/'+GH_FILE,
       { headers:{ 'Authorization':'Bearer '+S.ghToken, 'Accept':'application/vnd.github.raw+json' },
         cache:'no-store' }); /* never restore a minute-old cached copy */
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    const d = await r.json();
-    if(!d || d.t!=='bak' || !d.s || typeof d.s!=='object') throw new Error('bad payload');
-    applyBak(d);
-  }catch(e){ toast(t('ghRestoreFail')); }
+    if(!r.ok) throw new Error(r.status===404 ? 'none' : (r.status===401 || r.status===403) ? 'auth' : 'HTTP '+r.status);
+    let d = null;
+    try{ d = await r.json(); }catch(e){}
+    if(!d || d.t!=='bak' || !d.s || typeof d.s!=='object') throw new Error('bad');
+    applyBak(d, true);
+  }catch(e){
+    const m = e && e.message;
+    const why = m==='none' ? t('ghWhyNone') : m==='auth' ? t('ghWhyAuth')
+              : m==='offline' ? t('ghWhyOffline') : m==='bad' ? t('ghWhyBad') : (m || '?');
+    toast(t('ghRestoreFail', { why }));
+  }
+  V.ghRestoring = false;
 }
 function ghDisconnect(){
-  if(!confirm(t('ghOffConfirm'))) return;
-  S.ghToken = ''; S.ghRepo = ''; S.ghDirty = 0;
-  save(); render();
+  ask(t('ghOffConfirm'), t('ghOff'), ()=>{
+    S.ghToken = ''; S.ghRepo = ''; S.ghDirty = 0; S.ghLast = 0;
+    V.ghConflictAsked = false;
+    save(); render();
+  }, { danger:true });
 }
 /* quiet cloud pill for the Home hero row: pending / syncing / synced HH:MM.
    Tap = push now. Nothing renders when sync is not set up. */
@@ -362,7 +430,8 @@ function syncPillHtml(){
 function syncNowTap(){
   if(!ghOn() || ghBusy) return;
   ghMark(); /* an explicit tap is a checkpoint too - it must not ride an in-flight payload */
-  cloudSync();
+  V.ghConflictAsked = false; /* an explicit tap may ask again */
+  return cloudSync();
 }
 /* backgrounding: the debounced push may never get its 4 seconds - try NOW,
    best effort; if the request dies with the page, ghDirty stays set and the

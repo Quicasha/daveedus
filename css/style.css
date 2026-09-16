@@ -1272,3 +1272,6 @@ button:focus-visible, .chip:focus-visible, .switch:focus-visible{
 .matt{font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap;}
 .matt.miss{color:var(--ghost); font-weight:600;}
 .matt.best{color:var(--accent-soft); font-weight:800;}
+
+/* ---- the app's own yes/no sheet (ask) ---- */
+.askmsg{font-size:16px; font-weight:600; line-height:1.5; color:var(--text); margin:6px 4px 18px;}
