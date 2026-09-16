@@ -117,6 +117,13 @@ export function fakeGitHub(app, opts){
     if (u === base){ state.gets++; return { ok: true, status: 200, json: async () => ({ private: !o.public }) }; }
     if (!u.startsWith(base + '/contents/')) return notFound;
     const name = u.split('/contents/')[1] || '';
+    if (name === '' && (opt.method || 'GET') === 'GET'){
+      /* the root listing: one entry per top-level name; an empty repo has no contents */
+      state.gets++;
+      const top = [...new Set([...files.keys()].map(p => p.split('/')[0]))];
+      if (!top.length) return notFound;
+      return { ok: true, status: 200, json: async () => top.map(n => ({ name: n, type: [...files.keys()].some(p => p.startsWith(n + '/')) ? 'dir' : 'file' })) };
+    }
     if (opt.method === 'PUT'){
       state.puts++;
       if (state.gate) await state.gate;

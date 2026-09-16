@@ -53,8 +53,8 @@ function htmlSettings(){
       <button onclick="ghRestore()">${t('ghRestore')}</button>
       <button onclick="ghDisconnect()">${t('ghOff')}</button>
     </div>` : `
-    <input class="nameinput" id="gh-repo" type="text" placeholder="${t('ghRepoPh')}" autocapitalize="none" autocorrect="off" style="margin-bottom:8px">
-    <input class="nameinput" id="gh-token" type="password" placeholder="${t('ghTokenPh')}" autocapitalize="none" style="margin-bottom:10px">
+    <input class="nameinput" id="gh-repo" type="text" name="daveedus-sync-repo" autocomplete="off" data-lpignore="true" data-1p-ignore placeholder="${t('ghRepoPh')}" autocapitalize="none" autocorrect="off" spellcheck="false" style="margin-bottom:8px">
+    <input class="nameinput" id="gh-token" type="password" name="daveedus-sync-token" autocomplete="new-password" data-lpignore="true" data-1p-ignore placeholder="${t('ghTokenPh')}" autocapitalize="none" style="margin-bottom:10px">
     <button class="btn primary" id="gh-connect" style="margin-bottom:0" onclick="ghConnect()">${t('ghConnect')}</button>
     <div style="font-size:12px;color:var(--ghost);line-height:1.5;margin-top:10px">${t('ghHint')}</div>`}
   </div>

@@ -200,7 +200,14 @@ function applyBak(d, fromCloud){
   else updateGhStatus();
   applyTheme(); closeModal();
   go('home');
-  toast(t('bakDone'));
+  toast(fromCloud ? t('ghRestoredN', { n:bakFacts(S).n }) : t('bakDone'));
+}
+/* what a backup holds, for the question before a restore: workouts (archived
+   ones left out, like everywhere else) and the date of the newest */
+function bakFacts(s){
+  const h = (s && Array.isArray(s.history)) ? s.history.filter(w=>w && !w.arch) : [];
+  const ts = h.map(w=>Date.parse(w.date)).filter(x=>!isNaN(x));
+  return { n:h.length, last: ts.length ? new Date(Math.max(...ts)).toISOString() : null };
 }
 function doImport(){
   try{ doImportInner(); }catch(e){ toast(t('codeBad')); } /* a hostile payload gets a toast, never a stuck modal */
@@ -303,7 +310,7 @@ async function cloudSync(force){
         V.gh = 'err'; updateGhStatus();
         if(has === true && !V.ghConflictAsked){
           V.ghConflictAsked = true;
-          ask(t('ghConflict'), t('ghRestoreOk'), ()=>ghRestore(true),
+          ask(t('ghConflict'), t('ghRestoreOk'), ()=>ghRestore(),
             { alt:{ label:t('ghConflictUpload'), fn:()=>cloudSync(true) } });
         }
         return;
@@ -334,6 +341,9 @@ async function cloudSync(force){
    their data back, and an immediate push would overwrite the cloud copy with
    whatever this device happens to hold (an empty log), making Restore useless.
    The first push happens after the next finished workout, or on Sync now. */
+/* The repo and token fields opt out of autofill (settings.js): Dienius lives on
+   the same origin with the same repo + token pair, and a browser password
+   manager once filled the Dienius repo in here. */
 async function ghConnect(){
   const repo = ($('#gh-repo')||{}).value, tok = ($('#gh-token')||{}).value;
   if(!repo || !repo.trim() || !tok || !tok.trim()){ toast(t('ghBad')); return; }
@@ -360,14 +370,41 @@ async function ghConnect(){
    copy, so push it. The check runs with the repo and token just typed - it once
    ran before they were stored, asked GitHub about "repos//", always heard "no
    backup", and uploaded the new device's data over the real one. */
-async function ghFinishConnect(rep, tk){
+async function ghFinishConnect(rep, tk, foreignOk){
   const has = await ghHasBackup(rep, tk);
   if(has === null) throw new Error('backup check failed'); /* unknown is not "empty" */
+  /* a repo that already holds another app's files is almost always the wrong
+     one - on a shared origin a password manager filled in the Dienius repo */
+  if(!foreignOk){
+    const foreign = await ghForeignFiles(rep, tk);
+    if(foreign === null) throw new Error('repo listing failed');
+    if(foreign.length){
+      const btn = $('#gh-connect'); if(btn) btn.disabled = false;
+      ask(t('ghForeign', { r:rep, f:foreign.slice(0,3).join(', ') }), t('ghForeignOk'),
+        ()=>ghFinishConnect(rep, tk, true).catch(()=>toast(t('ghBad'))), { danger:true });
+      return;
+    }
+  }
   S.ghRepo = rep; S.ghToken = tk; S.ghDirty = has ? 0 : 1;
   save(); render();
   toast(t('ghOkToast'));
-  if(has) ask(t(S.active ? 'bakConfirmActive' : 'ghFoundRestore'), t('ghRestoreOk'), ()=>ghRestore(true), { danger:true });
+  if(has) await ghRestore();  /* downloads, then shows what it holds before replacing anything */
   else cloudSync(true);
+}
+/* what a Daveedus data repo may hold: its two backups and GitHub's own starter
+   files. Anything else in the root means the repo belongs to something else. */
+const GH_OWN = /^(backup\.json|backup-code\.txt|readme(\.md|\.txt)?|license(\.md|\.txt)?|\.gitignore|\.gitattributes)$/i;
+/* names in the repo root that are not ours: [] for an empty or Daveedus-only
+   repo, null when the listing could not be read */
+async function ghForeignFiles(repo, token){
+  try{
+    const r = await fetch('https://api.github.com/repos/'+repo+'/contents/',
+      { headers:{ 'Authorization':'Bearer '+token, 'Accept':'application/vnd.github+json' }, cache:'no-store' });
+    if(r.status === 404) return [];   /* a brand-new repo has no contents yet */
+    if(!r.ok) return null;
+    const list = await r.json();
+    return Array.isArray(list) ? list.map(x=>x && x.name).filter(n=>n && !GH_OWN.test(n)) : null;
+  }catch(e){ return null; }
 }
 /* does the repo already hold a backup? true / false, or null when GitHub could
    not be asked (offline, token refused) - callers must never read null as "no" */
@@ -380,12 +417,12 @@ async function ghHasBackup(repo, token){
 }
 /* new phone / reinstall: pull the latest cloud backup and restore it in one tap.
    skipAsk = the caller already asked (the connect flow) */
-async function ghRestore(skipAsk){
+/* Download first, then ask with the facts: which repo, how many workouts, the
+   newest one. Asking before the download could only say "replace everything?",
+   which is how an empty backup from the wrong repo got restored without anyone
+   noticing. assumeYes skips the question (tests, and nothing else). */
+async function ghRestore(assumeYes){
   if(!ghOn() || V.ghRestoring) return;
-  if(!skipAsk){
-    ask(t(S.active ? 'bakConfirmActive' : 'ghRestoreConfirm'), t('ghRestoreOk'), ()=>ghRestore(true), { danger:true });
-    return;
-  }
   V.ghRestoring = true;
   toast(t('ghRestoring')); /* a download takes a moment - never let a tap look like nothing */
   try{
@@ -397,14 +434,18 @@ async function ghRestore(skipAsk){
     let d = null;
     try{ d = await r.json(); }catch(e){}
     if(!d || d.t!=='bak' || !d.s || typeof d.s!=='object') throw new Error('bad');
-    applyBak(d, true);
+    V.ghRestoring = false;
+    if(assumeYes === true){ applyBak(d, true); return; }
+    const f = bakFacts(d.s);
+    const holds = f.n ? t('ghHolds', { r:S.ghRepo, n:f.n, d:fmtDate(f.last) }) : t('ghHoldsNone', { r:S.ghRepo });
+    ask(holds + ' ' + t(S.active ? 'bakConfirmActive' : 'ghReplaceHere'), t('ghRestoreOk'), ()=>applyBak(d, true), { danger:true });
   }catch(e){
+    V.ghRestoring = false;
     const m = e && e.message;
     const why = m==='none' ? t('ghWhyNone') : m==='auth' ? t('ghWhyAuth')
               : m==='offline' ? t('ghWhyOffline') : m==='bad' ? t('ghWhyBad') : (m || '?');
     toast(t('ghRestoreFail', { why }));
   }
-  V.ghRestoring = false;
 }
 function ghDisconnect(){
   ask(t('ghOffConfirm'), t('ghOff'), ()=>{

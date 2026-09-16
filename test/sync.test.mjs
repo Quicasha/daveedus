@@ -67,16 +67,30 @@ describe('questions', () => {
 });
 
 describe('restore from the cloud', () => {
-  test('asks first and downloads nothing until the answer is yes', async () => {
+  test('shows what the cloud holds before anything is replaced; Back changes nothing', async () => {
     const { gh } = await phoneWithBackup();
     const laptop = makeApp();
     fakeGitHub(laptop, { files: gh.files });
+    laptop.S.history = sessions(1);
     laptop.__askAnswer = false;
-    const gets = gh.gets;
     await laptop.ghRestore();
     assert.equal(laptop.__asks.length, 1);
-    assert.equal(gh.gets, gets, 'Back must not touch the network');
-    assert.equal(laptop.S.history.length, 0);
+    assert.match(laptop.__asks[0], /me\/daveedus-data/, 'the question names the repo');
+    assert.match(laptop.__asks[0], /\b3 workouts\b/, 'and how much it holds');
+    assert.equal(laptop.S.history.length, 1, 'Back leaves this device exactly as it was');
+  });
+  test('a backup without a single workout says so before it can empty this device', async () => {
+    const empty = makeApp();
+    const gh = fakeGitHub(empty);
+    empty.scheduleCloudSync();
+    await empty.cloudSync();                          /* an empty device pushed its empty state */
+    empty.__stopTimers();
+    const laptop = makeApp();
+    fakeGitHub(laptop, { files: gh.files });
+    laptop.__askAnswer = false;
+    await laptop.ghRestore();
+    assert.match(laptop.__asks[0], /no workouts/i);
+    assert.match(laptop.__asks[0], /right repo/i);
   });
   test('yes brings the other device\'s workouts, and nothing is pushed back', async () => {
     const { gh } = await phoneWithBackup();
@@ -85,9 +99,12 @@ describe('restore from the cloud', () => {
     const puts = gh.puts + lgh.puts;
     let pushes = 0;
     laptop.scheduleCloudSync = () => { pushes++; };
+    const toasts = [];
+    laptop.toast = m => toasts.push(m);
     await laptop.ghRestore();
     await settle();
     assert.equal(laptop.S.history.length, 3);
+    assert.match(toasts[toasts.length - 1], /3 workouts/, 'the confirmation says what arrived');
     assert.equal(laptop.S.ghDirty, 0, 'the device now holds exactly what the cloud holds');
     assert.ok(laptop.S.ghLast > 0, 'and counts as synced');
     assert.equal(pushes, 0, 'a restore does not upload the same data straight back');
@@ -131,6 +148,30 @@ describe('a second device joining', () => {
     await settle();
     assert.equal(laptop.S.history.length, 3);
     laptop.__stopTimers();
+  });
+  test('connecting to a repo that holds another app\'s files asks first; Back does not connect', async () => {
+    const files = new Map([
+      ['README.md', { text: '# data', sha: 'r' }],
+      ['data/state.json', { text: '{}', sha: 's' }]
+    ]);
+    const laptop = makeApp();
+    const gh = fakeGitHub(laptop, { files });
+    laptop.S.history = sessions(2);
+    typeCredentials(laptop, gh);
+    laptop.__askAnswer = false;
+    await laptop.ghConnect();
+    await settle();
+    assert.equal(laptop.__asks.length, 1);
+    assert.match(laptop.__asks[0], /me\/daveedus-data/);
+    assert.match(laptop.__asks[0], /\bdata\b/, 'it names what is already there');
+    assert.equal(laptop.S.ghRepo, '', 'not connected');
+    assert.equal(files.has('backup.json'), false, 'and nothing uploaded');
+    laptop.__stopTimers();
+  });
+  test('the sync fields opt out of browser autofill - two apps share one origin', () => {
+    const src = readAppSource();
+    assert.match(src, /id="gh-repo"[^>]*autocomplete="off"/);
+    assert.match(src, /id="gh-token"[^>]*autocomplete="new-password"/);
   });
   test('connecting to an EMPTY repo uploads this device - it holds the only copy', async () => {
     const laptop = makeApp();

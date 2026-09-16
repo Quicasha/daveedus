@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.27.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.28.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 /* UI strings. One flat dictionary - the app is English-only by design. */
@@ -168,8 +168,7 @@ const T = {
   ghSyncing:'Syncing…', ghErr:'Sync pending', ghNever:'Not synced yet',
   ghLastSync:'Synced',
   syncPending:'sync pending - tap', syncedAt:'synced {t}',
-  ghHint:'After every finished workout your data is pushed to your own private GitHub repo automatically. Connecting itself uploads nothing, so a backup made on another phone stays untouched until you choose to sync. The token is entered once, stays on this device only and is never included in backup codes.',
-  ghFoundRestore:'A cloud backup was found in this repo. Restore it to this device now? Everything currently on this device will be replaced.',
+  ghHint:'Use a private repo made only for Daveedus. After every finished workout your data is pushed there automatically. Connecting to a repo that already has a backup uploads nothing: you see how many workouts it holds and choose whether to restore. The token is entered once, stays on this device only and is never included in backup codes.',
   csvTitle:'CSV export (for analysis)',
   csvSets:'Workout sets (CSV)', csvBw:'Body weight (CSV)',
   csvHint:'One row = one set. Weights in {u}, ISO dates, UTF-8 - ready for Excel / Google Sheets / Python.',
@@ -222,7 +221,7 @@ const T = {
   a2hsTitle:'Install as an app',
   a2hsIos:'Safari: Share → Add to Home Screen. Works offline, full screen.',
   a2hsAnd:'Chrome: ⋮ menu → Install app. Works offline, full screen.',
-  ghRestore:'Restore from cloud', ghRestoreConfirm:'Download the latest backup from the cloud? Current data will be replaced.',
+  ghRestore:'Restore from cloud',
   ghRestoreFail:'Could not download the cloud backup: {why}',
   histSearch:'Search by workout or exercise...', histNoMatch:'No matches',
   wkS:'wk',
@@ -250,7 +249,13 @@ const T = {
   ghWhyAuth:'the token was refused', ghWhyNone:'there is no backup in this repo yet',
   ghWhyOffline:'you are offline', ghWhyBad:'the file is not a Daveedus backup',
   ghConflict:'This repo already holds a backup from another device, and this device has never synced with it. Restore that backup here, or replace it with what is on this device?',
-  ghConflictUpload:'Replace it with this device'
+  ghConflictUpload:'Replace it with this device',
+  ghHolds:'{r} holds {n} workouts, the latest on {d}.',
+  ghHoldsNone:'{r} holds a Daveedus backup with no workouts at all. Check this is the right repo.',
+  ghReplaceHere:'Restore it here? Everything on this device will be replaced.',
+  ghRestoredN:'Restored {n} workouts ✓',
+  ghForeign:'{r} already holds files that are not a Daveedus backup ({f}). It may belong to another app. Use it for Daveedus anyway?',
+  ghForeignOk:'Use this repo'
 };
 
 function t(k, vars){
