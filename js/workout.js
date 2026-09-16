@@ -185,12 +185,22 @@ function openExMenu(xi){
   const item = (cls, icon, label, action) =>
     `<button class="swapitem ${cls}" onclick="closeModal();${action}">
        <span class="mi">${icon}</span><span class="sn">${label}</span></button>`;
+  /* a max card is a measurement: plates and remove, nothing that plans training */
+  if(ex.max){
+    openModal(`<h3>${esc(ex.name)} · ${t('maxBadge')}<button class="x" onclick="closeModal()">✕</button></h3>
+      <div class="swaplist">
+        ${bw?'':item('', ACT_ICONS.plates, t('plates'), `openPlates(${xi})`)}
+        ${item('danger', ACT_ICONS.x, t('woDelExBtn'), `removeWorkoutEx(${xi})`)}
+      </div>`);
+    return;
+  }
   openModal(`<h3>${esc(ex.name)}<button class="x" onclick="closeModal()">✕</button></h3>
     <div class="swaplist">
       ${item(ex.k!==ex.baseK?'on':'', ACT_ICONS.swap, t('swapTitle'), `openSwapMenu(${xi})`)}
       ${bw?'':item('', ACT_ICONS.plates, t('plates'), `openPlates(${xi})`)}
       ${item(ex.dropUi?'on':'', 'D+', t('dropTog'), `toggleDropUi(${xi})`)}
       ${isTimeEx(ex.k)?'':item(S.waves[ex.k]?'on':'', '∿', t('waveMode'), `openWaveModal('${esc(ex.k)}')`)}
+      ${isTimeEx(ex.k)?'':item('', ACT_ICONS.star, t('maxBtn'), `addMaxCard(${xi})`)}
       ${notLast?item(ex.ss?'on':'', ACT_ICONS.link, t('superset'), `toggleWoSS(${xi})`):''}
       ${item('danger', ACT_ICONS.x, t('woDelExBtn'), `removeWorkoutEx(${xi})`)}
     </div>`);
@@ -221,8 +231,10 @@ function ghostText(g, tm, bw){
 }
 function lastForExercise(k, name, tplId){
   const nm = (name||'').trim().toLowerCase();
+  /* a max test is never a ghost: next session repeats the training sets,
+     not a single at a hundred percent */
   const match = e => (e.k===k || (nm && e.name && e.name.trim().toLowerCase()===nm))
-                     && e.sets && e.sets.length;
+                     && e.sets && e.sets.length && !e.max;
   /* prefer the last session of the SAME workout - exercise order/fatigue context matters.
      Deload sessions are skipped, so after a deload the ghosts return to real loads. */
   if(tplId){
@@ -298,7 +310,7 @@ function startWorkout(tplId){
     };
     /* extras that were LOGGED last session */
     for(const e of lastW.exercises){
-      if(!e.sets.length) continue;
+      if(e.max || !e.sets.length) continue; /* a max test does not come back as a suggestion */
       addGhost(e.k, e.name,
         Math.max(1, Math.min(12, e.sets.filter(s=>!s.warm && !s.drop).length || e.sets.length)),
         String(e.targetReps||'10'), !!e.x2, !!e.adhoc, e.mb);
@@ -384,12 +396,12 @@ function masteryFact(exercises){
   const MIN_GAP = 42*864e5;
   let best = null; /* { name, gap } - gap Infinity = all-time */
   for(const e of exercises){
-    if(isTimeEx(e.k)) continue;
+    if(e.max || isTimeEx(e.k)) continue; /* a test day's single is a record or nothing */
     const work = e.sets.filter(s=>!s.warm && !s.drop && s.reps>0);
     if(!work.length) continue;
     const add = (isBwEx(e.k) ? (e.bw||0) : 0) + (e.mb||0);
     const mul = e.x2 ? 2 : 1;
-    const today = Math.max(...work.map(s=>(s.weight*mul+add)*(1+s.reps/30)));
+    const today = Math.max(...work.map(s=>e1rmOf(s.weight*mul+add, s.reps)));
     if(today <= 0) continue;
     const pts = e1rmSeries(e.k);
     if(pts.length < 4) continue; /* young lifts: every session is a "best" - not a fact */
@@ -449,7 +461,7 @@ function addedBaseAt(k, ts){
     if(h.arch || h.dl) continue;
     if(ts && new Date(h.date).getTime() > ts) continue;
     for(const e of h.exercises)
-      if(e.k===k || (e.name && e.name.trim().toLowerCase()===nm))
+      if(!e.max && (e.k===k || (e.name && e.name.trim().toLowerCase()===nm)))
         return (isBwEx(k) ? (e.bw||0) : 0) + (e.mb||0);
   }
   return 0;
@@ -482,7 +494,7 @@ function lastTopW(k){
   for(const h of S.history){
     if(h.arch || h.dl) continue;
     for(const e of h.exercises){
-      if(e.k!==k) continue;
+      if(e.k!==k || e.max) continue; /* a tested single is no wave base */
       const work = e.sets.filter(s=>!s.warm && !s.drop);
       if(work.length) return Math.max(...work.map(s=>s.weight));
     }
@@ -600,7 +612,7 @@ function setVerdict(ex, si, wkg, reps){
   const todayAdd = (bw ? (ex.bw||0) : 0) + (ex.base||0);
   const prevAdd  = (bw ? (ex.last.bw||0) : 0) + (ex.last.mb||0);
   /* one set's contribution: [work, strength] */
-  const tally = (kg, r, add) => tm ? [r, r] : [(kg+add)*r, (kg+add)*(1+r/30)];
+  const tally = (kg, r, add) => tm ? [r, r] : [(kg+add)*r, e1rmOf(kg+add, r)];
   let work = 0, best = 0, wi = -1;
   for(let i=0; i<=si; i++){
     const x = ex.sets[i];
@@ -650,6 +662,7 @@ function htmlWorkout(){
       <button class="gx" onclick="dismissGhostEx(${xi})" aria-label="dismiss">✕</button>
     </div>`;
     const tm = isTimeEx(ex.k), bw = isBwEx(ex.k);
+    const mx = !!ex.max; /* a max test card: attempt rows, no planning chips */
     /* progression ladder chip: current level, taps open the level sheet */
     const lte = (!ex.adhoc && ex.tplId) ? tplEntryFor(ex) : null;
     const lvlL = lvlsOf(lte);
@@ -668,15 +681,16 @@ function htmlWorkout(){
       ? ` <button class="x2chip${ex.base?' on':''}" onclick="openBaseEdit(${xi})" aria-label="${t('baseLabel')}">+${ex.base?fmtW(kg2u(ex.base)):unitL()}</button>` : '';
     /* the D column exists only while it's needed (D+ enabled or drop rows present) -
        otherwise the grid is 5 columns and the check button sits flush at the edge */
-    const dropCol = !!ex.dropUi || ex.sets.some(s=>s.drop);
+    const dropCol = !mx && (!!ex.dropUi || ex.sets.some(s=>s.drop));
     const gcls = dropCol ? 'setgrid' : 'setgrid nod';
-    const hdr = `<div class="${gcls} hdr"><div>${t('woSet')}</div><div>${t('woPrev')}</div>
-      <div>${wcol}${x2chip}${baseChip}</div><div>${tm?t('woSec'):t('woReps')}</div><div>${ACT_ICONS.check}</div>${dropCol?'<div></div>':''}</div>`;
+    const hdr = `<div class="${gcls} hdr"><div>${t('woSet')}</div><div>${mx?t('maxPlanCol'):t('woPrev')}</div>
+      <div>${wcol}${x2chip}${baseChip}</div><div>${mx ? (ex.sets.some(s=>s.warm) && !warmHide ? t('woReps') : '') : tm?t('woSec'):t('woReps')}</div><div>${ACT_ICONS.check}</div>${dropCol?'<div></div>':''}</div>`;
     let workNum = 0;
     const approx = ex.last && !ex.last.sameTpl ? '* ' : ''; /* values borrowed from another workout */
     const rows = ex.sets.map((s,si)=>{
       /* folded warmup rows vanish - except the one the rest bar hangs under */
       if(warmHide && s.warm && !(S.active.rest && S.active.rest.key===xi+'-'+si)) return '';
+      if(mx && !s.warm) return maxRowHtml(ex, xi, si, firstNotDone, gcls);
       const g = ghostFor(ex,si);
       const prevTxt = g ? approx + ghostText({ weight:ghostW(ex,g), reps:g.reps }, tm, bw) : '—';
       if(!s.warm && !s.drop) workNum++;
@@ -724,16 +738,17 @@ function htmlWorkout(){
     const isAlt = ex.k !== ex.baseK;
     const statusBadge = doneOrder[ex.id] ? `<span class="ordbadge" title="${t('woOrderHint')}">${doneOrder[ex.id]}</span>`
       : (ex.prevOrder ? `<span class="ordbadge last" title="${t('woPrevOrderHint')}">${ex.prevOrder}</span>` : '');
-    return `<div class="card${isAlt?' altcard':''}${doneOrder[ex.id]?' exdone':''}${outlined.has(ex.id)?' excur':''}">
+    return `<div class="card${isAlt?' altcard':''}${mx?' maxcard':''}${doneOrder[ex.id]?' exdone':''}${outlined.has(ex.id)?' excur':''}">
       <div class="exhead">
         <div class="exname" onclick="openExDetailByKey('${esc(ex.k)}')">${esc(ex.name)}</div>
+        ${mx?`<span class="maxchip">${t('maxBadge')}</span>`:''}
         ${statusBadge}
-        ${(!tm && !dl && S.waves[ex.k] && !exFullyDone(ex))?(w=>{const wt=waveTarget(w);
+        ${(!tm && !dl && !mx && S.waves[ex.k] && !exFullyDone(ex))?(w=>{const wt=waveTarget(w);
           return `<button class="dpchip" onclick="applyWave(${xi})" title="${t('waveChipHint')}">W${w.idx+1} ${fmtW(kg2u(wt.w))}×${wt.r}</button>`;})(S.waves[ex.k]):''}
         ${dpDue(ex)?`<button class="dpchip" onclick="applyDp(${xi})" title="${t('dpChipHint')}">+${fmtW(kg2u(ex.dp))}</button>`:''}
         ${lvlL?`<button class="dpchip" onclick="openLvlSheet(${xi})" title="${t('lvlSheetTitle')}">L${(lte.lvl||0)+1}/${lvlL.length}</button>`:''}
-        <div class="extarget" onclick="openTargetEdit(${xi})">${ex.targetSets}×${ex.targetReps}${tm?'s':''}</div>
-        ${ex.adhoc?`<button class="minibtn pinex" onclick="pinToTpl(${xi})" aria-label="${t('pinExLabel')}">${ACT_ICONS.pin}</button>`:''}
+        ${mx?'':`<div class="extarget" onclick="openTargetEdit(${xi})">${ex.targetSets}×${ex.targetReps}${tm?'s':''}</div>`}
+        ${(ex.adhoc && !mx)?`<button class="minibtn pinex" onclick="pinToTpl(${xi})" aria-label="${t('pinExLabel')}">${ACT_ICONS.pin}</button>`:''}
         ${(tm||bw)?'':`<button class="minibtn warm${warmDone ? (ex.warmShow?' on':'') : (ex.sets.some(s=>s.warm&&!s.done)?' on':'')}" onclick="${warmDone?`toggleWarmShow(${xi})`:`autoWarmup(${xi})`}" aria-label="${t('warmBtn')}">W</button>`}
         <button class="minibtn${isAlt||ex.ss?' acc':''}" onclick="openExMenu(${xi})" aria-label="menu">${ACT_ICONS.more}</button>
       </div>
@@ -741,16 +756,16 @@ function htmlWorkout(){
       ${(!dl && !ex.ghost && cbFactor(ex)<1) ? `<div class="cbnote">${t('cbNote',{p:Math.round(cbFactor(ex)*100)})}</div>` : ''}
       ${(ex.pnote && !ex.notePerm) ? `<div class="pnote">${ACT_ICONS.pin} ${esc(ex.pnote)}</div>` : ''}
       ${ex.last && ex.last.note ? `<div class="lastnote">${ACT_ICONS.note} <span>${esc(ex.last.note)}</span></div>` : ''}
-      <div class="noterow">
+      ${mx ? maxInfoHtml(ex) : `<div class="noterow">
         <input class="exnote${ex.notePerm?' perm':''}" placeholder="${ex.notePerm?t('woNotePerm'):t('woNoteSess')}"
           value="${esc(ex.notePerm?(ex.pnote||''):ex.note)}"
           oninput="${ex.notePerm?`setPnote(${xi},this.value)`:`onNoteInput(${xi},this.value)`}">
         <button class="noteperm${ex.notePerm?' on':''}" onclick="toggleNoteMode(${xi})" aria-label="${t('woNotePermToggle')}">${ACT_ICONS.pin}</button>
-      </div>
+      </div>`}
       ${bwField}${hdr}${rows}
       <div class="setctl">
-        <button onclick="addSet(${xi})">${t('woAddSet')}</button>
-        <button onclick="removeSet(${xi})">${t('woRemoveSet')}</button>
+        <button onclick="addSet(${xi})">${mx?t('maxAdd'):t('woAddSet')}</button>
+        <button onclick="removeSet(${xi})">${mx?t('maxRemove'):t('woRemoveSet')}</button>
       </div>
     </div>${ssConn}`;
   }).join('');
@@ -949,6 +964,165 @@ function addWorkoutEx(){
     openTargetEdit(S.active.exercises.length-1); /* set sets x reps right away, no silent defaults */
   });
 }
+/* ======================= MAX TEST =======================
+   A one-rep max attempted inside a workout: on the deload day before the light
+   work, at the end of a session, or as a session of its own. The card is
+   session-only (adhoc) and flagged max. Its rows after the warm-ups are
+   attempts - singles logged made or missed with their own clock time, 4 min
+   rest between them (NSCA: 3-5 min). History keeps it as an entry with max:1,
+   which isRecordEntry lets into the records even on a deload pass and every
+   training reader keeps out. Evidence and caveats: docs/RESEARCH-TRAINING.md,
+   section 7. */
+
+/* which attempt a row is (0-based), counting past the warm-up rows */
+function attemptNo(ex, si){
+  let n = 0;
+  for(let i=0; i<si; i++) if(!ex.sets[i].warm) n++;
+  return n;
+}
+/* the attempts a meet lifter would pick from what the lift shows NOW: an opener
+   near 92% (a weight you could triple on a bad day), a read near 97%, and a
+   third that is a new best - at least 101% and always one plate step above the
+   estimate. In the display unit, as the ADDED load the card logs (body weight
+   and machine base off, per hand for a dumbbell pair), snapped to the plate
+   step. No real estimate - under three recent sessions and no recent test -
+   means no suggestion: the lifter types the weights. */
+function maxPlan(ex){
+  if(!ex || isTimeEx(ex.k)) return [];
+  const k = ex.k;
+  const recentTest = maxTests(k).some(x=>x.best>0 && Date.now()-new Date(x.date).getTime() <= 90*864e5);
+  if(recentSeries(k).length < 3 && !recentTest) return [];
+  const E = kg2u(currentE1rm(k));
+  if(!(E > 0)) return [];
+  const su = stepU(), mul = isX2(ex) ? 2 : 1;
+  const addU = kg2u((isBwEx(k) ? (ex.bw||0) : 0) + (ex.base||0));
+  const load = p => (E*p - addU)/mul;
+  const snap = x => Math.round(x/su + 1e-9)*su;
+  const a1 = snap(load(0.92));
+  const a2 = Math.max(snap(load(0.97)), a1 + su);
+  const a3 = Math.max(snap(load(1.01)), (Math.floor(load(1)/su + 1e-9) + 1)*su, a2 + su);
+  const out = [a1, a2, a3].map(x=>Math.round(x*100)/100);
+  /* below zero would be assistance on a machine nobody described */
+  return out.every(x=>x > 0 || (x===0 && isBwEx(k))) ? out : [];
+}
+function buildMaxEx(k, src){
+  const mx = buildActiveEx(k, exName(k), 3, '1', false, S.active.tplId, [], '', 240);
+  mx.max = true;
+  mx.adhoc = true;      /* session-only: never touches a template slot */
+  mx.last = null;       /* no ghosts - the suggestions come from maxPlan */
+  mx.prevOrder = 0;
+  if(src){
+    if(isBwEx(k) && src.bw!=null) mx.bw = src.bw;
+    if(isX2(src)) mx.x2 = true;
+  }
+  return mx;
+}
+function scrollToCard(i){
+  const card = document.querySelectorAll('#screen .card')[i];
+  if(card && card.scrollIntoView) card.scrollIntoView({ behavior:'smooth', block:'center' });
+}
+/* put a max card for lift k at index `at` - one per lift per session */
+function insertMaxCard(k, at, src){
+  const exs = S.active.exercises;
+  const had = exs.findIndex(e=>e.max && e.k===k);
+  if(had >= 0){ toast(t('maxHere')); scrollToCard(had); return; }
+  exs.splice(at, 0, buildMaxEx(k, src));
+  const r = S.active.rest;
+  if(r){                                   /* a running rest clock stays on its own exercise */
+    const [rx, rs] = r.key.split('-').map(Number);
+    if(rx >= at) r.key = (rx+1)+'-'+rs;
+  }
+  S.active.curEx = exs[at].id;
+  save(); render();
+  scrollToCard(at);
+}
+/* from a workout card's menu: the test goes right above that lift - the usual
+   deload-day order is test first, then the light work - and above its whole
+   superset group, so a linked pair is never split */
+function addMaxCard(xi){
+  const src = S.active && S.active.exercises[xi];
+  if(!src || src.ghost || src.max || isTimeEx(src.k)) return;
+  insertMaxCard(src.k, ssGroup(xi)[0], src);
+}
+/* from an exercise screen: join the running workout (above that lift, or at the
+   end when the workout does not have it), or open a session of its own */
+function openMaxTest(k){
+  closeModal();
+  if(isTimeEx(k)) return;
+  if(S.active){
+    const xi = S.active.exercises.findIndex(e=>e.k===k && !e.ghost && !e.max);
+    if(xi >= 0) insertMaxCard(k, ssGroup(xi)[0], S.active.exercises[xi]);
+    else insertMaxCard(k, S.active.exercises.length, null);
+  }else{
+    S.active = { tplId:null, name:t('maxSess'), startedAt:new Date().toISOString(), rest:null, dl:0, exercises:[] };
+    S.active.exercises.push(buildMaxEx(k, null));
+    S.active.curEx = S.active.exercises[0].id;
+    save();
+  }
+  go('workout');
+}
+/* ✓ made or ✕ missed on an attempt row. A fresh row logs through toggleSet
+   (the plan's weight when none was typed, the rest clock, the order); on a
+   logged row the OTHER button corrects the call and the SAME button takes the
+   attempt back - the latest one only, like any set. */
+function markAttempt(xi, si, made){
+  const ex = S.active && S.active.exercises[xi];
+  const s = ex && ex.sets[si];
+  if(!s || !ex.max || s.warm) return;
+  if(s.done){
+    if(!s.fail === made){
+      if(ex.sets.slice(si+1).some(x=>x.done)) return;
+      s.done = false; s.cls = ''; s.fail = false; s.r = ''; delete s.at;
+      updateExDone(ex);
+    }else{
+      s.fail = !made; s.r = made ? '1' : '0';
+    }
+    save(); render();
+    return;
+  }
+  s.r = made ? '1' : '0';
+  s.fail = !made;
+  toggleSet(xi, si);
+  if(!s.done){ s.r = ''; s.fail = false; } /* refused (no weight to log) - the row stays as it was */
+}
+/* one attempt row: its number, what it is (the plan's share of the estimate
+   before, the clock time after), the weight, then ✕ missed and ✓ made */
+function maxRowHtml(ex, xi, si, firstNotDone, gcls){
+  const s = ex.sets[si];
+  const n = attemptNo(ex, si);
+  const plan = maxPlan(ex);
+  const p = plan[n];
+  const E = plan.length ? kg2u(currentE1rm(ex.k)) : 0;
+  const addU = kg2u((isBwEx(ex.k) ? (ex.bw||0) : 0) + (ex.base||0));
+  const pct = (p!=null && E>0) ? Math.round((p*(isX2(ex)?2:1) + addU)/E*100) + '%' : '—';
+  const info = (s.done && s.at) ? fmtClock(new Date(s.at).toISOString()) : pct;
+  const isCur = si === firstNotDone;
+  const isLocked = firstNotDone!==-1 && !s.done && !isCur;
+  const miss = s.done && s.fail, made = s.done && !s.fail;
+  const pop = V.lastDone===xi+'-'+si ? ' pop' : '';
+  const restHere = S.active.rest && S.active.rest.key===xi+'-'+si;
+  return `<div class="setrow-wrap ${s.done?'done':''} ${miss?'miss':''} ${isLocked?'locked':''}">
+    <div class="${gcls}">
+      <div class="setnum attnum">A${n+1}</div>
+      <div class="prev">${info}</div>
+      <input type="text" inputmode="decimal" id="w-${xi}-${si}" placeholder="${p!=null?fmtW(p):(isBwEx(ex.k)?'+':unitL())}" value="${esc(s.w)}"
+        ${s.done?'disabled':''} oninput="onSetInput(${xi},${si},'w',this.value)">
+      <button class="missbtn${miss?' on':''}" onclick="markAttempt(${xi},${si},false)" aria-label="${t('maxMiss')}">✕</button>
+      <button class="checkbtn${made?' done'+pop:''}${isCur?' cur':''}" onclick="markAttempt(${xi},${si},true)">${ACT_ICONS.check}</button>
+    </div>
+  </div>${restHere ? restBarHtml() : ''}`;
+}
+/* the line under a max card's name: the best tested single and today's training
+   estimate, plus - until the first row is logged - how the card works */
+function maxInfoHtml(ex){
+  const best = Math.max(0, ...maxTests(ex.k).map(x=>x.best));
+  const est = Math.max(0, ...recentSeries(ex.k).map(p=>p.v));
+  const bits = [];
+  if(best) bits.push(`${t('maxTested')} <b>${wu(best,true)}</b>`);
+  if(est) bits.push(`${t('metric1RM')} <b>${wu(Math.round(est*10)/10,true)}</b>`);
+  const fresh = !ex.sets.some(s=>s.done);
+  return `<div class="maxinfo">${bits.join(' · ')}${fresh?`<span class="hint">${t('maxHint')}</span>`:''}</div>`;
+}
 function restBarHtml(){
   const r = S.active.rest;
   const el = (Date.now()-r.at)/1000;
@@ -1106,6 +1280,7 @@ function autoWarmup(xi){
     if(s.warm || s.drop) continue;
     w = parseNum(s.w);
     if(isNaN(w)){ const g = ghostFor(ex,i); if(g) w = kg2u(sugW(ex, false, ghostW(ex,g))); }
+    if(isNaN(w) && ex.max){ const p = maxPlan(ex)[0]; if(p!=null) w = p; } /* a max test warms up to its opener */
     break;
   }
   const step = stepU();
@@ -1227,16 +1402,19 @@ function toggleSet(xi,si){
   const g = ghostFor(ex,si);                 /* g.weight is kg */
   const tm = isTimeEx(ex.k), bw = isBwEx(ex.k);
   const dl = woIsDeload();
+  const att = !!ex.max && !s.warm;           /* a max attempt: one rep made, or none (markAttempt) */
   let w = parseNum(s.w), r = parseNum(s.r);  /* w is in the display unit */
   if(isNaN(w) && g) w = kg2u(sugW(ex, s.warm, ghostW(ex,g)));
+  if(isNaN(w) && att){ const p = maxPlan(ex)[attemptNo(ex, si)]; if(p!=null) w = p; }
   if(isNaN(r) && g) r = g.reps;
   if(isNaN(w) && (tm || bw)) w = 0;          /* weight optional for time & bodyweight */
-  if(isNaN(w) || isNaN(r) || Math.abs(w)>2000 || r<1 || r>5000){ toast(t('woEmptyVals')); return; }
+  if(isNaN(w) || isNaN(r) || Math.abs(w)>2000 || r<(att?0:1) || r>5000){ toast(t('woEmptyVals')); return; }
   if(!bw && w<0){ toast(t('woEmptyVals')); return; } /* only assisted bodyweight may be negative */
   const wkg = u2kg(w);
   s.w = fmtW(w); s.r = String(Math.round(r)); s.done = true;
-  /* no win/loss judgment on warmups, drops or a deload pass */
-  s.cls = (s.warm || s.drop || dl) ? 'none' : setVerdict(ex, si, wkg, r);
+  /* no win/loss judgment on warmups, drops, a deload pass or a max attempt */
+  s.cls = (s.warm || s.drop || dl || ex.max) ? 'none' : setVerdict(ex, si, wkg, r);
+  if(att) s.at = Date.now();                 /* the attempt's own clock time, for the record */
   updateExDone(ex);
   /* out-of-order training: on an exercise's first set it floats (with its whole
      superset group) up right below the exercises already under way, so the card
@@ -1282,7 +1460,8 @@ function toggleSet(xi,si){
   const fex = S.active.exercises[fx];
   for(let i=0; i<fex.sets.length; i++){
     if(!fex.sets[i].done){
-      if(!ghostFor(fex,i) && !fex.sets[i].warm && !String(fex.sets[i].w).trim() && fx===xi){
+      /* never on a max card: the keyboard popping up through a 4-minute rest is noise */
+      if(!fex.max && !ghostFor(fex,i) && !fex.sets[i].warm && !String(fex.sets[i].w).trim() && fx===xi){
         const el = document.getElementById('w-'+fx+'-'+i);
         if(el) el.focus();
       }
@@ -1347,13 +1526,14 @@ function finishWorkout(){
     const variants = [{ k:ex.k, name:ex.name, note:ex.note, sets:ex.sets, bw:ex.bw, base:ex.base }];
     for(const sk in ex.stash){ const v=ex.stash[sk]; variants.push({ k:sk, name:v.name, note:v.note, sets:v.sets, bw:v.bw, base:v.base }); }
     variants.forEach(v=>{
-      const done = v.sets.filter(s=>s.done).map(s=>({ weight:u2kg(parseNum(s.w)), reps:parseNum(s.r), warm:!!s.warm, drop:!!s.drop, fail:!!s.fail }));
+      const done = v.sets.filter(s=>s.done).map(s=>({ weight:u2kg(parseNum(s.w)), reps:parseNum(s.r), warm:!!s.warm, drop:!!s.drop, fail:!!s.fail, ...(s.at?{ at:s.at }:{}) }));
       if(!done.length) return;
       const o = { k:v.k, name:v.name, targetSets:ex.targetSets, targetReps:ex.targetReps, note:v.note||'', ss:!!ex.ss, sets:done };
       if(orderMap[ex.id]) o.order = orderMap[ex.id];
       if(isBwEx(v.k) && v.bw!=null) o.bw = v.bw;
       if(ex.x2 && (exInfo(v.k)||{}).e==='dumbbell') o.x2 = 1; /* weights are per hand */
       if(ex.adhoc) o.adhoc = 1; /* standalone addition - ghosts next time even if the key overlaps the template */
+      if(ex.max) o.max = 1;     /* a max test: counts for records, never for training (isRecordEntry) */
       if(v.base > 0) o.mb = v.base; /* machine base: logged weights are added-only, totals include this */
       exercises.push(o);
     });
@@ -1364,13 +1544,16 @@ function finishWorkout(){
   }
   /* "unfinished sets?" looks only at each slot's CURRENT variant - sets sitting
      in a swapped-away variant's stash are not work that was left undone */
-  const unfinished = S.active.exercises.some(ex=>!ex.ghost && ex.sets.some(s=>!s.done));
+  /* an attempt nobody needed (the test ended on a miss, or on a best) is not unfinished work */
+  const unfinished = S.active.exercises.some(ex=>!ex.ghost && ex.sets.some(s=>!s.done && !(ex.max && !s.warm)));
   if(unfinished && !confirm(t('woFinishPart'))) return;
-  /* detect all-time PRs BEFORE this workout enters history (never on a deload pass) */
+  /* detect all-time PRs BEFORE this workout enters history - never on a deload
+     pass, except a max test done on one */
   const isDl = woIsDeload();
   const prs = [];
-  if(!isDl) for(const e of exercises){
-    const work = e.sets.filter(s=>!s.warm && !s.drop);
+  for(const e of exercises){
+    if(isDl && !e.max) continue;
+    const work = e.sets.filter(s=>!s.warm && !s.drop && s.reps>0); /* a missed attempt is no record */
     if(!work.length) continue;
     const prev = exStats(e.k, e.name);
     if(isTimeEx(e.k)){
@@ -1402,7 +1585,7 @@ function finishWorkout(){
      keep them as suggestions so they still ghost next session - only untouched
      ghosts are allowed to expire */
   const sug = S.active.exercises
-    .filter(ex=>ex.adhoc && !ex.ghost && !ex.sets.some(s=>s.done))
+    .filter(ex=>ex.adhoc && !ex.ghost && !ex.max && !ex.sets.some(s=>s.done))
     .map(ex=>({ k:ex.k, n:ex.name, s:ex.targetSets, r:ex.targetReps, ...(isX2(ex)?{x2:1}:{}), ...(ex.base>0?{mb:ex.base}:{}) }));
   if(sug.length) entry.sug = sug;
   S.history.unshift(entry);
@@ -1416,7 +1599,7 @@ function finishWorkout(){
   if(!isDl){
     for(const e of exercises){
       const wv = S.waves[e.k];
-      if(!wv || advanced.has(e.k)) continue;
+      if(e.max || !wv || advanced.has(e.k)) continue; /* a test is no wave week */
       if(!e.sets.some(s=>!s.warm && !s.drop)) continue;
       advanced.add(e.k);
       waveSnaps.push({ k:e.k, prev:Object.assign({}, wv) });

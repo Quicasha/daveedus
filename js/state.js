@@ -386,6 +386,11 @@ function scaleLoad(kg, f){
 
 function fmtSet(s, k, mb){
   const tm = isTimeEx(k), bw = isBwEx(k);
+  /* a missed max attempt: the weight that was tried, and no reps to show */
+  if(s.fail && s.reps===0 && !tm){
+    const wt = bw ? (s.weight ? (s.weight>0?'+':'') + wu(s.weight) : 'BW') : (mb>0 ? '+' : '') + wu(s.weight);
+    return wt + ' ✕';
+  }
   const p = s.warm ? 'W ' : s.drop ? 'D ' : s.fail ? 'F ' : '';
   if(tm) return p + (s.weight ? wu(s.weight)+'·' : '') + s.reps + 's';
   if(bw){

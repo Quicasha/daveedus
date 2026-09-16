@@ -48,6 +48,17 @@ function woVolume(exs){
       .reduce((b,s)=>b+(s.weight*mul+add)*s.reps, 0);
   }, 0);
 }
+/* estimated one-rep max from ONE set's total load. A single IS its own one-rep
+   max; from two reps up, Epley. THE formula: records, trends, charts, the set
+   colour and the mastery fact all read it, so a tested max and a training
+   estimate sit on one scale (Epley's 1 + 1/30 would inflate every single by 3%). */
+function e1rmOf(total, reps){ return reps===1 ? total : total*(1+reps/30); }
+/* does a history entry count toward RECORDS (best lift, rep maxes, the PR feed)?
+   Archived never. A deload pass never - except a max test done on it: a single
+   tested on a light week is still the heaviest thing ever lifted. Training
+   readers (trends, ghosts, waves, progression) skip max tests outright - a test
+   is a measurement, and one bad test morning is not a strength trend. */
+function isRecordEntry(h, e){ return !h.arch && (!h.dl || !!e.max); }
 function fmtTime(sec){
   sec = Math.max(0, Math.floor(sec));
   const h = Math.floor(sec/3600), m = Math.floor(sec%3600/60), s = sec%60;

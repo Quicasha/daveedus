@@ -204,7 +204,8 @@ function weeklyMuscleSets(nWeeks){
     for(const e of h.exercises){
       const info = exInfo(e.k);
       const g = info ? info.g : 'other';
-      wkb.counts[g] = (wkb.counts[g]||0) + e.sets.filter(s=>!s.warm).length;
+      /* a set with no reps (a missed max attempt) was tried, not done */
+      wkb.counts[g] = (wkb.counts[g]||0) + e.sets.filter(s=>!s.warm && s.reps>0).length;
     }
   }
   return weeks;
@@ -428,7 +429,7 @@ function trackSeries(k){
     const w = S.history[i];
     if(w.arch || w.dl) continue;
     for(const e of w.exercises){
-      if(e.k===k || (e.name && e.name.trim().toLowerCase()===nm)){
+      if(!e.max && (e.k===k || (e.name && e.name.trim().toLowerCase()===nm))){
         const work = e.sets.filter(s=>!s.warm && !s.drop);
         if(!work.length) continue;
         pts.push({ ts:new Date(w.date).getTime(), v:Math.max(...work.map(s=>tm?s.reps:s.weight*(e.x2?2:1)+(e.mb||0))) });
@@ -452,18 +453,22 @@ function sparkSVG(vals){
 /* per-session best e1RM (Epley, TOTAL load) for a lift, oldest -> newest,
    deloads and archived workouts excluded - the shared source for the trend
    arrow, the goal ETA and the stall detector */
-/* best e1RM for one lift inside ONE session (Epley, TOTAL load), 0 when the lift
+/* best e1RM for one lift inside ONE session (e1rmOf, TOTAL load), 0 when the lift
    is absent or only warmup/drop sets were logged. THE per-session formula: the
-   lifetime series and the per-workout views must never disagree about a number. */
+   lifetime series and the per-workout views must never disagree about a number.
+   A max test in the session is left out - it is a measurement, not training
+   (see isRecordEntry); the tested value reaches "where the lift is now" through
+   currentE1rm instead. */
 function sessionE1rm(w, k, nm){
   let v = 0;
   for(const e of w.exercises){
+    if(e.max) continue;
     if(!(e.k===k || (e.name && e.name.trim().toLowerCase()===nm))) continue;
     const work = e.sets.filter(s=>!s.warm && !s.drop && s.reps>0);
     if(!work.length) continue;
     const add = (isBwEx(e.k) ? (e.bw||0) : 0) + (e.mb||0);
     const mul = e.x2 ? 2 : 1;
-    v = Math.max(v, ...work.map(s=>(s.weight*mul+add)*(1+s.reps/30)));
+    v = Math.max(v, ...work.map(s=>e1rmOf(s.weight*mul+add, s.reps)));
   }
   return v;
 }
@@ -499,8 +504,11 @@ function e1rmSeries(k){
 /* "where the lift is NOW" for the goal row and the ETA - the best of the
    current-form window, so the bar and the projected date agree on one number */
 function currentE1rm(k){
-  const rp = recentSeries(k);
-  return rp.length ? Math.max(...rp.map(p=>p.v)) : 0;
+  /* a max tested inside the same 90-day window is the best evidence there is:
+     it can lift "now" above the training estimate, and an old one cannot */
+  const cut = Date.now() - 90*864e5;
+  const tested = maxTests(k).filter(x=>new Date(x.date).getTime() >= cut).map(x=>x.best);
+  return Math.max(0, ...recentSeries(k).map(p=>p.v), ...tested);
 }
 /* the window a direction call may use: this training BLOCK, i.e. the newest
    points walking back until a real break (60+ days) - never across a layoff,
@@ -669,8 +677,9 @@ function prEvents(){
   const events = [];
   for(let i=S.history.length-1; i>=0; i--){
     const w = S.history[i];
-    if(w.arch || w.dl) continue;
+    if(w.arch) continue;
     for(const e of w.exercises){
+      if(!isRecordEntry(w, e)) continue;  /* a deload pass sets no records - a max test on it does */
       if(!e.k || isTimeEx(e.k)) continue; /* seconds are not reps */
       const work = e.sets.filter(s=>!s.warm && !s.drop && s.reps>0);
       if(!work.length) continue;
@@ -707,6 +716,32 @@ function prFeedHtml(){
     </div>`).join('') + `</div>`;
 }
 
+
+/* ---- max tests: every one-rep max attempted on a lift, newest first ----
+   One entry per test: the session date, the first attempt's own clock time,
+   each attempt at TOTAL load made or missed, and the best made single (0 when
+   every attempt missed). Deload sessions are in - that is where most lifters
+   test. Archived workouts are out, like everywhere else. */
+function maxTests(k){
+  const info = exInfo(k);
+  const nm = (info?info.n:k).trim().toLowerCase();
+  const out = [];
+  for(const h of S.history){
+    if(h.arch) continue;
+    for(const e of h.exercises){
+      if(!e.max || !(e.k===k || (e.name && e.name.trim().toLowerCase()===nm))) continue;
+      const add = (isBwEx(e.k) ? (e.bw||0) : 0) + (e.mb||0);
+      const mul = e.x2 ? 2 : 1;
+      const attempts = e.sets.filter(s=>!s.warm && !s.drop)
+        .map(s=>({ w:s.weight*mul + add, made:s.reps>0, at:s.at||0 }));
+      if(!attempts.length) continue;
+      out.push({ id:h.id, date:h.date, dl:!!h.dl, attempts,
+        at: attempts[0].at || new Date(h.date).getTime(),
+        best: Math.max(0, ...attempts.filter(a=>a.made).map(a=>a.w)) });
+    }
+  }
+  return out;
+}
 
 /* ======================= per-workout progress =======================
    The question the per-exercise views cannot answer: is THIS workout working.

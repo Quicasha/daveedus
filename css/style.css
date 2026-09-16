@@ -1246,3 +1246,29 @@ button:focus-visible, .chip:focus-visible, .switch:focus-visible{
 .cmprate{font-style:normal; font-size:11px; font-weight:700; color:var(--dim);}
 .cmprate.up{color:var(--green);} .cmprate.down{color:var(--red);}
 .cmpna{color:var(--ghost);}
+
+/* ---- max test: the card's attempt rows and the attempts log on an exercise screen ---- */
+.maxchip{flex:none; background:var(--accent-bg); color:var(--accent-soft); border-radius:6px;
+  font-size:9px; font-weight:800; letter-spacing:.5px; padding:2px 6px; vertical-align:1px;}
+.maxinfo{font-size:13px; color:var(--dim); line-height:1.45; margin:6px 2px 0;}
+.maxinfo b{color:var(--text); font-weight:800;}
+.maxinfo .hint{display:block; color:var(--ghost); font-size:12px; margin-top:2px;}
+.setnum.attnum{display:flex; align-items:center; justify-content:center; color:var(--accent-soft);}
+.missbtn{width:100%; min-height:42px; border-radius:9px; border:none; padding:0;
+  background:var(--input); color:var(--dim); font-size:15px; font-weight:800;}
+.missbtn.on{background:var(--ghost); color:var(--bg);}
+/* a miss is information, not failure: neutral row, never red */
+.setrow-wrap.done.miss{background:none;}
+.setrow-wrap.miss .setgrid input{text-decoration:line-through; color:var(--dim);}
+.maxhd{display:flex; align-items:baseline; gap:8px; margin-bottom:4px;
+  font-size:12px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--dim);}
+.maxhd .maxtop{margin-left:auto; text-transform:none; letter-spacing:0; font-size:13px; font-weight:600;}
+.maxhd .maxtop b{color:var(--text); font-weight:800; font-size:15px;}
+.maxrow{display:flex; align-items:baseline; gap:10px; padding:8px 0; border-top:1px solid var(--line); font-size:14px;}
+.maxhd + .maxrow{border-top:none;}
+.maxrow .md{flex:none; color:var(--dim); font-size:13px;}
+.maxrow .md .tmm{opacity:.7; margin-left:2px;}
+.maxrow .ma{margin-left:auto; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:2px 12px;}
+.matt{font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap;}
+.matt.miss{color:var(--ghost); font-weight:600;}
+.matt.best{color:var(--accent-soft); font-weight:800;}

@@ -12,7 +12,8 @@ const root = path.join(path.dirname(url.fileURLToPath(import.meta.url)), '..');
 const FILES = [
   'js/exercises.js', 'js/i18n.js', 'js/util.js', 'js/state.js',
   'js/deload.js', 'js/workout.js', 'js/program.js', 'js/stats.js', 'js/data.js',
-  'js/history.js' /* for the plate maths; its screen builders are never called here */
+  'js/history.js', /* for the plate maths; its screen builders are never called here */
+  'js/exercises-ui.js' /* the record tables (exStats, repMaxRows) that finishing a session reads */
 ];
 
 export function makeApp(){
@@ -72,6 +73,7 @@ export function makeApp(){
   vm.runInContext(`
     closeModal = () => {}; openModal = () => {}; go = () => {};
     render = () => {}; toast = () => {}; undoToast = (m, r) => {};
+    unlockAudio = () => {}; /* boot.js: the rest-timer sound needs a real tap */
   `, ctx);
   ctx.__stopTimers = () => { for (const h of timers) clearTimeout(h); timers.clear(); };
   return ctx;

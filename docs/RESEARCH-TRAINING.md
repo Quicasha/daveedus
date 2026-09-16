@@ -233,7 +233,7 @@ technique breakdown, not strength, decide how many reps a 15-rep set gets.
 average with nothing having changed. An ESTIMATED 1RM from a submaximal set inherits
 that plus the formula error.
 
-**What this means for Daveedus.** `sessionE1rm()` takes the best Epley value among a
+**What this means for Daveedus.** `sessionE1rm()` takes the best estimate among a
 session's working sets (warmups and drop sets excluded, deload sessions excluded), on
 TOTAL load: added weight, plus the lifter's body weight on bodyweight lifts, plus the
 machine base on plate-loaded machines, times two on paired dumbbells. That makes a
@@ -254,6 +254,62 @@ says "est.". Two consequences follow from the evidence above and both are in the
   switch of rep range: moving lateral raises from 20s to 8s will shift the level of
   the series. The stall watch is therefore attached to tracked lifts, which are
   meant to be the heavy ones.
+- A single is its own one-rep max. `e1rmOf()` returns the load of a one-rep set as it
+  is and applies Epley only from two reps up, because Epley's `1 + 1/30` would add 3 %
+  to every heavy single and to every tested max.
+
+### Testing a real max
+
+**Strong (the protocol).** The NSCA procedure is the one most studies use: a light
+warm-up for 5 to 10 reps, a heavier one for 3 to 5, then single attempts with **3 to
+5 minutes** of rest, raising the load each time, and the max found within **3 to 5
+attempts**. Tested this way the 1RM is safe across populations, older adults included,
+and repeatable to the 4 % median noise above. One caution recurs: people new to
+lifting get more soreness from it and gain little information, because their max
+changes week to week anyway.
+
+**Folk (the attempt percentages).** Powerlifting coaches pick an opener near 90 to 92
+% of the expected max (a weight you could triple on a bad day), a second near 96 to
+98 %, and a third at or just above 100 %. This is meet strategy, not a study, but it
+has the right shape for anybody: the opener builds confidence, the second tells you
+what the day holds, the third is the attempt.
+
+**Folk (how often).** Coaching advice for non-competitors ranges from every 8 to 12
+weeks to once or twice a year. No trial compares testing frequencies. A tested max
+is a measurement with a noise floor, not a training stimulus, so testing more often
+mostly buys more noise.
+
+**Grain of salt.** A missed max on a tired morning is inside the 4 % noise, so it says
+little about strength. And a tested max and an Epley estimate are not the same
+instrument: for some lifters Epley under-reads their single and for others it
+over-reads it, so the two should not be averaged into one trend.
+
+**What this means for Daveedus.** A max test is a card in a workout. It is added from a
+card's menu and sits above that lift, which fits the usual order on a deload day: test
+first, then the light work. It can also start on an exercise screen, as part of the
+running workout or as a session of its own (`addMaxCard()`, `openMaxTest()`). Its
+rows are single attempts, each logged made or missed with its own clock time, with 4
+minutes of rest between them. The W button builds the same big-plate warm-up ramp as
+any barbell card, aimed at the opener (section 12). The suggested attempts are 92 %,
+97 % and 101 % of what the lift shows now, snapped to the plate step, and the third
+is always one step above the estimate (`maxPlan()`). When there is no real estimate,
+meaning fewer than three recent sessions and no recent test, the rows stay empty. In
+history the entry carries a max flag, and `isRecordEntry()` decides where it counts:
+
+- **Records: yes, even on a deload pass.** The best lift, the rep-max table, the PR
+  feed and the finish screen all see a made single. A miss is kept in the log and
+  never becomes a record.
+- **Training: no.** The trend arrow, stall watch, fatigue check, wave, double
+  progression, ghosts and charts all skip a test, for the grain-of-salt reasons above.
+  A bad test morning must not read as a strength drop, and a single must not become
+  next week's ghost.
+- **"Where the lift is now": yes, for 90 days.** `currentE1rm()` takes the higher of
+  the training estimate and any test inside the current-form window. The goal bar and
+  the next test's suggestions therefore move when a test beats the estimate, and an
+  old test ages out.
+
+Nothing reminds you to test and nothing suggests when. The evidence gives no
+frequency worth nudging toward.
 
 ---
 
@@ -556,6 +612,9 @@ Estimated 1RM
 - Grgic et al. 2020, 1RM test-retest reliability, [PMC7367986](https://pmc.ncbi.nlm.nih.gov/articles/PMC7367986/)
 - Validation of Brzycki and Epley equations, [SIU](https://opensiuc.lib.siu.edu/cgi/viewcontent.cgi?article=1744&context=gs_rp)
 - On the undocumented origin of the 1RM equations, [arXiv 2603.17495](https://arxiv.org/pdf/2603.17495v1.pdf)
+- 1RM testing, the NSCA protocol summarised, [Science for Sport](https://www.scienceforsport.com/1rm-testing/)
+- Attempt selection percentages, [StrengthLog](https://www.strengthlog.com/powerlifting-competition-attempt-calculator/), [PowerliftingToWin](https://www.powerliftingtowin.com/how-to-pick-your-attempts-at-a-powerlifting-meet/)
+- How often to test a 1RM, coaching view, [Powerlifting Watch](https://www.powerliftingwatch.com/test-your-1-rep-max/)
 
 Periodization
 - Grgic et al. 2017, linear vs undulating and hypertrophy, [PMC5571788](https://pmc.ncbi.nlm.nih.gov/articles/PMC5571788/)

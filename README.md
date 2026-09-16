@@ -58,6 +58,7 @@ Takes half a minute. After that it runs full-screen and works fully offline.
 - Level ladders for bodyweight work - L1→L5 progressions (knee raise → toes-to-bar); two clean sessions at the top of the range and the next level loads itself
 - Rotation programs suggest what's NEXT; free-pick splits (gym / bar / home) skip rotation and deload, showing how often and how long ago instead
 - Records and charts - estimated 1RM trends, rep records, tracked lifts with goals and projections
+- Max tests when you feel like one - "Test a max" on any lift, in the middle of a workout or on its own: warm-up to the opener, three suggested attempts from what the lift shows now, each one made or missed with its time. Every attempt stays on the exercise screen, a made single counts as a record even on a deload day, and the test never distorts your training trends
 - Progress per workout, not just per exercise - open any workout to see its own volume trend, cadence and every lift measured inside that workout alone, so a bench climbing in Upper A cannot hide one stalling in Upper B
 - Programs side by side - once a second program has sessions, compare blocks on length, cadence, volume and every shared lift's change per week, so a 6-week block and a 20-week one answer the same question
 - Weekly sets per muscle - four weeks side by side against the 10-20 set research band, so the back never quietly falls behind the chest

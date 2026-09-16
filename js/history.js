@@ -156,6 +156,7 @@ function histRowHtml(w){
       <span class="dt">${fmtDate(w.date)} <span class="tmm">${fmtClock(w.date)}</span></span>
       <span class="dn">${esc(w.name)}</span>
       ${w.dl?`<span class="dlchip">${t('dlBadge')}</span>`:''}
+      ${w.exercises.some(e=>e.max)?`<span class="maxchip">${t('maxBadge')}</span>`:''}
       ${canCont?`<button class="contbtn" onclick="event.stopPropagation();continueWorkout()">${ACT_ICONS.play} ${t('histContinue')}</button>`:''}
       <span class="sm">${nsets} ${t('histSets')}${w.dur?' · '+fmtTime(w.dur):''}</span>
     </div>${detail}</div>`;

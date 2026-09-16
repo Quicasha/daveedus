@@ -69,7 +69,9 @@ function buildSetsCSV(){
       const info = exInfo(e.k);
       const tm = isTimeEx(e.k), bw = isBwEx(e.k);
       e.sets.forEach((s,si)=>{
-        const type = s.warm ? 'warmup' : s.drop ? 'dropset' : s.fail ? 'failure' : 'work';
+        const type = s.warm ? 'warmup'
+                   : e.max ? (s.reps>0 ? 'max_attempt' : 'max_miss')
+                   : s.drop ? 'dropset' : s.fail ? 'failure' : 'work';
         /* THE total-load formula, same as woVolume / sessionE1rm: paired dumbbells
            doubled, machine base and (on bodyweight lifts) the body weight added */
         const total = s.weight*(e.x2?2:1) + (bw ? (e.bw||0) : 0) + (e.mb||0);

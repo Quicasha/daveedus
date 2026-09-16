@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.25.0'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.26.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 /* UI strings. One flat dictionary - the app is English-only by design. */
@@ -235,7 +235,12 @@ const T = {
   dlaDown:'Tracked lifts are trending down',
   dlaTime:'A long stretch of hard training',
   rhTotal:'workouts: {n}', rhDays:'training days: {n}', rhDl:'deload days: {n}', rhBest:'best month: {m} ({n})',
-  rhSince:'since {d}'
+  rhSince:'since {d}',
+  /* v2.26: max tests */
+  maxBtn:'Test a max', maxBadge:'MAX', maxTitle:'Max attempts', maxTested:'Tested 1RM',
+  maxSess:'Max test', maxHere:'This lift already has a max test here',
+  maxAdd:'+ Attempt', maxRemove:'− Attempt', maxMiss:'Missed', maxPlanCol:'Plan',
+  maxHint:'W warms you up to the first attempt. Then ✓ made or ✕ missed - 4 min rest between attempts.'
 };
 
 function t(k, vars){

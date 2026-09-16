@@ -112,10 +112,12 @@ function exStats(k, name, tplName){
   const bwKind = isBwEx(k);
   let best = 0, bestBw = null, bestAdd = null, bestTime = 0, e1rm = 0, bestVol = 0, bestSet = null, sessions = 0, lastDate = null;
   for(const h of S.history){
-    if(h.arch || h.dl || (tplName && h.name!==tplName)) continue;
+    if(h.arch || (tplName && h.name!==tplName)) continue;
     for(const e of h.exercises){
+      if(!isRecordEntry(h, e)) continue; /* deload passes out, a max test on one in */
       if(e.k===k || (nm && e.name && e.name.trim().toLowerCase()===nm)){
-        const work = e.sets.filter(s=>!s.warm && !s.drop);
+        /* a missed max attempt (0 reps) stays in the log and never becomes a record */
+        const work = e.sets.filter(s=>!s.warm && !s.drop && s.reps>0);
         if(work.length){
           sessions++;
           if(!lastDate) lastDate = h.date;
@@ -125,7 +127,7 @@ function exStats(k, name, tplName){
             const ew = s.weight*mul + add;
             if(ew > best){ best = ew; if(bwKind && e.bw!=null){ bestBw = e.bw; bestAdd = s.weight; } }
             bestTime = Math.max(bestTime, s.reps);
-            const est = ew * (1 + s.reps/30); /* Epley */
+            const est = e1rmOf(ew, s.reps);
             if(est > e1rm) e1rm = est;
             const v = ew * s.reps;
             if(v > bestVol){ bestVol = v; bestSet = { weight:ew, reps:s.reps, bw:(bwKind && e.bw!=null)?e.bw:null, add:s.weight }; }
@@ -141,8 +143,9 @@ function exStats(k, name, tplName){
 function repMaxRows(k, nm, tplName){
   const best = {};
   for(const h of S.history){
-    if(h.arch || h.dl || (tplName && h.name!==tplName)) continue;
+    if(h.arch || (tplName && h.name!==tplName)) continue;
     for(const e of h.exercises){
+      if(!isRecordEntry(h, e)) continue;
       if(!(e.k===k || (e.name && e.name.trim().toLowerCase()===nm))) continue;
       const add = (isBwEx(e.k) ? (e.bw||0) : 0) + (e.mb||0);
       const mul = e.x2 ? 2 : 1;
@@ -156,6 +159,23 @@ function repMaxRows(k, nm, tplName){
   return Object.keys(best).map(r=>({ r:+r, w:best[r].w, d:best[r].d })).sort((a,b)=>a.r-b.r);
 }
 /* "80 + 28" / "80 − 20" breakdown (kg stored -> display unit) for bodyweight records */
+/* the max attempts card on an exercise screen: one row per test - date and the
+   clock time of its first attempt, every attempt made or missed, the best made
+   single marked - under the best tested single ever. The button starts a test:
+   inside the running workout, or as a session of its own. */
+function maxTestsHtml(k){
+  const tests = maxTests(k);
+  const btn = `<button class="btn ghostbtn" onclick="openMaxTest('${esc(k)}')">${ACT_ICONS.star} ${t('maxBtn')}</button>`;
+  if(!tests.length) return btn;
+  const top = Math.max(0, ...tests.map(x=>x.best));
+  return `<div class="card" style="padding:10px 16px 6px">
+    <div class="maxhd"><span>${t('maxTitle')}</span>${top?`<span class="maxtop">${t('maxTested')} <b>${wu(top,true)}</b></span>`:''}</div>` +
+    tests.map(x=>`<div class="maxrow">
+      <span class="md">${fmtDate(x.date)} <span class="tmm">${fmtClock(new Date(x.at).toISOString())}</span>${x.dl?` <span class="dlchip">${t('dlBadge')}</span>`:''}</span>
+      <span class="ma">${x.attempts.map(a=>
+        `<span class="matt${a.made?'':' miss'}${a.made && a.w===x.best?' best':''}">${fmtW(kg2u(a.w))}${a.made?'':' ✕'}</span>`).join('')}</span>
+    </div>`).join('') + `</div>` + btn;
+}
 function bwSplit(bw, add){
   return wu(bw) + (add>=0 ? ' + ' + wu(add) : ' − ' + wu(Math.abs(add)));
 }
@@ -231,7 +251,7 @@ function htmlExDetail(){
     <div class="stat"><div class="v">${st.sessions}</div><div class="l">${t('exSessions')}</div></div>
     <div class="stat"><div class="v" style="font-size:16px;padding-top:6px">${st.lastDate?daysAgoStr(st.lastDate):'—'}</div><div class="l">${t('exLastDone')}</div></div>
   </div>`;
-  if(!st.sessions) return h + `<div class="empty">${t('exNoHistory')}</div>`;
+  if(!st.sessions) return h + `<div class="empty">${t('exNoHistory')}</div>` + (tm ? '' : maxTestsHtml(k));
   if(!tm && st.bestSet){
     h += `<div class="card">
       <div style="font-size:12px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);margin-bottom:8px">${t('recTitle')}</div>
@@ -256,6 +276,7 @@ function htmlExDetail(){
         </div>`).join('') + `</div>`;
     }
   }
+  if(!tm) h += maxTestsHtml(k);
   if(!tm){
     h += `<div class="chips" style="padding-bottom:6px">` +
       [['w',t('metricW')],['vol',t('metricVol')],['1rm',t('metric1RM')]].map(([m,lb])=>
@@ -269,7 +290,7 @@ function htmlExDetail(){
     if(w.arch || (filter && w.name!==filter)) continue;
     for(const e of w.exercises){
       if(matches(e)){
-        rows.push(`<div class="exl"><span class="n">${fmtDate(w.date)}${w.dl?` <span class="dlchip">${t('dlBadge')}</span>`:''} <span style="opacity:.6">· ${esc(w.name)}</span></span>
+        rows.push(`<div class="exl"><span class="n">${fmtDate(w.date)}${w.dl?` <span class="dlchip">${t('dlBadge')}</span>`:''}${e.max?` <span class="maxchip">${t('maxBadge')}</span>`:''} <span style="opacity:.6">· ${esc(w.name)}</span></span>
           <span class="s">${e.sets.map(s=>`<span class="tok">${fmtSet(s, k, e.mb)}</span>`).join(' ')}</span></div>`);
       }
     }
@@ -285,7 +306,8 @@ function chartSVG(k, name, tplName, metric){
     const w = S.history[i];
     if(w.arch || w.dl || (tplName && w.name!==tplName)) continue;
     for(const e of w.exercises){
-      if(e.k===k || (e.name && e.name.trim().toLowerCase()===nm)){
+      /* the chart is training: a max test has its own card above */
+      if(!e.max && (e.k===k || (e.name && e.name.trim().toLowerCase()===nm))){
         const work = e.sets.filter(s=>!s.warm && !s.drop);
         if(!work.length) continue;
         const add = (bwKind ? (e.bw||0) : 0) + (e.mb||0); /* volume/1RM use TOTAL load */
@@ -293,7 +315,7 @@ function chartSVG(k, name, tplName, metric){
         let v;
         if(tm) v = Math.max(...work.map(s=>s.reps));
         else if(metric==='vol') v = Math.round(kg2u(work.reduce((a,s)=>a+(s.weight*mul+add)*s.reps,0)));
-        else if(metric==='1rm') v = Math.round(kg2u(Math.max(...work.map(s=>(s.weight*mul+add)*(1+s.reps/30))))*10)/10;
+        else if(metric==='1rm') v = Math.round(kg2u(Math.max(...work.map(s=>e1rmOf(s.weight*mul+add, s.reps))))*10)/10;
         /* weight metric on bodyweight moves plots ADDED load only (comparable across
            body-weight changes); the body weight itself shows on point tap */
         else v = Math.round(kg2u(Math.max(...work.map(s=>bwKind ? s.weight : s.weight*mul+add)))*100)/100;
