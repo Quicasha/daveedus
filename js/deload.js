@@ -43,8 +43,8 @@ function dlLastStart(){
 /* MAIN program: the split deload (and future self-regulation features) anchors to.
    User-picked among the pinned home cards; falls back to the first shown card. */
 function mainFolderId(){
-  /* free (pick-by-place) splits never anchor deload or the weekday plan */
-  const own = S.folders.filter(f=>!f.free);
+  /* free (pick-by-place) splits and archived programs never anchor deload or the weekday plan */
+  const own = activeFolders().filter(f=>!f.free);
   const pinned = own.filter(f=>f.pinned);
   const pool = pinned.length ? pinned : own;
   if(S.mainFolder && pool.some(f=>f.id===S.mainFolder)) return S.mainFolder;
@@ -77,7 +77,7 @@ function startDeload(){
   /* say out loud WHICH program gets the deload - with several programs the
      star on Home decides, and that must not be a surprise */
   const count = S.templates.filter(tp=>tp.folderId===fid).length;
-  const multi = S.folders.filter(x=>S.templates.some(tp=>tp.folderId===x.id)).length > 1;
+  const multi = activeFolders().filter(x=>S.templates.some(tp=>tp.folderId===x.id)).length > 1;
   const scope = t('dlmScope',{c:count, n:f.name}) + (multi ? ' ' + t('dlmScopeStar') : '');
   openModal(`<h3>${t('dlBtn')} · ${esc(f.name)}<button class="x" onclick="closeModal()">✕</button></h3>
     <div style="color:var(--accent-soft);font-size:13px;font-weight:600;line-height:1.45;margin:0 4px 10px">${scope}</div>

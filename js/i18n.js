@@ -6,7 +6,7 @@
    ============================================================ */
 'use strict';
 
-const APP_VER = '2.28.1'; /* bump together with CACHE in sw.js on every release */
+const APP_VER = '2.29.0'; /* bump together with CACHE in sw.js on every release */
 
 /* ======================= i18n ======================= */
 /* UI strings. One flat dictionary - the app is English-only by design. */
@@ -42,6 +42,9 @@ const T = {
   folderName:'Program name',
   folderShare:'Program code', folderShareHint:'Send this code to a friend - they get the whole program with all workouts.',
   folderImported:'Program “{n}” added ✓', tplFolder:'Program', deleteBtn:'Delete', nextBadge:'NEXT',
+  folderArchBtn:'Move to archive', folderArchDone:'Program “{n}” archived',
+  folderRestored:'Program “{n}” is back ✓',
+  folderArchNote:'This program is in the archive: off Home and never the main program. Its workouts, history and progress are all kept.',
   lvlLabel:'Level', lvlSheetTitle:'Progression',
   lvlHint:'Top of the rep range on every set, two clean sessions in a row → the next level loads itself. Or move anytime by hand.',
   lvlStreak:'{n}/2 clean sessions toward the next level.',

@@ -1190,7 +1190,8 @@ button:focus-visible, .chip:focus-visible, .switch:focus-visible{
 #toast{position:fixed; left:50%; transform:translateX(-50%) translateY(20px);
   bottom:calc(96px + env(safe-area-inset-bottom)); background:var(--card); color:var(--text);
   border:1px solid var(--edge); padding:12px 22px; border-radius:999px; font-weight:600; font-size:14px; opacity:0;
-  pointer-events:none; transition:all .25s; z-index:70; white-space:nowrap; box-shadow:var(--shadow);}
+  pointer-events:none; transition:all .25s; z-index:70; white-space:nowrap; box-shadow:var(--shadow);
+  max-width:calc(100vw - 32px); overflow:hidden; text-overflow:ellipsis;}
 /* undo lives in its OWN element: an incidental toast must never wipe the only
    way back from a deletion, and it sits UNDER the modal so a sheet built on
    now-stale indices cannot be undone from behind it */
@@ -1198,10 +1199,12 @@ button:focus-visible, .chip:focus-visible, .switch:focus-visible{
   bottom:calc(96px + env(safe-area-inset-bottom)); background:var(--card); color:var(--text);
   border:1px solid var(--edge); padding:12px 12px 12px 22px; border-radius:999px; font-weight:600;
   font-size:14px; opacity:0; pointer-events:none; transition:all .25s; z-index:55;
-  white-space:nowrap; box-shadow:var(--shadow);}
+  white-space:nowrap; box-shadow:var(--shadow);
+  display:flex; align-items:center; max-width:calc(100vw - 32px);}
+#undo .um{min-width:0; overflow:hidden; text-overflow:ellipsis;}
 #undo.show{opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto;}
 #undo button{background:var(--accent-bg); color:var(--accent-soft); border:none;
-  border-radius:999px; min-height:32px; padding:0 14px; margin-left:12px;
+  border-radius:999px; min-height:32px; padding:0 14px; margin-left:12px; flex:none;
   font-weight:800; font-size:13px; cursor:pointer;}
 #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
 

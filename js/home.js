@@ -112,8 +112,8 @@ function htmlHome(){
     }
   }
   /* home shows only PINNED splits as a grid of split cards; fall back to all when none pinned */
-  const pinned = S.folders.filter(f=>f.pinned);
-  const showFolders = pinned.length ? pinned : S.folders;
+  const pinned = activeFolders().filter(f=>f.pinned);
+  const showFolders = pinned.length ? pinned : activeFolders();
   /* workout + full-cycle counters since the last deload - the "when to deload" gauge */
   const counts = tplCounts();
   /* the main-program star only matters when there is a choice (free splits opt out) */
@@ -170,7 +170,7 @@ function htmlHome(){
   }
   const loose = looseTemplates();
   if(loose.length && !pinned.length){
-    h += `<h2 class="sec">${S.folders.length?t('folderNone'):t('homeTemplates')}</h2>` + loose.map(d=>tplBtn(d,false)).join('');
+    h += `<h2 class="sec">${activeFolders().length?t('folderNone'):t('homeTemplates')}</h2>` + loose.map(d=>tplBtn(d,false)).join('');
   }
   if(!cards.length && !loose.length){
     h += `<div class="empty">${t('homeNoProg')}</div>`;

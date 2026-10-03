@@ -86,8 +86,7 @@ function histListSection(){
     h += `<button class="btn ghostbtn" onclick="V.histLimit=(V.histLimit||20)+30; renderHistList()">${t('histMore')} (${act.length-lim})</button>`;
   }
   if(arch.length){
-    h += `<h2 class="sec" style="cursor:pointer" onclick="V.showArch=!V.showArch; renderHistList()">
-            ${V.showArch?'▾':'▸'} ${t('archTitle')} (${arch.length})</h2>`;
+    h += archHeadHtml(V.showArch, arch.length, 'V.showArch=!V.showArch; renderHistList()');
     if(V.showArch) h += arch.slice(0,lim).map(histRowHtml).join('');
   }
   return h;

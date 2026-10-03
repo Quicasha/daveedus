@@ -59,6 +59,11 @@ function e1rmOf(total, reps){ return reps===1 ? total : total*(1+reps/30); }
    readers (trends, ghosts, waves, progression) skip max tests outright - a test
    is a measurement, and one bad test morning is not a strength trend. */
 function isRecordEntry(h, e){ return !h.arch && (!h.dl || !!e.max); }
+/* the fold-out "Archive (n)" header at the bottom of a list - History and
+   Programs share it, so both archives open and read the same way */
+function archHeadHtml(open, n, onclick){
+  return `<h2 class="sec" style="cursor:pointer" onclick="${onclick}">${open?'▾':'▸'} ${t('archTitle')} (${n})</h2>`;
+}
 function fmtTime(sec){
   sec = Math.max(0, Math.floor(sec));
   const h = Math.floor(sec/3600), m = Math.floor(sec%3600/60), s = sec%60;
@@ -96,7 +101,7 @@ function toast(msg){
    now-stale indices cannot be undone from underneath. */
 function undoToast(msg, restore){
   const el = $('#undo');
-  el.innerHTML = `${esc(msg)}<button id="undo-btn">${t('undoBtn')}</button>`;
+  el.innerHTML = `<span class="um">${esc(msg)}</span><button id="undo-btn">${t('undoBtn')}</button>`;
   el.classList.add('show');
   const hide = ()=>{ el.classList.remove('show'); clearTimeout(undoToast._t); };
   $('#undo-btn').onclick = ()=>{ hide(); restore(); save(); render(); };

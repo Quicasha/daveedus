@@ -1,7 +1,7 @@
 /* ============================================================
-   Programs (folders) and workout templates: the split cards, the template
-   editor (sets/reps ranges, rest targets, progression step, weekday,
-   alternatives), duplication and folder sharing.
+   Programs (folders) and workout templates: the split cards, the program
+   archive, the template editor (sets/reps ranges, rest targets, progression
+   step, weekday, alternatives), duplication and folder sharing.
    Template edits sync into an active session only through tplEntryFor().
    ============================================================ */
 'use strict';
@@ -56,20 +56,34 @@ function tplCardHtml(d){
 function looseTemplates(){
   return S.templates.filter(x=>!x.folderId || !S.folders.some(f=>f.id===x.folderId));
 }
-function htmlProgram(){
-  let h = '<div style="height:8px"></div>';
-  h += S.folders.map(f=>{
-    const tpls = S.templates.filter(x=>x.folderId===f.id);
-    const names = tpls.slice(0,4).map(x=>x.name).join(', ');
-    return `<div class="tplbtn" onclick="openSplit('${f.id}')">
+/* the programs in use: every reader that plans training (Home cards, the main
+   program, deload, the template's program picker) sees only these. Archived
+   ones keep their workouts, history and comparison column - they just stop
+   asking for attention. */
+function activeFolders(){ return S.folders.filter(f=>!f.arch); }
+/* one row of the Programs list; an archived one sits dimmed in the Archive
+   fold with Restore where Pin and Archive were */
+function folderRowHtml(f){
+  const tpls = S.templates.filter(x=>x.folderId===f.id);
+  const names = tpls.slice(0,4).map(x=>x.name).join(', ');
+  const btn = (cls, fn, icon, label) =>
+    `<button class="iconbtn2 ${cls}" onclick="event.stopPropagation(); ${fn}('${f.id}')" aria-label="${label}">${icon}</button>`;
+  const acts = f.arch
+    ? btn('', 'restoreFolder', ACT_ICONS.restore, t('histUnarch'))
+    : btn(f.pinned?'on':'', 'togglePin', ACT_ICONS.pin, 'pin') + btn('', 'archiveFolder', ACT_ICONS.archive, t('folderArchBtn'));
+  return `<div class="tplbtn"${f.arch?' style="opacity:.65"':''} onclick="openSplit('${f.id}')">
       <div class="tinfo"><div class="tname">${esc(f.name)} <span style="color:var(--dim);font-weight:700;font-size:14px">(${tpls.length})</span></div>
       <div class="tsub">${esc(names)||'—'}</div></div>
       <div class="rowacts">
-        <button class="iconbtn2 ${f.pinned?'on':''}" onclick="event.stopPropagation(); togglePin('${f.id}')" aria-label="pin">${ACT_ICONS.pin}</button>
-        <button class="iconbtn2 danger" onclick="event.stopPropagation(); delFolder('${f.id}')" aria-label="delete">${ACT_ICONS.x}</button>
+        ${acts}
+        ${btn('danger', 'delFolder', ACT_ICONS.x, 'delete')}
         <div class="go">${ACT_ICONS.chevron}</div>
       </div></div>`;
-  }).join('');
+}
+function htmlProgram(){
+  let h = '<div style="height:8px"></div>';
+  const archived = S.folders.filter(f=>f.arch);
+  h += activeFolders().map(folderRowHtml).join('');
   const loose = looseTemplates();
   if(loose.length){
     if(S.folders.length) h += `<h2 class="sec">${t('folderNone')}</h2>`;
@@ -84,6 +98,11 @@ function htmlProgram(){
   /* two programs with sessions is when "which one worked better" becomes a question */
   if(S.folders.filter(f=>folderProgStats(f.id).n>0).length >= 2){
     h += `<button class="btn" onclick="go('progcmp')">${ACT_ICONS.chart} ${t('cmpBtn')}</button>`;
+  }
+  /* the archive sits below everything: out of the way, one tap to open */
+  if(archived.length){
+    h += archHeadHtml(V.progArch, archived.length, 'V.progArch=!V.progArch; render()');
+    if(V.progArch) h += archived.map(folderRowHtml).join('');
   }
   return h;
 }
@@ -101,7 +120,12 @@ function htmlSplitView(){
   const f = S.folders.find(x=>x.id===V.viewFolder);
   if(!f){ V.screen='program'; return htmlProgram(); }
   const tpls = S.templates.filter(x=>x.folderId===f.id);
-  let h = `<div style="height:8px"></div>` + folderProgHtml(f.id) + `
+  /* an archived program opens for viewing like any other, and says how to bring it back */
+  const archNote = f.arch ? `<div class="card">
+      <div style="color:var(--dim);font-size:13px;line-height:1.5;margin-bottom:10px">${t('folderArchNote')}</div>
+      <button class="btn primary" style="margin:0" onclick="restoreFolder('${f.id}')">${ACT_ICONS.restore} ${t('histUnarch')}</button>
+    </div>` : '';
+  let h = `<div style="height:8px"></div>` + archNote + folderProgHtml(f.id) + `
     <div class="card">
       <div style="color:var(--dim);font-size:13px;margin-bottom:6px">${t('folderName')}</div>
       <input class="nameinput" type="text" value="${esc(f.name)}" oninput="renameFolder('${f.id}',this.value)">
@@ -116,6 +140,7 @@ function htmlSplitView(){
   h += `<button class="btn ghostbtn" onclick="addTplTo('${f.id}')">${t('tplNew')}</button>
         <button class="btn primary" onclick="go('program')">${ACT_ICONS.check} ${t('saveDone')}</button>
         <button class="btn" onclick="shareFolder('${f.id}')">${ACT_ICONS.share} ${t('folderShare')}</button>
+        ${f.arch?'':`<button class="btn" onclick="archiveFolder('${f.id}')">${ACT_ICONS.archive} ${t('folderArchBtn')}</button>`}
         <button class="btn danger" onclick="delFolder('${f.id}')">${ACT_ICONS.x} ${t('deleteBtn')}</button>`;
   return h;
 }
@@ -132,6 +157,32 @@ function setFolderFree(id,v){
   if(v) f.free = true; else delete f.free;
   if(f.free && S.mainFolder===id) S.mainFolder = null;
   save(); render();
+}
+/* archive = out of the way, never gone. When the program being archived is
+   the main one, the star is pinned on whichever program takes over - so
+   bringing an old program back later never quietly moves the weekday plan
+   and deload onto it. Undo restores both exactly. */
+function archiveFolder(id){
+  const f = S.folders.find(x=>x.id===id);
+  if(!f || f.arch) return;
+  const prevMain = S.mainFolder, wasMain = mainFolderId()===id;
+  f.arch = true;
+  const newMain = wasMain ? mainFolderId() : prevMain;
+  S.mainFolder = newMain;
+  save(); scheduleCloudSync();
+  if(V.screen==='splitview') go('program'); else render();
+  undoToast(t('folderArchDone',{n:f.name}), ()=>{
+    delete f.arch;
+    if(S.mainFolder===newMain) S.mainFolder = prevMain; /* a star moved meanwhile stays */
+    scheduleCloudSync();
+  });
+}
+function restoreFolder(id){
+  const f = S.folders.find(x=>x.id===id);
+  if(!f || !f.arch) return;
+  delete f.arch;
+  save(); render(); scheduleCloudSync();
+  toast(t('folderRestored',{n:f.name}));
 }
 function renameFolder(id,v){
   const f = S.folders.find(x=>x.id===id);
@@ -190,7 +241,8 @@ function htmlTplEdit(){
   const d = S.templates.find(x=>x.id===V.editTpl);
   if(!d){ V.screen='program'; return htmlProgram(); }
   const folderOpts = `<option value="">${t('folderNone')}</option>` +
-    S.folders.map(f=>`<option value="${f.id}" ${d.folderId===f.id?'selected':''}>${esc(f.name)}</option>`).join('');
+    S.folders.filter(f=>!f.arch || f.id===d.folderId) /* never file a workout into the archive */
+      .map(f=>`<option value="${f.id}" ${d.folderId===f.id?'selected':''}>${esc(f.name)}</option>`).join('');
   let h = `<div style="height:8px"></div>
     <div class="card">
       <div class="ct" style="color:var(--dim);font-size:13px;margin-bottom:6px">${t('tplName')}</div>
