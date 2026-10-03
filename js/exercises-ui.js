@@ -368,9 +368,27 @@ function lineChartSVG(pts, label, unit, goal){
                    : i===data.length-1 ? { x:X(i)-3, a:'end' } : { x:X(i), a:'middle' };
   const dots = data.map((p,i)=>
     `<circle cx="${X(i)}" cy="${Y(p.w)}" r="4" fill="var(--accent)"/>` +
-    `<circle cx="${X(i)}" cy="${Y(p.w)}" r="13" fill="transparent" style="cursor:pointer" onclick="chartTap(${i})"/>` +
-    (data.length<=10 ? (l=>`<text x="${l.x}" y="${Y(p.w)-9}" fill="var(--text)" font-size="11" font-weight="700" text-anchor="${l.a}">${fmtW(p.w)}</text>`)(lblAt(i)) : '')
+    `<circle cx="${X(i)}" cy="${Y(p.w)}" r="13" fill="transparent" style="cursor:pointer" onclick="chartTap(${i})"/>`
   ).join('');
+  /* value labels (up to 10 points), each only where it fits: a label is skipped
+     when it would run into one already placed - same height, overlapping width.
+     The newest point goes first (it is the session just done), then the rest
+     left to right, so both ends always read and a crowded middle thins itself.
+     Ten near-flat sessions once wrote 7300 and 7301 as one number, 73007301. */
+  const placed = [];
+  const labelAt = i => {
+    const l = lblAt(i), txt = fmtW(data[i].w), w = txt.length*6.5; /* about 6.5 px per character at 11px bold */
+    const x0 = l.a==='start' ? l.x : l.a==='end' ? l.x-w : l.x-w/2, x1 = x0+w, y = Y(data[i].w)-9;
+    if(placed.some(q=>x0 < q.x1+3 && q.x0 < x1+3 && Math.abs(q.y-y) < 11)) return '';
+    placed.push({ x0, x1, y });
+    return `<text x="${l.x}" y="${y}" fill="var(--text)" font-size="11" font-weight="700" text-anchor="${l.a}">${txt}</text>`;
+  };
+  let vals = '';
+  if(data.length<=10){
+    const last = labelAt(data.length-1);
+    for(let i=0; i<data.length-1; i++) vals += labelAt(i);
+    vals += last;
+  }
   const d0 = fmtDate(data[0].d), d1 = fmtDate(data[data.length-1].d);
   const goalLine = goal ? `<line x1="${padL}" y1="${Y(goal)}" x2="${W-padR}" y2="${Y(goal)}"
       stroke="var(--accent-soft)" stroke-width="1.5" stroke-dasharray="6 5" opacity=".75"/>
@@ -378,7 +396,7 @@ function lineChartSVG(pts, label, unit, goal){
   return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
     ${grid}${labels}${goalLine}
     <polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>
-    ${dots}
+    ${dots}${vals}
     <text x="${padL}" y="${H-8}" fill="var(--dim)" font-size="11">${d0}</text>
     <text x="${W-padR}" y="${H-8}" fill="var(--dim)" font-size="11" text-anchor="end">${d1}</text>
     <text x="${W-padR}" y="${padT-5}" fill="var(--ghost)" font-size="10" text-anchor="end">${label||''}</text>
