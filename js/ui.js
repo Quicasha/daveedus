@@ -31,6 +31,7 @@ function askAnswer(which){
 /* ======================= render core ======================= */
 function go(screen){
   if(screen!==V.screen && screen==='history') V.histLimit = 20;
+  if(screen!==V.screen) V.progOrder = false; /* leaving Programs ends reorder mode */
   V.screen = screen;
   render();
   /* entrance animation only on navigation, not on every re-render */
@@ -97,6 +98,12 @@ function renderTopbar(){
     const titles = { home:'Daveedus', program:t('tabProgram'), exercises:t('tabExercises'),
                      history:t('tabHistory'), settings:t('tabSettings') };
     h = `<h1>${titles[V.screen]||'Daveedus'}</h1>`;
+    /* program order: offered once there are two programs to put in order */
+    if(V.screen==='program' && activeFolders().length > 1){
+      h += V.progOrder
+        ? `<button class="finishbtn" onclick="setProgOrder(0)">${ACT_ICONS.check} ${t('orderDone')}</button>`
+        : `<button class="finishbtn" onclick="setProgOrder(1)">${ACT_ICONS.reorder} ${t('orderBtn')}</button>`;
+    }
     if(V.screen==='home' && S.active){
       h += `<button class="finishbtn" onclick="go('workout')">${ACT_ICONS.play} ${fmtTime((Date.now()-new Date(S.active.startedAt).getTime())/1000)}</button>`;
     }
@@ -126,6 +133,7 @@ const ACT_ICONS = {
   dl:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5"/><path d="M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/></svg>',
   copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>',
   archive:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>',
+  reorder:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20V4M3 8l4-4 4 4M17 4v16M13 16l4 4 4-4"/></svg>',
   restore:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3 8a9 9 0 1 1-1 5"/></svg>',
   note:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
   scale:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.5"/><path d="M8.2 8.5h7.6L18 20a1 1 0 0 1-1 1.2H7A1 1 0 0 1 6 20z"/></svg>',

@@ -1,7 +1,8 @@
 /* ============================================================
-   Programs (folders) and workout templates: the split cards, the program
-   archive, the template editor (sets/reps ranges, rest targets, progression
-   step, weekday, alternatives), duplication and folder sharing.
+   Programs (folders) and workout templates: the split cards, program order
+   and the program archive, the template editor (sets/reps ranges, rest
+   targets, progression step, weekday, alternatives), duplication and folder
+   sharing.
    Template edits sync into an active session only through tplEntryFor().
    ============================================================ */
 'use strict';
@@ -81,6 +82,7 @@ function folderRowHtml(f){
       </div></div>`;
 }
 function htmlProgram(){
+  if(V.progOrder && activeFolders().length > 1) return htmlProgOrder();
   let h = '<div style="height:8px"></div>';
   const archived = S.folders.filter(f=>f.arch);
   h += activeFolders().map(folderRowHtml).join('');
@@ -105,6 +107,45 @@ function htmlProgram(){
     if(V.progArch) h += archived.map(folderRowHtml).join('');
   }
   return h;
+}
+/* ---- program order ----
+   Home lists its program cards in the order of S.folders, so that order is
+   the lifter's to set. Reorder mode shows only the programs in use, each with
+   big up/down arrows and nothing else to tap; the one just moved is lit so a
+   run of taps never loses track of it. */
+function setProgOrder(on){
+  V.progOrder = !!on;
+  V.movedFolder = null;
+  render();
+}
+function htmlProgOrder(){
+  const act = activeFolders();
+  let h = `<div style="color:var(--dim);font-size:13px;line-height:1.5;margin:8px 6px 12px">${t('orderHint')}</div>`;
+  h += act.map((f,i)=>{
+    const names = S.templates.filter(x=>x.folderId===f.id).map(x=>x.name).join(', ');
+    return `<div class="tplbtn ordrow${V.movedFolder===f.id?' next':''}">
+      <div class="tinfo"><div class="tname">${esc(f.name)}</div>
+      <div class="tsub">${esc(names)||'—'}</div></div>
+      <div class="rowacts">
+        <button class="iconbtn2" ${i===0?'disabled ':''}onclick="moveFolder('${f.id}',-1)" aria-label="up">${ACT_ICONS.up}</button>
+        <button class="iconbtn2" ${i===act.length-1?'disabled ':''}onclick="moveFolder('${f.id}',1)" aria-label="down">${ACT_ICONS.down}</button>
+      </div></div>`;
+  }).join('');
+  return h + `<button class="btn primary" onclick="setProgOrder(0)">${ACT_ICONS.check} ${t('orderDone')}</button>`;
+}
+/* swap a program with its neighbour among the programs in use - archived ones
+   keep their place. The main program falls back to the first card when none
+   was starred, so the star is pinned first: reordering never moves it, and
+   with it the weekday plan and deload. */
+function moveFolder(id, dir){
+  const act = activeFolders();
+  const i = act.findIndex(f=>f.id===id), j = i + dir;
+  if(i<0 || j<0 || j>=act.length) return;
+  S.mainFolder = mainFolderId();
+  const a = S.folders.indexOf(act[i]), b = S.folders.indexOf(act[j]);
+  [S.folders[a], S.folders[b]] = [S.folders[b], S.folders[a]];
+  V.movedFolder = id;
+  save(); render(); scheduleCloudSync();
 }
 function openSplit(id){
   V.viewFolder = id;

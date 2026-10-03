@@ -730,6 +730,14 @@ h2.sec{font-size:11px; text-transform:uppercase; letter-spacing:1.1px; color:var
 .iconbtn2.on{background:var(--accent-bg); color:var(--accent-soft);}
 .iconbtn2.danger{color:var(--red);}
 .iconbtn2.play{background:var(--accent); color:var(--on-accent);}
+/* program reorder rows: nothing to open, only big up/down targets */
+.tplbtn.ordrow{cursor:default;}
+.tplbtn.ordrow:active{opacity:1;}
+/* the program just moved: an accent outline, visible on every skin (the tint alone vanishes on monochrome ones) */
+.tplbtn.ordrow.next{border-color:var(--accent);}
+.ordrow .iconbtn2{width:44px; height:44px; border-radius:11px;}
+.ordrow .iconbtn2 svg{width:20px; height:20px;}
+.ordrow .iconbtn2:disabled{opacity:.3;}
 .iconbtn2.play svg{width:15px; height:15px; margin-left:1px;}
 .nameinput{width:100%; background:var(--input); border:none;
   border-radius:10px; min-height:46px; font-size:16px; font-weight:600; padding:0 12px; -webkit-appearance:none;}

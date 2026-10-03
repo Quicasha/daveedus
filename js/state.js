@@ -343,6 +343,7 @@ const V = { screen:'home', editTpl:null, viewFolder:null, exDetail:null, expande
             pickerCb:null, pickerQ:'', pickerG:'all', exQ:'', exG:'mine',
             exTplFilter:'', exFilterNames:[], exMetric:'w', showArch:false,
             progArch:false, /* Programs screen: the Archive fold is open */
+            progOrder:false, movedFolder:null, /* Programs reorder mode; the program just moved */
             histLimit:20, histQ:'', wkvol:0, /* weekly sets view: weeks back (0 = this week) */
             progTpl:null, progFrom:null, /* per-workout progress screen: which template, and where back goes */
             /* per-chart period state: p = 'w'|'m'|'y'|'c' (charts), days|'all'|'c' (muscle/bw);
