@@ -253,7 +253,9 @@ says "est.". Two consequences follow from the evidence above and both are in the
   with itself at similar rep ranges the trend survives. What does NOT survive is a
   switch of rep range: moving lateral raises from 20s to 8s will shift the level of
   the series. The stall watch is therefore attached to tracked lifts, which are
-  meant to be the heavy ones.
+  meant to be the heavy ones, and every reader of CHANGE starts over when the lift
+  moves to a new program (section 8), because a new program is where rep ranges
+  switch.
 - A single is its own one-rep max. `e1rmOf()` returns the load of a one-rep set as it
   is and applies Epley only from two reps up, because Epley's `1 + 1/30` would add 3 %
   to every heavy single and to every tested max.
@@ -327,9 +329,19 @@ This section is statistics hygiene, not a training finding. Label it **Inference
 - **Current form, not lifetime.** Progress logic looks at the last 12 sessions within
   90 days (`recentSeries()`), and a direction call never crosses a break of 60 days or
   more nor speaks at all if the last session is over 120 days old (`trendWindow()`).
-  After a cut, an injury or a program change, the old peak ages out and the detectors
-  recalibrate to what the lifter can do now. Records and the PR feed stay all-time on
-  purpose, because that is what a record is.
+  After a cut or an injury the old peak ages out and the detectors recalibrate to what
+  the lifter can do now. Records and the PR feed stay all-time on purpose, because
+  that is what a record is.
+- **A new program is a new block.** The readers of CHANGE (the trend arrow, the goal
+  date, the stall watch and the deload advisor's performance check) compare a lift only
+  inside the program it is trained in now (`programSeries()`, `blockSeries()`). A new
+  program brings new rep ranges, a new order and new fatigue, so its first sessions are
+  not a verdict on the last program: a switch from fives to eights would read as a
+  fall, and a quiet first week as a stall. Workouts outside any program count as one
+  context together, and a session with no workout behind it cannot be placed, so when
+  it is the newest the whole series stands. The readers of LEVEL (where the lift is
+  now, the wave base, the max-test suggestions, records) keep every program, because
+  strength does not reset when the plan changes.
 - **A projected date is only shown when it is earnable.** `etaFor()` fits a line
   through at most the last 10 sessions and shows a month only if the trend is up, there
   are at least 4 points spanning at least 14 days, and the answer lands within three
@@ -403,8 +415,12 @@ unneeded deload costs something, the passive advisor (`dlAdvice()`) leads with
 performance and uses the calendar only as a backstop: it stays quiet for the first 3
 hard weeks, speaks at once when two tracked lifts are trending down, otherwise after
 8 weeks of continuous training, after 6 weeks with one tired lift, or after 4 weeks
-with two. "Hard weeks" (`hardWeeks()`) reset on a real break of 3 weeks or more,
-because a layoff already IS a deload as far as fatigue goes. It can be snoozed, it
+with two. A lift is "tired" only by its sessions in the program it is trained in now
+(section 8), so a new program's first sessions cannot set it off. "Hard weeks"
+(`hardWeeks()`) reset on a real break of 3 weeks or more, because a layoff already IS
+a deload as far as fatigue goes, but not on a program change: fatigue does not reset
+when the plan does, so the 8-week backstop counts every week of training. A running
+deload stops waiting on workouts that were archived with their program. It can be snoozed, it
 never starts anything, and a calendar reminder (`dlEvery`, 6 / 7 / 8 weeks) replaces it
 entirely for a lifter who prefers Rogerson's planned style.
 

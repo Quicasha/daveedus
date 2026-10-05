@@ -27,9 +27,15 @@ function dlActive(){
   if(!dlRemaining(d).length){ d.e = Date.now(); save(); return null; }
   return d;
 }
-/* workouts still waiting for their deload pass (deleted templates don't block) */
+/* workouts still waiting for their deload pass - deleted ones and ones in an
+   archived program don't block: nobody is going to train them this week */
 function dlRemaining(d){
-  return d.tpls.filter(id=>!d.done.includes(id) && S.templates.some(tp=>tp.id===id));
+  return d.tpls.filter(id=>{
+    if(d.done.includes(id)) return false;
+    const tp = S.templates.find(x=>x.id===id);
+    const f = tp && tp.folderId ? S.folders.find(x=>x.id===tp.folderId) : null;
+    return !!tp && !(f && f.arch);
+  });
 }
 /* is THIS workout's deload pass still due? (drives ghost scaling + dl tagging) */
 function dlForTpl(tplId){
@@ -138,9 +144,13 @@ function endDeload(){
      so FLAT = last 3 sessions gained nothing beyond the 2.5% band vs the
      3 sessions before, DOWN = last 2 sessions both >=5% under the 4-week peak;
    - deloading when not needed carries a small strength cost (Coleman 2024),
-     so performance triggers lead and the calendar is only a backstop. */
-function liftFatigue(k){ /* 'down' | 'flat' | null, on the current-form window */
-  const pts = recentSeries(k);
+     so performance triggers lead and the calendar is only a backstop.
+   The performance check reads each lift inside the program it is trained in
+   now (blockSeries): a new program's first sessions are not a verdict on the
+   last one. The calendar counts every week of training, whatever the program -
+   fatigue does not reset when the plan changes. */
+function liftFatigue(k){ /* 'down' | 'flat' | null, on the current-form window of the program trained now */
+  const pts = blockSeries(k);
   if(pts.length >= 3){
     const cut = Date.now() - 28*864e5;
     const p4 = Math.max(0, ...pts.filter(p=>p.ts>=cut).map(p=>p.v));

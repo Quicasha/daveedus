@@ -202,12 +202,16 @@ function setFolderFree(id,v){
 /* archive = out of the way, never gone. When the program being archived is
    the main one, the star is pinned on whichever program takes over - so
    bringing an old program back later never quietly moves the weekday plan
-   and deload onto it. Undo restores both exactly. */
+   and deload onto it. A running deload left with nothing but this program's
+   workouts ends with it. Undo restores all three exactly. */
 function archiveFolder(id){
   const f = S.folders.find(x=>x.id===id);
   if(!f || f.arch) return;
   const prevMain = S.mainFolder, wasMain = mainFolderId()===id;
+  const dl0 = dlActive();
   f.arch = true;
+  /* a deload waiting only on this program's workouts is over: dlActive closes it */
+  const dlClosed = dl0 && !dlActive() ? dl0 : null;
   const newMain = wasMain ? mainFolderId() : prevMain;
   S.mainFolder = newMain;
   save(); scheduleCloudSync();
@@ -215,6 +219,7 @@ function archiveFolder(id){
   undoToast(t('folderArchDone',{n:f.name}), ()=>{
     delete f.arch;
     if(S.mainFolder===newMain) S.mainFolder = prevMain; /* a star moved meanwhile stays */
+    if(dlClosed && dlClosed===S.deloads[S.deloads.length-1]) dlClosed.e = 0;
     scheduleCloudSync();
   });
 }

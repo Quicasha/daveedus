@@ -483,10 +483,20 @@ function seriesTrend(vals){
   const pct = (b-a)/a*100;
   return pct > 1.5 ? 'up' : pct < -1.5 ? 'down' : 'flat';
 }
+/* which program a session was trained in: the program its workout sits in
+   now, '' for a workout outside any program (loose workouts are one context
+   together), null when it cannot be told - no workout, or the workout is gone.
+   Built once per series: a Map lookup per session, not a scan. */
+function programOfSession(){
+  const fids = new Set(S.folders.map(f=>f.id));
+  const m = new Map(S.templates.map(tp=>[tp.id, (tp.folderId && fids.has(tp.folderId)) ? tp.folderId : '']));
+  return w => (w.tplId && m.has(w.tplId)) ? m.get(w.tplId) : null;
+}
 function e1rmSeries(k){
   if(isTimeEx(k)) return [];
   const info = exInfo(k);
   const nm = (info?info.n:k).trim().toLowerCase();
+  const prog = programOfSession();
   const pts = [];
   for(let i=S.history.length-1; i>=0; i--){
     const w = S.history[i];
@@ -497,9 +507,21 @@ function e1rmSeries(k){
     const v = sessionE1rm(w, k, nm);
     /* v=0 happens on bodyweight lifts logged before any body weight existed -
        an artifact, not form; letting it in fabricates trends and ETAs */
-    if(v > 0) pts.push({ ts:new Date(w.date).getTime(), v });
+    if(v > 0) pts.push({ ts:new Date(w.date).getTime(), v, p:prog(w) });
   }
   return pts;
+}
+/* the lift inside the program it is trained in NOW (the newest session's).
+   A new program brings new rep ranges, a new order and new fatigue, so its
+   sessions are not lined up against the last program's: a switch from fives to
+   eights would read as a fall, a quiet first week as a stall. When the newest
+   session belongs to no program it cannot be placed, and the whole series
+   stands. Only the CHANGE readers use this (trend, goal date, stall watch,
+   deload advisor); where the lift IS stays on every program (recentSeries). */
+function programSeries(k){
+  const all = e1rmSeries(k);
+  const p = all.length ? all[all.length-1].p : null;
+  return p==null ? all : all.filter(x=>x.p===p);
 }
 /* "where the lift is NOW" for the goal row and the ETA - the best of the
    current-form window, so the bar and the projected date agree on one number */
@@ -510,12 +532,13 @@ function currentE1rm(k){
   const tested = maxTests(k).filter(x=>new Date(x.date).getTime() >= cut).map(x=>x.best);
   return Math.max(0, ...recentSeries(k).map(p=>p.v), ...tested);
 }
-/* the window a direction call may use: this training BLOCK, i.e. the newest
-   points walking back until a real break (60+ days) - never across a layoff,
-   whatever the session count. A lift nobody has trained in four months gets no
-   window at all, so it shows no arrow and no projected date. */
+/* the window a direction call may use: this training BLOCK, i.e. the program
+   the lift is trained in now (programSeries), walking back until a real break
+   (60+ days) - never across a program switch or a layoff, whatever the session
+   count. A lift nobody has trained in four months gets no window at all, so it
+   shows no arrow and no projected date. */
 function trendWindow(k){
-  const all = e1rmSeries(k);
+  const all = programSeries(k);
   if(!all.length) return [];
   if(Date.now() - all[all.length-1].ts > 120*864e5) return [];
   let start = all.length-1;
@@ -553,21 +576,28 @@ function etaFor(k, goalKg){
   if(ms > 3*365*864e5) return null;
   return new Date(Date.now() + ms);
 }
-/* CURRENT FORM window: the last 12 sessions within 90 days. Progress logic
-   (stall watch, wave targets) anchors here, NOT to lifetime records - after a
-   cut, a layoff or a program change the old peak ages out and the detectors
-   recalibrate to what the lifter can actually do now. Records and the PR feed
-   stay all-time on purpose: that is what records are. */
+/* CURRENT FORM window: the last 12 sessions within 90 days, across programs -
+   where the lift IS now (goal bar, wave base, max-test suggestions). It anchors
+   here, NOT to lifetime records: after a cut or a layoff the old peak ages out
+   and the numbers recalibrate to what the lifter can actually do now. Records
+   and the PR feed stay all-time on purpose: that is what records are. */
 function recentSeries(k){
   const cut = Date.now() - 90*864e5;
   return e1rmSeries(k).filter(p=>p.ts >= cut).slice(-12);
+}
+/* the same current-form window inside the program the lift is trained in now -
+   what the stall watch and the deload advisor judge PROGRESS on. A new program
+   earns its own sessions before either may call it stalled or tired. */
+function blockSeries(k){
+  const cut = Date.now() - 90*864e5;
+  return programSeries(k).filter(p=>p.ts >= cut).slice(-12);
 }
 /* stalled = flat trend AND 4+ sessions without beating the CURRENT-FORM best
    (0.25% tolerance eats rounding noise). A falling trend stays silent - that
    is a cut or life happening, and a wave does not fix a calorie deficit. */
 function stallInfo(k){
   if(trendFor(k) !== 'flat') return null;
-  const pts = recentSeries(k);
+  const pts = blockSeries(k);
   if(pts.length < 6) return null;
   let best = 0, since = 0;
   for(const p of pts){
@@ -753,13 +783,18 @@ function maxTests(k){
    template NAME as a fallback so a workout that was re-created (new id, same
    name) keeps its history instead of restarting from zero. Deload passes are
    out by default - they are deliberately light and would fake a downtrend. */
+/* sessions of one workout: by id, plus - by name - sessions whose own workout
+   no longer exists (deleted and re-created). A session that belongs to another
+   live workout is never borrowed by name: a new program's "Upper A" must not
+   collect the archived program's "Upper A". */
 function tplSessions(tplId, withDl){
   const tpl = S.templates.find(x=>x.id===tplId);
   const nm = tpl ? tpl.name.trim().toLowerCase() : null;
+  const live = new Set(S.templates.map(x=>x.id));
   return S.history.filter(w=>{
     if(w.arch) return false;
     if(w.dl && !withDl) return false;
-    return w.tplId===tplId || (nm && (w.name||'').trim().toLowerCase()===nm);
+    return w.tplId===tplId || (nm && !live.has(w.tplId) && (w.name||'').trim().toLowerCase()===nm);
   });
 }
 /* headline numbers for one template. avgGap is the real cadence: how many days
@@ -905,13 +940,15 @@ function openExFromTpl(k){
    Answers "how is THIS program going" without mixing in the program you ran
    before it, which is exactly what the lifetime charts cannot separate. */
 /* every session that belongs to one program: its workouts by id, with the
-   name fallback so a re-created workout stays in the block */
+   name fallback so a re-created workout stays in the block - only for sessions
+   whose own workout is gone, never one that lives in another program */
 function folderSessions(fid){
   const tpls = S.templates.filter(x=>x.folderId===fid);
   const ids = new Set(tpls.map(x=>x.id));
   const names = new Set(tpls.map(x=>x.name.trim().toLowerCase()));
+  const live = new Set(S.templates.map(x=>x.id));
   return S.history.filter(w=>!w.arch && !w.dl &&
-    (ids.has(w.tplId) || names.has((w.name||'').trim().toLowerCase())));
+    (ids.has(w.tplId) || (!live.has(w.tplId) && names.has((w.name||'').trim().toLowerCase()))));
 }
 function folderProgStats(fid){
   const ss = folderSessions(fid);
