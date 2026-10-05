@@ -270,7 +270,9 @@ describe('a max test inside a normal workout', () => {
 });
 
 describe('a miss is kept, never counted', () => {
-  const missed = () => workout(1, [exEntry('bench-press', [set(160, 0), set(150, 1)], { max: 1 })]);
+  /* today, not yesterday: on a Monday yesterday is last week, and the weekly-sets
+     check below asks about THIS week */
+  const missed = () => workout(0, [exEntry('bench-press', [set(160, 0), set(150, 1)], { max: 1 })]);
   const fix = h => { h.exercises[0].sets[0].fail = true; h.exercises[0].sets[0].at = Date.now(); return h; };
   test('not a record, not a weekly set, not volume', () => {
     const app = makeApp();
