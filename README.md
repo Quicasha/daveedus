@@ -1,9 +1,9 @@
 <p align="center">
-  <a href="https://quicasha.github.io/daveedus/"><img src="shots/hero.png" alt="Daveedus - log a set in one tap, the training brain does the rest" width="100%"></a>
+  <a href="https://dovjonikas.github.io/daveedus/"><img src="shots/hero.png" alt="Daveedus - log a set in one tap, the training brain does the rest" width="100%"></a>
 </p>
 
 <p align="center">
-  <a href="https://quicasha.github.io/daveedus/"><b>Open the app</b></a>
+  <a href="https://dovjonikas.github.io/daveedus/"><b>Open the app</b></a>
   &nbsp;·&nbsp; <a href="#install">Install</a>
   &nbsp;·&nbsp; <a href="#what-it-does">Features</a>
   &nbsp;·&nbsp; <a href="docs/RESEARCH-TRAINING.md">The evidence</a>
@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Quicasha/daveedus/actions/workflows/test.yml"><img alt="Tests" src="https://github.com/Quicasha/daveedus/actions/workflows/test.yml/badge.svg"></a>
+  <a href="https://github.com/dovjonikas/daveedus/actions/workflows/test.yml"><img alt="Tests" src="https://github.com/dovjonikas/daveedus/actions/workflows/test.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Vanilla JS" src="https://img.shields.io/badge/vanilla_JS-no_dependencies-f7df1e.svg">
   <img alt="PWA" src="https://img.shields.io/badge/PWA-offline--first-5a0fc8.svg">
@@ -39,7 +39,7 @@ It runs entirely in the browser, installs to the home screen, works offline and 
 
 ## Install
 
-- **iPhone** - open [the app](https://quicasha.github.io/daveedus/) in Safari → **Share** → **Add to Home Screen**
+- **iPhone** - open [the app](https://dovjonikas.github.io/daveedus/) in Safari → **Share** → **Add to Home Screen**
 - **Android** - open it in Chrome → **⋮** → **Install app**
 
 Half a minute. After that it runs full-screen, works fully offline and updates itself the next time it opens.
@@ -142,4 +142,4 @@ serve.ps1               Zero-dependency local server (PowerShell)
 
 [MIT](LICENSE) © 2026 Dovydas Jonikas. Use it, fork it, ship it. Attribution is appreciated, and an issue with feedback even more so.
 
-<p align="center"><sub>Built by <b>Dovydas Jonikas</b>, who logs every session with it.</sub></p>
+<p align="center"><sub>Built by <a href="https://github.com/dovjonikas"><b>Dovydas Jonikas</b></a>, who logs every session with it.</sub></p>
