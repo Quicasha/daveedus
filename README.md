@@ -1,13 +1,13 @@
 <p align="center">
-  <a href="https://dovjonikas.github.io/daveedus/"><img src="shots/hero.png" alt="Daveedus - log a set in one tap, the training brain does the rest" width="100%"></a>
+  <a href="https://dovjonikas.github.io/daveedus/"><img src="shots/hero.png" alt="Daveedus workout tracker" width="100%"></a>
 </p>
 
 <p align="center">
   <a href="https://dovjonikas.github.io/daveedus/"><b>Open the app</b></a>
   &nbsp;·&nbsp; <a href="#install">Install</a>
-  &nbsp;·&nbsp; <a href="#what-it-does">Features</a>
-  &nbsp;·&nbsp; <a href="docs/RESEARCH-TRAINING.md">The evidence</a>
-  &nbsp;·&nbsp; <a href="#under-the-hood">Under the hood</a>
+  &nbsp;·&nbsp; <a href="#features">Features</a>
+  &nbsp;·&nbsp; <a href="#research">Research</a>
+  &nbsp;·&nbsp; <a href="#tech">Tech</a>
 </p>
 
 <p align="center">
@@ -18,20 +18,20 @@
   <img alt="Local-first" src="https://img.shields.io/badge/data-local--first-2ea44f.svg">
 </p>
 
-**Daveedus** is a workout tracker for people who lift. Logging has to be instant, because nobody types between heavy sets, and the decisions have to be right, because a bad suggestion costs a training week. So the set row takes one tap, and behind it sits a training brain: double progression, a wave for a stalled lift, deloads earned from performance, eased-in comebacks after a break, and trend lines that refuse to read noise as progress. Every threshold it uses is traced to a study, a coaching consensus or a stated inference in [the evidence document](docs/RESEARCH-TRAINING.md).
+Daveedus is a workout tracker that runs in the browser. You add it to your home screen, it works offline, and all your data stays on the phone. There is no account and no server.
 
-It runs entirely in the browser, installs to the home screen, works offline and keeps every number on the device. No account, no ads, no server.
+Logging is made for the gym. Your numbers from last time are already filled in, so most sets take one tap. The app also handles progression from your history: double progression, a 4-week wave when a lift stalls, deload suggestions, lighter weights after a break, and trend lines that ignore normal day-to-day ups and downs. The reasoning and sources behind each rule are in [docs/RESEARCH-TRAINING.md](docs/RESEARCH-TRAINING.md).
 
 <table>
   <tr>
-    <td align="center" width="33%"><img src="shots/home.png" width="250" alt="Home screen"><br><b>Home</b><br><sub>Today's workout, the week's plan and the deload gauge</sub></td>
-    <td align="center" width="33%"><img src="shots/workout.png" width="250" alt="A workout in progress"><br><b>Workout</b><br><sub>Last session as the placeholder, one tap per set, the rest clock in the bar</sub></td>
-    <td align="center" width="33%"><img src="shots/history.png" width="250" alt="History and tracked lifts"><br><b>History</b><br><sub>Rhythm, tracked lifts, goals with a date only when the trend earns one</sub></td>
+    <td align="center" width="33%"><img src="shots/home.png" width="250" alt="Home screen"><br><b>Home</b><br><sub>Today's workout and the week's plan</sub></td>
+    <td align="center" width="33%"><img src="shots/workout.png" width="250" alt="A workout in progress"><br><b>Workout</b><br><sub>Last session prefilled, rest timer in the top bar</sub></td>
+    <td align="center" width="33%"><img src="shots/history.png" width="250" alt="History and tracked lifts"><br><b>History</b><br><sub>Training rhythm, tracked lifts and goals</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="shots/exercise.png" width="250" alt="Exercise detail"><br><b>Every lift</b><br><sub>Records, rep records and the estimated 1RM against your goal</sub></td>
-    <td align="center"><img src="shots/workout-progress.png" width="250" alt="Progress of one workout"><br><b>Every workout</b><br><sub>Volume per session and each lift measured inside that workout alone</sub></td>
-    <td align="center"><img src="shots/weekly-sets.png" width="250" alt="Weekly sets per muscle"><br><b>Every muscle</b><br><sub>Weekly sets against the 10-20 set research band</sub></td>
+    <td align="center"><img src="shots/exercise.png" width="250" alt="Exercise detail"><br><b>Exercise</b><br><sub>Records and estimated 1RM against the goal</sub></td>
+    <td align="center"><img src="shots/workout-progress.png" width="250" alt="Progress of one workout"><br><b>Workout progress</b><br><sub>Volume per session and each lift in it</sub></td>
+    <td align="center"><img src="shots/weekly-sets.png" width="250" alt="Weekly sets per muscle"><br><b>Weekly sets</b><br><sub>Sets per muscle against the 10-20 range</sub></td>
   </tr>
 </table>
 
@@ -39,68 +39,66 @@ It runs entirely in the browser, installs to the home screen, works offline and 
 
 ## Install
 
-- **iPhone** - open [the app](https://dovjonikas.github.io/daveedus/) in Safari → **Share** → **Add to Home Screen**
-- **Android** - open it in Chrome → **⋮** → **Install app**
+- **iPhone:** open [the app](https://dovjonikas.github.io/daveedus/) in Safari → Share → Add to Home Screen
+- **Android:** open it in Chrome → ⋮ → Install app
 
-Half a minute. After that it runs full-screen, works fully offline and updates itself the next time it opens.
+After that it runs full screen, works offline and updates itself.
 
-## What it does
+## Features
 
-### Logging that stays out of the way
+### Logging
 
-- **One tap per set.** Last session's numbers are the placeholders; confirm and the rest clock starts with the target for that exercise.
-- **Honest colours.** A set is green or red for the session so far, never one set against one set: a heavier first set followed by a shorter second one stays green, because you are ahead.
-- **Warm-ups in one tap**, loaded the way a lifter loads a bar and tapered the way the evidence says: empty bar, big plates only, the last one short and at or under 90%. On the way to 140 kg that reads 20 / 60 / 80 / 100 / 120.
-- **The gym details covered:** drop sets, supersets, a plate calculator, machine base weight, bodyweight lifts with your body weight counted, dumbbell pairs, kg or lb.
-- **Alternatives per exercise.** Bench taken? Swap in one tap; each variant keeps its own history.
-- **Max tests when you feel like one.** Warm up to the opener, take three attempts suggested from what the lift shows now, log each one made or missed. A made single is a record, even on a deload day, and a test never bends your training trend.
+- Last session's weights and reps are prefilled. Tap to confirm a set and the rest timer starts.
+- A set turns green or red by comparing the whole session so far with last time, not one set against another.
+- Warm-up sets in one tap, e.g. 20 / 60 / 80 / 100 / 120 kg on the way to 140.
+- Drop sets, supersets, plate calculator, machine starting weight, bodyweight exercises, dumbbell pairs, kg or lb.
+- Alternative exercises for each slot, each with its own history.
+- Max tests with suggested attempts. A made single counts as a record and doesn't affect training trends.
 
-### Progress, measured honestly
+### Progress
 
-- **Estimated 1RM trends** with a dead band wider than day-to-day noise, so a good Tuesday is not called a breakthrough.
-- **Tracked lifts with goals.** A projected date appears only when the trend actually climbs and the data spans enough time to mean it.
-- **Stall watch and the 4-week wave.** When a tracked lift stops setting bests, the app offers a 4-week wave: fives at a base, fours and threes a step heavier each, sixes back at the base, then the next round one step up. It ends itself on a new best or after three rounds without one.
-- **Deloads, earned or planned.** A passive advisor speaks when performance and accumulated weeks say so, or a calendar reminder does it every 6, 7 or 8 weeks. A deload is one light pass over every workout of the main program, kept out of records and trends.
-- **Comebacks eased in.** After a break the suggested weights come back a notch lower and climb back session by session, following the detraining research.
-- **A new program is a new block.** Trends, stalls and the deload check compare a lift only inside the program you run now, so a new program's first quiet week is not read as a verdict on the last one.
-- **Progress per workout and per muscle.** Each workout's own volume trend and lifts, so a bench climbing in Upper A cannot hide one stalling in Upper B, and weekly sets per muscle against the 10-20 set band.
+- Estimated 1RM trend for each lift, with a margin so normal session-to-session noise isn't read as a trend.
+- Tracked lifts with goals. A projected date is shown only when the trend is actually going up.
+- Stall detection, with an optional 4-week wave to get a lift moving again.
+- Deload suggestions based on performance and weeks of training, or a fixed reminder every 6, 7 or 8 weeks.
+- Lower suggested weights after a break, building back up over a few sessions.
+- Progress per workout and weekly sets per muscle.
+- When you start a new program, trends and stall checks start fresh for it.
 
 ### Programs
 
-- **Rotation programs** suggest what is NEXT, a weekday plan marks TODAY, and a star marks the main program that the plan and the deload follow.
-- **Free-pick splits** (gym / bar / home) skip rotation and deload and show how often and how long ago instead.
-- **Level ladders** for bodyweight work, from knee raises to toes-to-bar: two clean sessions at the top of the range and the next level loads itself.
-- **Programs side by side.** Compare blocks on length, cadence, volume and every shared lift's change per week, so a 6-week block and a 20-week one answer the same question.
-- **Archive and order.** Finished programs move to an archive with every record kept; the rest go in the order Home should show them.
-- **Share a program** as a short code.
+- Rotation programs show which workout is next; a weekday plan marks today's.
+- Free-pick splits for training in different places (gym / bar / home).
+- Level ladders for bodyweight exercises, e.g. knee raise up to toes-to-bar.
+- Compare programs side by side.
+- Archive old programs and reorder the rest.
+- Share a program as a short code.
 
 ## Your data
 
-Everything is stored on the device, in two places at once. If one breaks, the app restores from the other.
+Everything is saved on the device twice (localStorage and IndexedDB), so if one copy breaks the other restores it.
 
-- **Backup code** - copy it now and then and keep it somewhere safe; it survives a lost phone.
-- **Cloud sync** (optional) - every finished workout goes to your own private GitHub repository. Your repository, your token; without it nothing ever leaves the device. On a new phone, connect and tap **Restore from cloud**. A device that has never synced never replaces an existing backup without asking, a restore shows what it will bring before it does, and the repository only gets a commit when the data actually changed.
-- **CSV export** - tidy per-set data for Excel or anything else.
+- **Backup code:** copy it now and then and keep it somewhere safe.
+- **Cloud sync (optional):** saves to your own private GitHub repository after each workout. On a new phone, connect and tap Restore from cloud. Without it, nothing leaves the device.
+- **CSV export** of every set, for Excel or anything else.
 
-## Evidence, not opinions
+## Research
 
-The training brain does not guess. Each rule names where its numbers come from and how strong that evidence is, from strong (meta-analyses, a Delphi consensus of coaches) down to folk practice and plain inference, and says where the evidence stops:
+Where possible the numbers come from studies and coach surveys. Where the evidence is weak or missing, the docs say so.
 
-- [**docs/RESEARCH-TRAINING.md**](docs/RESEARCH-TRAINING.md) - volume, effort, frequency, rest, load and rep ranges, estimated 1RM and its noise floor, trends, waves, deloads, layoffs, warm-ups, ladders, and what deliberately was not built.
-- [**docs/RESEARCH-APP.md**](docs/RESEARCH-APP.md) - why people stop logging, what feedback does to motivation, what a set row must get right, and why there are no streaks, points or per-set effort ratings.
+- [docs/RESEARCH-TRAINING.md](docs/RESEARCH-TRAINING.md): volume, effort, frequency, rest, rep ranges, estimated 1RM, trends, waves, deloads, breaks, warm-ups, ladders.
+- [docs/RESEARCH-APP.md](docs/RESEARCH-APP.md): why people stop logging, feedback and motivation, and what was left out on purpose (streaks, points, per-set effort ratings).
 
-## Under the hood
+## Tech
 
 | | |
 |---|---|
-| **Stack** | Plain HTML, CSS and JavaScript. No framework, no build step, no dependencies |
-| **Storage** | `localStorage` mirrored to `IndexedDB`; writes debounced and flushed when the app is backgrounded; on launch the newer copy wins and the other is parked, never destroyed |
-| **Offline** | A service worker caches each release and swaps in the next one by itself |
-| **Units** | Stored in kilograms, converted only for display, so switching units loses nothing |
-| **Sync** | Optional, to the user's own GitHub repository through the Contents API; identical snapshots are never pushed twice; the token stays on the device and out of every backup code |
-| **Tests** | A `node:test` suite that loads the real app scripts into a sandbox and checks the training brain, the data layer and sync. CI runs it on every push; new rules are checked by breaking them on purpose and watching the tests fail |
-
-The code is split into small per-domain scripts loaded in dependency order. Everything is global by design, because inline handlers resolve against global scope.
+| **Stack** | HTML, CSS and plain JavaScript. No framework, no build step, no dependencies |
+| **Storage** | `localStorage` with an `IndexedDB` mirror; on launch the newer copy is used |
+| **Offline** | Service worker that caches each release and updates on the next launch |
+| **Units** | Stored in kg, converted only for display |
+| **Sync** | Optional, to the user's own GitHub repo via the Contents API. The token stays on the device |
+| **Tests** | `node:test` suite that loads the app scripts in a sandbox; runs in CI on every push |
 
 <details>
 <summary><b>Project structure</b></summary>
@@ -108,38 +106,36 @@ The code is split into small per-domain scripts loaded in dependency order. Ever
 ```
 index.html              App shell and script load order
 css/style.css           Styles: seven skins, each with a dark and a light palette
-js/exercises.js         Built-in exercise database (ids are permanent)
-js/i18n.js              App version and every user-facing string
-js/util.js              Formatting, the volume and 1RM formulas, toasts, skins and theme
-js/state.js             The state object: schema, validation and repair, persistence, units
-js/ui.js                Render core: navigation, top bar, tab bar, sheets, icons
-js/home.js              Home: week plan, reminders, program cards
-js/deload.js            Deload cycle, options sheet, the passive deload advisor
-js/workout.js           The live session: logging, ghosts, warm-ups, waves, comebacks, finish
-js/program.js           Programs, archive, order and the workout editor
-js/exercises-ui.js      Exercise picker, browser, custom exercises, detail view, charts
-js/stats.js             1RM series and trends, tracked lifts, records, rhythm, comparisons
-js/history.js           History list, search, editing, body weight, plate calculator
+js/exercises.js         Built-in exercise database
+js/i18n.js              App version and all UI strings
+js/util.js              Formatting, volume and 1RM formulas, toasts, skins
+js/state.js             State: schema, validation, saving, units
+js/ui.js                Navigation, top bar, tab bar, sheets, icons
+js/home.js              Home screen
+js/deload.js            Deloads and the deload advisor
+js/workout.js           The active workout: logging, warm-ups, waves, finishing
+js/program.js           Programs, archive, order, workout editor
+js/exercises-ui.js      Exercise picker, browser, detail view, charts
+js/stats.js             1RM trends, tracked lifts, records, comparisons
+js/history.js           History, body weight, plate calculator
 js/settings.js          Settings
-js/data.js              Share and backup codes, import, CSV, GitHub cloud sync
-js/boot.js              Startup, rest signal, wake lock, onboarding
-test/                   node:test suite and the sandbox harness (no DOM, no dependencies)
-docs/                   The evidence behind every rule
-sw.js                   Service worker: offline cache and self-update
+js/data.js              Share and backup codes, CSV, cloud sync
+js/boot.js              Startup and onboarding
+test/                   Tests and the sandbox harness
+docs/                   Research notes
+sw.js                   Service worker
 manifest.webmanifest    PWA manifest
-serve.ps1               Zero-dependency local server (PowerShell)
+serve.ps1               Local dev server (PowerShell)
 ```
 
 </details>
 
-**Run locally** - any static file server works; on Windows `powershell -File serve.ps1`, then open `http://localhost:8317`.
+**Run locally:** any static file server works. On Windows: `powershell -File serve.ps1`, then open `http://localhost:8317`.
 
-**Test** - `npm test` (Node 20 or newer, nothing to install).
+**Tests:** `npm test` (Node 20+).
 
-**Release** - bump `APP_VER` in `js/i18n.js` and `CACHE` in `sw.js`, push to `main`, and GitHub Actions runs the tests and publishes to Pages. Installed phones pick up the new files on their next launch.
+**Release:** bump `APP_VER` in `js/i18n.js` and `CACHE` in `sw.js`, then push to `main`. GitHub Actions runs the tests and deploys to Pages.
 
 ## License
 
-[MIT](LICENSE) © 2026 Dovydas Jonikas. Use it, fork it, ship it. Attribution is appreciated, and an issue with feedback even more so.
-
-<p align="center"><sub>Built by <a href="https://github.com/dovjonikas"><b>Dovydas Jonikas</b></a>, who logs every session with it.</sub></p>
+[MIT](LICENSE)
