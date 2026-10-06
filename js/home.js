@@ -140,6 +140,8 @@ function htmlHome(){
     /* weekday plan applies to the STARRED program only (like deload): there a
        workout assigned to TODAY wins; otherwise suggest the one AFTER the most
        recently done in this split (cyclic) */
+    /* today's row carries the TODAY chip, so it leaves its weekday tag out -
+       saying it twice squeezed the name to "Lo..." on a phone */
     const todayTpl = f.id===mainId ? tpls.find(x=>x.wd===wdToday) : null;
     let nextId = tpls[0].id;
     for(const hw of S.history){
@@ -155,7 +157,7 @@ function htmlHome(){
       <span class="spn">${esc(d.name)}</span>
       ${dlDue?`<span class="dldot" title="${t('dlBadge')}"></span>`:''}
       ${counts[d.id]?`<span class="spcnt">${counts[d.id]}</span>`:''}
-      ${(f.id===mainId && d.wd)?`<span class="spwd">${t('wd'+d.wd)}</span>`:''}
+      ${(f.id===mainId && d.wd && d!==todayTpl)?`<span class="spwd">${t('wd'+d.wd)}</span>`:''}
       ${d.id===nextId?`<span class="nextchip">${todayTpl?t('todayBadge'):t('nextBadge')}</span>`:''}</button>`;
     }).join('');
     return `<div class="splitcard">
